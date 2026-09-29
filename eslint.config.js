@@ -64,7 +64,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['vite.config.ts', 'src/mocks/sse-server.ts'],
+    files: ['vite.config.ts', 'playwright.config.ts', 'src/mocks/sse-server.ts', 'e2e/**'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
