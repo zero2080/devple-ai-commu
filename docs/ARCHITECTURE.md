@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.3 (2026-09-29, seq=Date.now()·positions 본인 무시·채팅 포커스·Mock 티켓)
+> 문서 버전: 1.4 (2026-09-30, 하트비트 이벤트·Mock 월드 상태 일원화)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -121,7 +121,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 ### 4.1 연결 정책
 - 탭당 **EventSource 1개** (브라우저 HTTP/1.1 도메인당 연결 제한 6개 대응)
 - 모든 실시간 이벤트를 이 한 연결에 다중화
-- 서버 하트비트 `: ping` 15초 간격. 30초 무수신 시 클라이언트가 강제 재연결
+- 서버 하트비트: 15초마다 `system.heartbeat` 이벤트 (SSE 주석은 `EventSource`가 JS에 전달하지 않아 관찰 불가). 클라이언트는 어떤 이벤트든 30초 무수신이면 `close()` 후 새 티켓으로 재연결 (`SseClient.idleTimeoutMs` 기본 30초)
 - **재연결은 항상 수동**: 티켓이 1회용이라 EventSource의 자동 재연결(같은 URL 재요청)은 401로 실패한다. `onerror` → 기존 EventSource `close()` → `POST /sse/ticket` → 새 EventSource 생성
 - 수동 재연결 시 브라우저는 `Last-Event-ID` 헤더를 보내지 않으므로(자동 재연결 때만 전송, 정확도 높음) 마지막 수신 `id`를 **쿼리 `lastEventId`** 로 넘긴다: `GET /sse?ticket=...&lastEventId=1234`
 - 재연결 백오프: 1s → 2s → 4s → … 최대 30s, 지터 ±20%
@@ -143,7 +143,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 | 접속 상태 | `presence.joined`, `presence.left`, `presence.updated` |
 | 채팅 | `chat.public`, `chat.dm`, `chat.dm.recalled`, `chat.dm.read`, `chat.group` |
 | 그룹 | `group.joined`, `group.updated`, `group.removed` |
-| 시스템 | `system.notice`, `system.suspended`, `sync.required` |
+| 시스템 | `system.notice`, `system.suspended`, `system.heartbeat`, `sync.required` |
 
 ### 4.4 인증
 - `EventSource`는 커스텀 헤더를 보낼 수 없다 (브라우저 표준 제약)
@@ -206,7 +206,7 @@ src/
 
 ## 9. Mock / 개발 환경
 
-- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, `POST /sse/ticket`은 Express mock이 발급·검증한다 (MSW와 티켓 상태를 공유할 수 없음). Vite proxy가 `/api/v1/sse` 접두 요청만 Express로 넘긴다
+- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 실시간 이벤트를 유발하는 나머지 엔드포인트(공개·DM·그룹 메시지 전송, 공지)는 해당 단계(7~9·11)에서 Express로 옮긴다
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -230,3 +230,4 @@ src/
 | 2026-09-29 | 예측/서버 불일치는 "즉시 보정 + 경로 재계산"으로 처리 (한 칸 튕김 허용, 부드러운 되감기 안 함) |
 | 2026-09-29 | 1.2: position batcher는 `game/sync/` 소속(1장 그림 정정), `isOccupied`는 presences를 인자로 받는 순수 함수, refresh 단일 진행, `transport/` 하위 구조를 CONVENTIONS와 일치 |
 | 2026-09-29 | 1.3: `seq`는 `Date.now()`, `world.positions` 본인 항목 무시(보정은 PUT 응답으로만), 채팅 입력 포커스 규칙, Mock 티켓은 Express |
+| 2026-09-30 | 1.4: 하트비트를 `system.heartbeat` 이벤트로(무수신 감시 30초 기본 활성). Mock 월드 REST 3개를 Express로 일원화하고 티켓에 사용자 바인딩 (Phase 1 결정 리포트 1·2) |

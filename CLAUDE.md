@@ -82,5 +82,5 @@
 
 ## 현재 상태
 
-- 문서: PRD·DOMAIN·API_CONTRACT 1.2, ARCHITECTURE·CONVENTIONS 1.3, ROADMAP 1.2 (2026-09-29, 선행 결정 전부 해소)
+- 문서: PRD·DOMAIN 1.2, API_CONTRACT 1.3, ARCHITECTURE 1.4, CONVENTIONS 1.3, ROADMAP 1.3 (2026-09-30)
 - 코드: **Phase 1 완료** (ROADMAP 1~5단계, 2026-09-29). Mock만으로 로그인 → 월드 → 가짜 접속자 20명 이동까지 동작하며 `pnpm test:e2e`로 검증. 다음은 Phase 2 6단계(내 캐릭터 이동). 설계 결정 대기 항목은 `reports/` 참조

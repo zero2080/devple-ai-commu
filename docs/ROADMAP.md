@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.2 (2026-09-29, 선행 결정 전부 해소·엔드포인트 37개)
+> 문서 버전: 1.3 (2026-09-30, Phase 1 결정 반영·6단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -112,7 +112,7 @@
 - `src/transport/api/` — `auth.ts`, `me.ts`, `users.ts`, `world.ts`, `chat.ts`, `dm.ts`, `groups.ts`, `admin.ts` (API_CONTRACT 2장 엔드포인트 전부, 함수 하나 = 엔드포인트 하나)
 - `src/transport/sse/client.ts` — **수동 재연결**: `onerror` → `close()` → `POST /sse/ticket` → `new EventSource('/api/v1/sse?ticket=…&lastEventId=…')`, 백오프 1s→30s 지터 ±20%, 30초 무수신 감지
 - `src/transport/sse/registry.ts` — `type → handler` 등록, zod 파싱 실패 시 `console.warn` + 무시
-- `src/transport/sse/handlers/*.ts` — API_CONTRACT 3.3의 이벤트 16종, 파일 1개씩. 이 단계에서는 스토어 갱신 로직 없이 파싱만
+- `src/transport/sse/handlers/*.ts` — API_CONTRACT 3.3의 이벤트 전부(1.3 기준 17종, `system.heartbeat` 포함), 파일 1개씩. 이 단계에서는 스토어 갱신 로직 없이 파싱만
 - `src/game/sync/positionBatcher.ts` — 200ms 배칭, 변경 없으면 미전송, `seq`는 `Date.now()` 밀리초 정수(API_CONTRACT 2.2), `pagehide` 시 `fetch keepalive`. 전송은 `transport/api/me.ts`를 호출
 
 **완료 조건**
@@ -128,7 +128,7 @@
 
 **만들 것**
 - `src/mocks/data/` — 고정 시드 데이터: 사용자 21명(본인 + 20), 맵 `main` 40×30, DM 대화 3개, 그룹 2개
-- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **SSE 티켓을 제외한 전체**(36개). 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
+- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **Express가 담당하는 4개(티켓·`PUT /me/position`·`PUT /me/presence`·`GET /world/{mapId}/presences`)를 제외한 33개** (ARCHITECTURE 9장, 2026-09-30 결정). 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
 - `src/mocks/browser.ts` — `VITE_MOCK=true`일 때만 워커 시작. `/api/v1/sse`로 시작하는 요청은 MSW가 건드리지 않고 통과(bypass)시켜 Vite proxy → Express로 간다
 - `src/mocks/sse-server.ts` — Express, 포트 5174
     - `POST /api/v1/sse/ticket` → 30초 유효 **1회용** 티켓 발급 (MSW와 상태를 공유할 수 없으므로 티켓은 Express가 발급·검증한다)
@@ -139,7 +139,7 @@
 
 **완료 조건**
 - [x] `pnpm dev:sse` 실행 후 `curl -X POST localhost:5174/api/v1/sse/ticket`로 티켓 발급 → `curl -N "localhost:5174/api/v1/sse?ticket=…"`로 스트림 확인 → 같은 티켓 재사용 시 `401`
-- [x] MSW 핸들러 36개 + Express 티켓 1개 = `endpoints.ts` 37개 (테스트로 자동 검사)
+- [x] MSW 핸들러 33개 + Express 4개(티켓·position·presence·presences) = `endpoints.ts` 37개 (테스트로 자동 검사)
 
 ---
 
@@ -167,9 +167,26 @@
 
 ---
 
-## Phase 2 — 상호작용 (Phase 1 완료 후 상세화)
+## Phase 2 — 상호작용
 
-- 6단계: 내 캐릭터 이동 (키보드, 클릭/터치 + A*, 충돌·점유, 배칭 전송, 409 보정)
+### 6단계: 내 캐릭터 이동 `[ ]`
+
+**만들 것**
+- `src/domain/pathfinding.ts` — A\* 4방향·맨해튼 휴리스틱 `findPath(grid, from, to)`. 차단 = 정적 `collision` + 동적 점유(`positions`, 본인 제외). 목적지가 벽이면 가장 가까운 통행 가능 타일로 대체, 목적지가 점유면 경로의 마지막 타일을 제외해 **직전 타일까지** (ARCHITECTURE 3.1·3.2.1)
+- `src/domain/movement.ts` — `stepTile(tile, dir)`, `directionTo(from, to)` 순수 함수
+- `src/game/engine/input.ts` — 키보드(방향키/WASD, 누르는 동안 연속), 포인터(클릭/탭 → 화면 좌표), `enabled` 스위치(채팅 입력 포커스 시 키 이동 비활성, PRD 5.3. 입력창은 7단계라 이번엔 스위치만)
+- `src/game/world/localPlayer.ts` — 클라이언트 예측 이동: 타일당 `MOVE_DURATION_MS`(150ms) 보간, 다음 타일이 벽·점유면 이동 없이 `dir`만, 자동 이동(경로 추종)은 키 입력이 들어오면 취소, 이동 중 막히면 현재 타일에서 A\* 재계산(스로틀 100ms), 재계산해도 도달 불가면 가장 가까운 타일. 타일 도착마다 `PositionBatcher.push`
+- `worldStore.myPosition`(예측 위치) 추가. `presences[me]`는 서버 기준(스냅샷)으로 유지하고 `world.positions`의 본인 항목은 계속 무시
+- WorldGame 연결: 카메라는 예측 픽셀 추종, 캔버스 클릭 → `screenToWorld` → 타일 → 경로, `PositionBatcher` 시작(`ServerConfig.positionBatchMs`), 409 `collision|too_far|occupied` → `details.position`으로 즉시 스냅 + 경로 재계산 (ARCHITECTURE 11장 "한 칸 튕김 허용")
+- Express mock: `PUT /me/position`을 실제 월드 상태로 검증(collision → `max(3, elapsed/100)` → 선착순 점유), 내 이동을 `world.positions`에 본인 포함으로 방송
+
+**완료 조건**
+- [ ] pathfinding 테스트: 직선, 우회, 도달 불가 → 가장 가까운 타일, 목적지 점유 → 직전 타일, 경계값(시작=목적지, 맵 밖)
+- [ ] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
+- [ ] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
+
+### 7~12단계 (6단계 완료 후 상세화)
+
 - 7단계: 근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼
 - 8단계: 프로필 카드, DM 패널, 회수
 - 9단계: 그룹 채팅 패널
@@ -190,6 +207,7 @@
 | 2026-09-29 | 1.1: 스택을 2026-09 npm 최신 메이저로 확정 (React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, zod 4, MSW 3, Express 5, ESLint 10). 기존 템플릿은 다운그레이드하지 않고 갱신 |
 | 2026-09-29 | 1.1: `exactOptionalPropertyTypes` 제외, domain 경계는 AST 셀렉터, refresh 단일 진행, `positionBatcher`는 `game/sync/`, SSE 티켓 발급·검증은 Express mock, 선행 결정 표 신설 |
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
+| 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 
 ---
 

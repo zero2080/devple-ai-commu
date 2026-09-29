@@ -1,6 +1,6 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.2 (2026-09-29, ROADMAP 선행 결정 반영)
+> 문서 버전: 1.3 (2026-09-30, 하트비트를 관찰 가능한 이벤트로)
 > 상태: 확정
 > 기준: DOMAIN.md 1.2, ARCHITECTURE.md 1.3
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
@@ -235,7 +235,7 @@ Accept: text/event-stream
 - `lastEventId`: 마지막으로 수신한 이벤트 `id` (재연결 시, 선택). 서버는 `Last-Event-ID` 헤더와 이 쿼리 중 **있는 것을 사용**하고 둘 다 있으면 쿼리 우선
 - 티켓 무효/만료/재사용 → `401` (본문 없이 종료). 프론트는 티켓 재발급 후 새 연결
 - 응답 헤더: `Cache-Control: no-cache`, `X-Accel-Buffering: no` (프록시 버퍼링 방지)
-- 서버는 연결 즉시 `world.snapshot` 전송, 이후 15초마다 주석 하트비트 `: ping\n\n`
+- 서버는 연결 즉시 `world.snapshot` 전송, 이후 15초마다 `system.heartbeat` 이벤트 전송. SSE 주석(`: ping`)은 브라우저 `EventSource` API가 JS에 전달하지 않아 클라이언트 무수신 감시에 쓸 수 없으므로 이벤트로 보낸다
 - `lastEventId`가 있으면 서버는 60초 버퍼에서 그 이후 이벤트를 `world.snapshot` **뒤에** 재전송. 버퍼 밖이면 `sync.required` 전송
 - 사용자당 동시 SSE 연결 최대 3개 (다중 탭). 초과 시 가장 오래된 연결 종료
 
@@ -268,11 +268,12 @@ data: {"id":"1234","type":"chat.public","ts":1727600000000,"payload":{...}}
 | `group.removed` | 강퇴/해산 대상 | `{ groupId, reason: 'kicked'\|'dissolved' }` |
 | `system.notice` | 전원 | `Notice` |
 | `system.suspended` | 본인 | `{}` — 직후 서버가 연결 종료 |
+| `system.heartbeat` | 본인 | `{ serverTime }` — 15초 간격. 클라이언트는 30초 무수신 시 재연결 (ARCHITECTURE 4.1) |
 | `sync.required` | 본인 | `{ reason: 'buffer_overflow' \| 'server_restart' }` |
 
 ### 3.4 순서 보장
 - 단일 SSE 연결 내 이벤트 순서는 `id` 오름차순으로 보장
-- `world.positions`와 `presence.*`는 재전송 버퍼에 **넣지 않는다** — positions는 다음 틱이 덮어쓰고, presence는 재연결 시 `world.snapshot`이 먼저 와서 복구됨
+- `world.positions`, `presence.*`, `system.heartbeat`는 재전송 버퍼에 **넣지 않는다** — positions는 다음 틱이 덮어쓰고, presence는 재연결 시 `world.snapshot`이 먼저 와서 복구되며, heartbeat는 생존 신호일 뿐이다
 - `chat.*`, `group.*`, `system.*`는 버퍼에 넣는다
 
 ### 3.5 프론트 재동기화 절차 (`sync.required` 또는 60초 초과 단절)
@@ -322,6 +323,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-29 | 위치 검증에 점유 조건 추가, `details.reason` 필드 추가 |
 | 2026-09-29 | 교차 검토: `GET /me` 응답 정의, SSE `lastEventId` 쿼리 추가, `presence.updated`에서 statusMessage 제거 |
 | 2026-09-29 | 1.2 (ROADMAP 선행 결정): seq=`Date.now()`, 이동 검증 `max(3, elapsedMs/100)`, positions 본인 포함·클라이언트 무시, `chat.dm.peerId`, 그룹 read body, 합성 타입명 DOMAIN 9장 참조, `presence.*` 버퍼 제외, `POST /admin/users/{id}/reissue-key` 추가 (엔드포인트 37개) |
+| 2026-09-30 | 1.3: 하트비트를 SSE 주석에서 `system.heartbeat` 이벤트(15초, `{ serverTime }`, 버퍼 제외)로 변경 — EventSource가 주석을 관찰할 수 없어 30초 무수신 감시가 동작하지 않았음. 이벤트 17종 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
