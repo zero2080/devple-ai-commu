@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.1 (2026-09-29, 스택 버전·선행 결정·Mock SSE 티켓 반영)
+> 문서 버전: 1.2 (2026-09-29, 선행 결정 전부 해소·엔드포인트 37개)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -12,21 +12,21 @@
 - 한 단계 안에서도 파일 5개 이상이면 나눠서 승인 받는다. 단, 같은 틀로 반복되는 동종 파일(SSE 핸들러 16개, API 모듈 8개, MSW 핸들러 등)은 한 묶음으로 승인한다
 - 완료 조건의 명령이 모두 통과해야 다음 단계로 간다
 - 단계 진행 중 문서(PRD/ARCHITECTURE/DOMAIN/API_CONTRACT/CONVENTIONS)와 어긋나는 점이 나오면 코드를 우회하지 않고 **먼저 문서 변경을 제안**한다
-- 아래 "선행 결정" 표의 항목은 해당 단계 착수 전에 문서에 반영되어 있어야 한다
+- 단계 착수 전에 필요한 문서 결정은 아래 "선행 결정" 표로 관리한다. 2026-09-29 기준 전부 해소됨
 
-## 선행 결정 (단계 착수 전 문서 반영 필요)
+## 선행 결정 (2026-09-29 전부 해소 — 결정 내용은 반영 문서 참조)
 
-| 착수 전 | 결정할 것 | 반영 문서 |
+| 착수 전 | 결정 | 반영 문서 |
 |---|---|---|
-| 3단계 | `PUT /me/position`의 `seq` 시작값. 서버가 `world.snapshot`·`GET /me`로 마지막 인정 seq를 주는지, 아니면 게임 루프를 한 탭만 돌리는지 (다중 탭 충돌 방지) | API_CONTRACT 2.2, ARCHITECTURE 3.3 |
-| 3단계 | 서버 응답 합성 타입 이름 정의: `GET /dm`의 `& { peer }`, `GET /groups`의 `& { unreadCount, lastMessage }`, 이벤트의 `& { sender }`. zod 스키마의 원천 | DOMAIN.md |
-| 3단계 | `positionBatcher`는 `game/sync/`에 둔다 (ARCHITECTURE 1장 그림의 Transport 표기 정정) | ARCHITECTURE 1·8 |
-| 4단계 | `world.positions`에 본인 포함 여부. 내 위치 보정은 `PUT /me/position` 응답(204/409)으로만 하고 `world.positions`의 본인 항목은 무시 | ARCHITECTURE 3.4·11, API_CONTRACT 3.3 |
-| 6단계 | 이동 검증 `elapsedMs/100`의 하한값, 채팅 입력 중 WASD·캔버스 포커스 규칙 | API_CONTRACT 2.2, ARCHITECTURE 3.1, PRD 6 |
-| 8단계 | `chat.dm` payload에 `peerId` 추가, chatStore의 안 읽음 합계는 Query 캐시에서 파생 | API_CONTRACT 3.3, ARCHITECTURE 7 |
-| 9단계 | `POST /groups/{id}/read` body, `group.updated`의 members 형태(`& { user }`) | API_CONTRACT 2.7·3.3 |
-| 10단계 | `presence.*`는 재전송 버퍼 제외 명시 | API_CONTRACT 3.4 |
-| 11단계 | 접근 키 재발급 플로우 | PRD 5.1·5.9, API_CONTRACT 2.8 |
+| 3단계 | ✅ `seq`는 `Date.now()` 밀리초 정수. 서버는 사용자 단위 마지막 seq 보관, 다중 탭은 같은 시계라 나중 요청이 이김 | API_CONTRACT 2.2, ARCHITECTURE 3.3 |
+| 3단계 | ✅ 합성 타입 `DmConversationWithPeer`, `GroupListItem`, `GroupDetail`, `GroupMemberWithUser`, `ChatPublicEvent`, `ChatDmEvent`, `ChatGroupEvent`, `GroupUpdatedEvent` | DOMAIN 9장 |
+| 3단계 | ✅ `positionBatcher`는 `game/sync/` | ARCHITECTURE 1·8 |
+| 4단계 | ✅ `world.positions`는 본인 포함, 클라이언트는 본인 항목 무시. 보정은 `PUT /me/position` 응답으로만 | API_CONTRACT 3.3, ARCHITECTURE 3.4 |
+| 6단계 | ✅ 이동 검증 `max(3, elapsedMs/100)` 타일. 채팅 입력창 포커스 시 키 이동 비활성, `Enter`/`Esc` 전환, 클릭 이동은 항상 | API_CONTRACT 2.2, PRD 5.3·6, ARCHITECTURE 3.1 |
+| 8단계 | ✅ `ChatDmEvent = DmMessage & { sender, peerId }` (peerId는 수신자 관점 상대). 안 읽음 합계는 Query 캐시 파생 | API_CONTRACT 3.3, DOMAIN 9, ARCHITECTURE 7 |
+| 9단계 | ✅ 그룹 read body `{ lastMessageId }`, `group.updated`는 `GroupMemberWithUser[]` | API_CONTRACT 2.7·3.3 |
+| 10단계 | ✅ `presence.*`는 재전송 버퍼 제외 | API_CONTRACT 3.4 |
+| 11단계 | ✅ 운영자 전용 `POST /admin/users/{id}/reissue-key`, 셀프 재발급 없음 | API_CONTRACT 2.8, PRD 5.1·5.9 |
 
 ---
 
@@ -107,20 +107,20 @@
 - `src/transport/http.ts` — fetch 래퍼: base URL, JSON, Bearer 첨부, `401 AUTH_REQUIRED` 시 `POST /auth/refresh` 후 1회 재시도, `ApiError { code, message, details }`
     - refresh는 **단일 진행**: 동시에 여러 요청이 401을 받아도 refresh 요청은 1회만 보내고 나머지는 같은 promise를 기다린다. 쿠키가 회전되므로 두 번째 refresh는 실패한다
     - (선택) `expiresIn` 기반 만료 직전 선제 갱신
-- `src/transport/api/endpoints.ts` — API_CONTRACT 2장의 엔드포인트 36개를 `{ method, path }` 상수 목록으로. api 모듈과 4단계 핸들러 수 검사가 공유
+- `src/transport/api/endpoints.ts` — API_CONTRACT 2장의 엔드포인트 37개를 `{ method, path }` 상수 목록으로. api 모듈과 4단계 핸들러 수 검사가 공유
 - `src/transport/schemas/*.ts` — zod 스키마, DOMAIN 타입과 1:1. `z.infer` 결과가 `domain/types.ts`와 일치하는지 타입 테스트
 - `src/transport/api/` — `auth.ts`, `me.ts`, `users.ts`, `world.ts`, `chat.ts`, `dm.ts`, `groups.ts`, `admin.ts` (API_CONTRACT 2장 엔드포인트 전부, 함수 하나 = 엔드포인트 하나)
 - `src/transport/sse/client.ts` — **수동 재연결**: `onerror` → `close()` → `POST /sse/ticket` → `new EventSource('/api/v1/sse?ticket=…&lastEventId=…')`, 백오프 1s→30s 지터 ±20%, 30초 무수신 감지
 - `src/transport/sse/registry.ts` — `type → handler` 등록, zod 파싱 실패 시 `console.warn` + 무시
 - `src/transport/sse/handlers/*.ts` — API_CONTRACT 3.3의 이벤트 16종, 파일 1개씩. 이 단계에서는 스토어 갱신 로직 없이 파싱만
-- `src/game/sync/positionBatcher.ts` — 200ms 배칭, 변경 없으면 미전송, `seq` 단조 증가(시작값은 선행 결정 참조), `pagehide` 시 `fetch keepalive`. 전송은 `transport/api/me.ts`를 호출
+- `src/game/sync/positionBatcher.ts` — 200ms 배칭, 변경 없으면 미전송, `seq`는 `Date.now()` 밀리초 정수(API_CONTRACT 2.2), `pagehide` 시 `fetch keepalive`. 전송은 `transport/api/me.ts`를 호출
 
 **완료 조건**
 - [ ] `http.ts` 401 재시도 테스트 (MSW)
 - [ ] `http.ts` 동시 401 3건 → refresh 요청 1회, 3건 모두 재시도 성공 (MSW 요청 카운트)
 - [ ] `sse/client.ts` 재연결 테스트: 에러 → 새 티켓 발급 호출 → `lastEventId` 쿼리 포함 확인 (EventSource mock)
 - [ ] `positionBatcher` fake timers 테스트: 200ms 내 5회 이동 → 요청 1회, 마지막 위치만
-- [ ] `endpoints.ts` 항목 수 36 = api 모듈 export 함수 수 (테스트)
+- [ ] `endpoints.ts` 항목 수 37 = api 모듈 export 함수 수 (테스트)
 
 ---
 
@@ -128,7 +128,7 @@
 
 **만들 것**
 - `src/mocks/data/` — 고정 시드 데이터: 사용자 21명(본인 + 20), 맵 `main` 40×30, DM 대화 3개, 그룹 2개
-- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **SSE 티켓을 제외한 전체**(35개). 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
+- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **SSE 티켓을 제외한 전체**(36개). 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
 - `src/mocks/browser.ts` — `VITE_MOCK=true`일 때만 워커 시작. `/api/v1/sse`로 시작하는 요청은 MSW가 건드리지 않고 통과(bypass)시켜 Vite proxy → Express로 간다
 - `src/mocks/sse-server.ts` — Express, 포트 5174
     - `POST /api/v1/sse/ticket` → 30초 유효 **1회용** 티켓 발급 (MSW와 상태를 공유할 수 없으므로 티켓은 Express가 발급·검증한다)
@@ -139,7 +139,7 @@
 
 **완료 조건**
 - [ ] `pnpm dev:sse` 실행 후 `curl -X POST localhost:5174/api/v1/sse/ticket`로 티켓 발급 → `curl -N "localhost:5174/api/v1/sse?ticket=…"`로 스트림 확인 → 같은 티켓 재사용 시 `401`
-- [ ] MSW 핸들러 35개 + Express 티켓 1개 = `endpoints.ts` 36개 (테스트로 자동 검사)
+- [ ] MSW 핸들러 36개 + Express 티켓 1개 = `endpoints.ts` 37개 (테스트로 자동 검사)
 
 ---
 
@@ -155,7 +155,7 @@
 - `src/game/render/characters.ts` — **플레이스홀더**: 16×32 색 사각형 + 머리 위 닉네임. 닉네임은 Canvas `fillText`로 그린다 (말풍선이 아니므로 허용). 최종 닉네임 렌더 방식은 12단계 전에 ARCHITECTURE 2장에 확정
 - `src/game/sync/interpolation.ts` — 원격 캐릭터 200ms 선형 보간
 - `src/game/engine/camera.ts` — 내 캐릭터 중심, 맵 경계 클램프, 줌 2x
-- SSE 핸들러 `world.snapshot`, `world.positions`, `presence.joined/left` → `worldStore` 갱신 (3단계 껍데기에 로직 채움). `world.positions`의 본인 항목 처리는 선행 결정 참조
+- SSE 핸들러 `world.snapshot`, `world.positions`, `presence.joined/left` → `worldStore` 갱신 (3단계 껍데기에 로직 채움). `world.positions`의 본인 항목은 무시한다 (API_CONTRACT 3.3)
 
 **완료 조건 (= Phase 1 목표)**
 - [ ] `pnpm dev` → 로그인 페이지 → `DEMO-0000-0000` 입력 → 월드 진입
@@ -189,6 +189,7 @@
 | 2026-09-29 | 1.0 작성. Phase 1을 5단계로 분할, 1차 목표는 Mock 월드 화면 |
 | 2026-09-29 | 1.1: 스택을 2026-09 npm 최신 메이저로 확정 (React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, zod 4, MSW 3, Express 5, ESLint 10). 기존 템플릿은 다운그레이드하지 않고 갱신 |
 | 2026-09-29 | 1.1: `exactOptionalPropertyTypes` 제외, domain 경계는 AST 셀렉터, refresh 단일 진행, `positionBatcher`는 `game/sync/`, SSE 티켓 발급·검증은 Express mock, 선행 결정 표 신설 |
+| 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 
 ---
 

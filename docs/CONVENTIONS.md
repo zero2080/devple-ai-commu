@@ -1,6 +1,6 @@
 # CONVENTIONS — 개발 규칙
 
-> 문서 버전: 1.2 (2026-09-29, 스택 버전·domain import 규칙·refresh 동시성 반영)
+> 문서 버전: 1.3 (2026-09-29, 문서 동기화 표에 ROADMAP 추가)
 > 상태: 확정
 > 적용 범위: 프론트엔드 저장소 전체. AI(Claude)와 사람 모두 동일하게 따른다.
 
@@ -143,6 +143,7 @@ Refs: #이슈번호
 | 타입·불변 조건 | DOMAIN.md → `domain/types.ts` |
 | 엔드포인트·이벤트·에러 | API_CONTRACT.md → `mocks/` |
 | 규칙 | CONVENTIONS.md |
+| 단계·완료 조건 변경 | ROADMAP.md |
 
 - 문서는 코드와 같은 PR에서 수정. 문서 버전 상단 표기 갱신
 - 결정 사항은 각 문서의 "결정 이력" 표에 날짜와 함께 추가
@@ -152,3 +153,4 @@ Refs: #이슈번호
 | 날짜 | 결정 |
 |---|---|
 | 2026-09-29 | 1.2: 스택을 ROADMAP 1단계 표(React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, MSW 3, ESLint 10, Node 24)에 맞춤. `domain/`은 같은 폴더 상대 import만 허용. `exactOptionalPropertyTypes` 미사용 |
+| 2026-09-29 | 1.3: 11장 문서 동기화 표에 ROADMAP.md 행 추가 |

@@ -74,6 +74,7 @@
 - ❌ 캐릭터가 겹치는 상태를 허용하거나, 막혔을 때 이동을 멈추는 구현 (경로 재계산이 맞다)
 - ❌ 클라이언트가 스폰 좌표를 가정 (초기 위치는 `world.snapshot`에서)
 - ❌ `world.positions` 이벤트를 재전송 버퍼 대상으로 가정
+- ❌ `world.positions`의 본인 항목으로 내 위치 보정 (보정은 `PUT /me/position` 응답으로만)
 - ❌ EventSource 자동 재연결에 의존 (1회용 티켓이라 401로 실패함)
 - ❌ `navigator.sendBeacon`으로 위치 전송 (PUT·헤더 불가) → `fetch keepalive`
 - ❌ DM 목록·히스토리를 Zustand와 Query 캐시에 이중 저장
@@ -81,5 +82,5 @@
 
 ## 현재 상태
 
-- 문서: PRD·DOMAIN·API_CONTRACT 1.1, ARCHITECTURE·CONVENTIONS 1.2, ROADMAP 1.1 (2026-09-29)
+- 문서: PRD·DOMAIN·API_CONTRACT 1.2, ARCHITECTURE·CONVENTIONS 1.3, ROADMAP 1.2 (2026-09-29, 선행 결정 전부 해소)
 - 코드: Vite 템플릿만 있음 (React 19, Vite 8, TS 6, oxlint, npm). `docs/ROADMAP.md` 1단계에서 규칙에 맞게 갱신·정리하는 것부터 시작. 1차 목표는 Mock만으로 실행되는 월드 화면

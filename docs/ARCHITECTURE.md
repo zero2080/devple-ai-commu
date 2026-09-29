@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.2 (2026-09-29, position batcher 위치·isOccupied 시그니처·refresh 동시성 정정)
+> 문서 버전: 1.3 (2026-09-29, seq=Date.now()·positions 본인 무시·채팅 포커스·Mock 티켓)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -79,6 +79,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 경로 탐색: **A\*** (4방향, 맨해튼 휴리스틱), `game/engine/pathfinding.ts`
 - 목적지가 충돌 타일이면 가장 가까운 통행 가능 타일로 대체
 - 이동 중 키 입력이 들어오면 자동 이동 취소
+- 채팅 입력창에 포커스가 있으면 키보드 이동 비활성. `Enter`로 입력창 포커스, `Esc`로 캔버스 복귀. 클릭/터치 이동은 항상 가능 (PRD 5.3)
 - 이동 속도: 타일당 150ms (약 6.7타일/초) — 키/클릭/터치 공통
 
 ### 3.2 로컬 (클라이언트 예측)
@@ -98,14 +99,14 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 ### 3.3 서버로 전송 (배칭)
 - 위치를 **200ms 주기**로 모아 REST 전송 (확정값, `game/sync/positionBatcher.ts`). 위치가 바뀌지 않았으면 전송 안 함
 - 페이로드는 최종 위치 + 방향만 (중간 경로는 보내지 않음)
-- `PUT /me/position { mapId, x, y, dir, seq }` — `seq`는 단조 증가, 서버는 오래된 seq 무시
+- `PUT /me/position { mapId, x, y, dir, seq }` — `seq`는 클라이언트가 `Date.now()` 밀리초 정수로 생성 (단조 증가, 다중 탭이 같은 시계를 공유). 서버는 사용자 단위 마지막 인정 seq보다 작거나 같으면 204로 무시
 - 이동 중 페이지 이탈 시(`pagehide`) `fetch(url, { method: 'PUT', keepalive: true, headers: { Authorization } })`로 마지막 위치 전송. `navigator.sendBeacon`은 POST 전용이고 커스텀 헤더를 못 붙여 사용 불가 (정확도 높음, 표준 제약)
 
 ### 3.4 서버 → 다른 클라이언트
 - 서버는 **200ms 틱**마다 변경된 위치를 하나의 SSE 이벤트 `world.positions`로 묶어 보냄
 - 페이로드: `{ mapId, positions: [{ userId, x, y, dir }] }` — 변경된 사용자만
 - 클라이언트는 원격 캐릭터를 목표 좌표로 **선형 보간**(200ms) 하여 끊김 없이 표시
-- 서버가 보낸 내 위치와 로컬 예측이 다르면 서버 값으로 보정 (Reconciliation)
+- `world.positions`에는 본인 항목도 포함되지만 **클라이언트는 무시**한다. 내 위치 보정은 `PUT /me/position` 응답으로만: 204는 수락, 409는 `details.position`으로 즉시 스냅 후 경로 재계산 (API_CONTRACT 2.2·3.3)
 
 ### 3.5 자리비움 판정
 - 키보드·마우스·터치 입력이 **5분간** 없으면 `PUT /me/presence { state: 'away' }`, 입력이 다시 들어오면 `online`
@@ -205,7 +206,7 @@ src/
 
 ## 9. Mock / 개발 환경
 
-- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로
+- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, `POST /sse/ticket`은 Express mock이 발급·검증한다 (MSW와 티켓 상태를 공유할 수 없음). Vite proxy가 `/api/v1/sse` 접두 요청만 Express로 넘긴다
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -228,3 +229,4 @@ src/
 | 2026-09-29 | 교차 검토: SSE 재연결은 수동 + `lastEventId` 쿼리, 이탈 시 `fetch keepalive`, 자리비움 5분, 서버 목록은 Query 캐시 단일 저장 |
 | 2026-09-29 | 예측/서버 불일치는 "즉시 보정 + 경로 재계산"으로 처리 (한 칸 튕김 허용, 부드러운 되감기 안 함) |
 | 2026-09-29 | 1.2: position batcher는 `game/sync/` 소속(1장 그림 정정), `isOccupied`는 presences를 인자로 받는 순수 함수, refresh 단일 진행, `transport/` 하위 구조를 CONVENTIONS와 일치 |
+| 2026-09-29 | 1.3: `seq`는 `Date.now()`, `world.positions` 본인 항목 무시(보정은 PUT 응답으로만), 채팅 입력 포커스 규칙, Mock 티켓은 Express |
