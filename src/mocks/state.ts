@@ -9,7 +9,6 @@ import type {
   Notice,
   Position,
   Presence,
-  PresenceState,
   SignupRequest,
   User,
 } from '@/domain';
@@ -36,10 +35,8 @@ export interface MockState {
   users: User[];
   signups: SignupRequest[];
   presences: Presence[];
+  /** MSW 쪽 공개 메시지 position용 고정값. 실제 위치·점유는 Express mock이 가진다 (7단계에서 chat도 이관) */
   myPosition: Position;
-  myPositionSeq: number;
-  myPositionAt: number;
-  myPresence: PresenceState;
   dmConversations: DmConversation[];
   dmMessages: DmMessage[];
   groups: Group[];
@@ -70,9 +67,6 @@ export function createInitialState(): MockState {
     ],
     presences: createInitialPresences(MAIN_MAP),
     myPosition: { mapId: MAIN_MAP.id, x: MAIN_MAP.spawn.x, y: MAIN_MAP.spawn.y, dir: 'down' },
-    myPositionSeq: 0,
-    myPositionAt: 0,
-    myPresence: 'online',
     dmConversations: clone(SEED_DM_CONVERSATIONS),
     dmMessages: clone(SEED_DM_MESSAGES),
     groups: clone(SEED_GROUPS),

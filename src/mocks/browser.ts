@@ -1,7 +1,8 @@
 // MSW 워커. VITE_MOCK=true일 때만 main.tsx가 startMockWorker()를 호출한다.
-// /api/v1/sse 접두 요청(스트림·티켓)은 MSW가 건드리지 않고 통과시켜 Vite proxy → Express mock으로 보낸다.
+// Express mock 경로(SSE·티켓·월드 REST)는 MSW가 건드리지 않고 통과시켜 Vite proxy → Express로 보낸다.
 import { setupWorker } from 'msw/browser';
 
+import { EXPRESS_MOCK_PATH_PREFIXES } from './data/config.ts';
 import { handlers } from './handlers/index.ts';
 
 export const worker = setupWorker(...handlers);
@@ -25,8 +26,10 @@ export function isApiRequest(url: string): boolean {
   return new URL(url, 'http://localhost').pathname.startsWith('/api/');
 }
 
-export function isSseMockRequest(url: string): boolean {
-  return new URL(url, 'http://localhost').pathname.startsWith('/api/v1/sse');
+/** Express mock이 담당하는 경로 (SSE·티켓·월드 REST) */
+export function isExpressMockRequest(url: string): boolean {
+  const pathname = new URL(url, 'http://localhost').pathname;
+  return EXPRESS_MOCK_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 export async function startMockWorker(): Promise<void> {
@@ -35,7 +38,7 @@ export async function startMockWorker(): Promise<void> {
     onUnhandledFrame: ({ frame, defaults }) => {
       const url = requestUrlOf(frame);
       // 계약 경로(/api/)만 경고한다. 문서·정적 자산·SSE(Express mock)는 조용히 통과
-      if (url === null || !isApiRequest(url) || isSseMockRequest(url)) {
+      if (url === null || !isApiRequest(url) || isExpressMockRequest(url)) {
         return;
       }
       defaults.warn();

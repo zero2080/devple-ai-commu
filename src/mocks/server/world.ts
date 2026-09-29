@@ -85,15 +85,44 @@ export class WorldSim {
     return deltas;
   }
 
-  /** 외부(트리거·검증)에서 위치를 강제로 옮길 때 */
+  /** 외부(트리거·검증)에서 위치를 강제로 옮길 때. 빈 타일에만 */
   place(userId: string, x: number, y: number, dir: Direction): boolean {
+    return this.moveTo(userId, x, y, dir) !== 'blocked';
+  }
+
+  /**
+   * 실제 사용자의 이동 요청 (PUT /me/position). 같은 타일이면 방향만 바꾼다.
+   * 점유 판정은 이 메서드 안에서 원자적으로 끝난다 (같은 타일 동시 요청은 먼저 온 쪽이 이김)
+   */
+  moveTo(userId: string, x: number, y: number, dir: Direction): 'moved' | 'turned' | 'blocked' {
     const presence = this.presences.find((p) => p.userId === userId);
-    if (presence === undefined || !this.isFree(x, y)) {
-      return false;
+    if (presence === undefined) {
+      return 'blocked';
+    }
+    if (presence.position.x === x && presence.position.y === y) {
+      presence.position = { ...presence.position, dir };
+      return 'turned';
+    }
+    if (!this.isFree(x, y)) {
+      return 'blocked';
     }
     this.occupied.delete(key(presence.position.x, presence.position.y));
     this.occupied.add(key(x, y));
     presence.position = { ...presence.position, x, y, dir };
+    return 'moved';
+  }
+
+  find(userId: string): Presence | undefined {
+    return this.presences.find((p) => p.userId === userId);
+  }
+
+  setState(userId: string, state: Presence['state'], now: number): boolean {
+    const presence = this.find(userId);
+    if (presence === undefined) {
+      return false;
+    }
+    presence.state = state;
+    presence.updatedAt = now;
     return true;
   }
 }
