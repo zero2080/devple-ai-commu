@@ -169,7 +169,7 @@
 
 ## Phase 2 — 상호작용
 
-### 6단계: 내 캐릭터 이동 `[ ]`
+### 6단계: 내 캐릭터 이동 `[x]`
 
 **만들 것**
 - `src/domain/pathfinding.ts` — A\* 4방향·맨해튼 휴리스틱 `findPath(grid, from, to)`. 차단 = 정적 `collision` + 동적 점유(`positions`, 본인 제외). 목적지가 벽이면 가장 가까운 통행 가능 타일로 대체, 목적지가 점유면 경로의 마지막 타일을 제외해 **직전 타일까지** (ARCHITECTURE 3.1·3.2.1)
@@ -180,10 +180,10 @@
 - WorldGame 연결: 카메라는 예측 픽셀 추종, 캔버스 클릭 → `screenToWorld` → 타일 → 경로, `PositionBatcher` 시작(`ServerConfig.positionBatchMs`), 409 `collision|too_far|occupied` → `details.position`으로 즉시 스냅 + 경로 재계산 (ARCHITECTURE 11장 "한 칸 튕김 허용")
 - Express mock: `PUT /me/position`을 실제 월드 상태로 검증(collision → `max(3, elapsed/100)` → 선착순 점유), 내 이동을 `world.positions`에 본인 포함으로 방송
 
-**완료 조건**
-- [ ] pathfinding 테스트: 직선, 우회, 도달 불가 → 가장 가까운 타일, 목적지 점유 → 직전 타일, 경계값(시작=목적지, 맵 밖)
-- [ ] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
-- [ ] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
+**완료 조건** — 검증 자산: `e2e/phase2-move.spec.ts`
+- [x] pathfinding 테스트: 직선, 우회, 도달 불가 → 가장 가까운 타일, 목적지 점유 → 직전 타일, 경계값(시작=목적지, 맵 밖)
+- [x] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
+- [x] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
 
 ### 7~12단계 (6단계 완료 후 상세화)
 
