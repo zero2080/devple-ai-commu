@@ -32,7 +32,7 @@
 
 ## Phase 1 — Mock으로 실행 (1차 목표)
 
-### 1단계: 프로젝트 초기화 `[ ]`
+### 1단계: 프로젝트 초기화 `[x]`
 
 현재 저장소에는 Vite 템플릿(React 19, Vite 8, TS 6, oxlint, npm)이 들어 있다. 새로 만들지 않고 **아래 정의에 맞게 갱신·정리**한다.
 
@@ -74,10 +74,10 @@
 | `*.test.*`, `src/mocks/**`, `src/test/**` | 경계 규칙 해제 | override |
 
 **완료 조건**
-- [ ] `pnpm install` 성공, `package-lock.json` 없음
-- [ ] `pnpm lint`, `pnpm typecheck` 통과 (빈 `App` 상태)
-- [ ] `src/game/x.ts`에 `import React from 'react'`를 넣으면 lint가 **실패**
-- [ ] `src/domain/x.ts`에 `import { z } from 'zod'`를 넣으면 lint가 **실패**하고, `import { a } from './y'`는 통과
+- [x] `pnpm install` 성공, `package-lock.json` 없음
+- [x] `pnpm lint`, `pnpm typecheck` 통과 (빈 `App` 상태)
+- [x] `src/game/x.ts`에 `import React from 'react'`를 넣으면 lint가 **실패**
+- [x] `src/domain/x.ts`에 `import { z } from 'zod'`를 넣으면 lint가 **실패**하고, `import { a } from './y'`는 통과
 
 ---
 
