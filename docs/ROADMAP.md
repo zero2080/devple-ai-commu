@@ -101,7 +101,7 @@
 
 ---
 
-### 3단계: Transport 뼈대 `[ ]`
+### 3단계: Transport 뼈대 `[x]`
 
 **만들 것**
 - `src/transport/http.ts` — fetch 래퍼: base URL, JSON, Bearer 첨부, `401 AUTH_REQUIRED` 시 `POST /auth/refresh` 후 1회 재시도, `ApiError { code, message, details }`
@@ -116,11 +116,11 @@
 - `src/game/sync/positionBatcher.ts` — 200ms 배칭, 변경 없으면 미전송, `seq`는 `Date.now()` 밀리초 정수(API_CONTRACT 2.2), `pagehide` 시 `fetch keepalive`. 전송은 `transport/api/me.ts`를 호출
 
 **완료 조건**
-- [ ] `http.ts` 401 재시도 테스트 (MSW)
-- [ ] `http.ts` 동시 401 3건 → refresh 요청 1회, 3건 모두 재시도 성공 (MSW 요청 카운트)
-- [ ] `sse/client.ts` 재연결 테스트: 에러 → 새 티켓 발급 호출 → `lastEventId` 쿼리 포함 확인 (EventSource mock)
-- [ ] `positionBatcher` fake timers 테스트: 200ms 내 5회 이동 → 요청 1회, 마지막 위치만
-- [ ] `endpoints.ts` 항목 수 37 = api 모듈 export 함수 수 (테스트)
+- [x] `http.ts` 401 재시도 테스트 (MSW)
+- [x] `http.ts` 동시 401 3건 → refresh 요청 1회, 3건 모두 재시도 성공 (MSW 요청 카운트)
+- [x] `sse/client.ts` 재연결 테스트: 에러 → 새 티켓 발급 호출 → `lastEventId` 쿼리 포함 확인 (EventSource mock)
+- [x] `positionBatcher` fake timers 테스트: 200ms 내 5회 이동 → 요청 1회, 마지막 위치만
+- [x] `endpoints.ts` 항목 수 37 = api 모듈 export 함수 수 (테스트)
 
 ---
 
