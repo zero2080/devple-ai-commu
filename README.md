@@ -1,32 +1,62 @@
-# React + TypeScript + Vite
+# devple-ai-commu
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+90년대 2D 도트 아트 가상공간에서 회원들이 캐릭터로 이동하며 근접 대화·DM·그룹 채팅을 하는 폐쇄형 웹 서비스의 **프론트엔드**(React + Vite + TypeScript SPA)입니다. 백엔드는 `docs/API_CONTRACT.md`를 기준으로 별도 구현됩니다.
 
-Currently, two official plugins are available:
+## 문서
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| 질문                                          | 문서                   |
+| --------------------------------------------- | ---------------------- |
+| 이 기능이 범위 안인가? 어떻게 동작해야 하나?  | `docs/PRD.md`          |
+| 어느 레이어에 코드를 두나? 통신·렌더 구조는?  | `docs/ARCHITECTURE.md` |
+| 타입 정의, 필드 의미, 불변 조건은?            | `docs/DOMAIN.md`       |
+| API 경로, 요청/응답, SSE 이벤트, 에러 코드는? | `docs/API_CONTRACT.md` |
+| 네이밍, 디렉토리, 테스트, 커밋 규칙은?        | `docs/CONVENTIONS.md`  |
+| 지금 무엇을 만들 차례인가? 완료 조건은?       | `docs/ROADMAP.md`      |
 
-## React Compiler
+문서와 코드가 다르면 문서가 기준입니다. AI 작업 지침은 `CLAUDE.md`에 있습니다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 요구 사항
 
-## Expanding the Oxlint configuration
+- Node 24 (`.nvmrc`)
+- pnpm 12 — `corepack enable` 후 `pnpm -v`로 확인 (`package.json`의 `packageManager` 필드가 버전을 고정)
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 시작하기
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+pnpm install
+cp .env.example .env
+pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
+
+## 스크립트
+
+| 명령                                | 설명                                       |
+| ----------------------------------- | ------------------------------------------ |
+| `pnpm dev`                          | 웹 + Mock SSE 서버 동시 실행               |
+| `pnpm dev:web` / `pnpm dev:sse`     | 각각 따로 실행                             |
+| `pnpm lint`                         | ESLint (타입 인식 규칙 + 레이어 경계 규칙) |
+| `pnpm typecheck`                    | `tsc -b`                                   |
+| `pnpm test` / `pnpm test:coverage`  | Vitest (`domain/` 커버리지 100% 요구)      |
+| `pnpm format` / `pnpm format:check` | Prettier                                   |
+| `pnpm build`                        | 타입 검사 후 프로덕션 빌드                 |
+
+## 구조
+
+`docs/ARCHITECTURE.md` 8장 기준입니다.
+
+```
+src/
+├── app/            # 라우팅, 프로바이더, 진입점
+├── pages/          # 라우트 단위 페이지
+├── features/       # 기능 단위 UI + 훅
+├── game/           # Canvas 엔진 (React 의존 없음)
+├── domain/         # 순수 함수·타입
+├── transport/      # http, sse, api/*.ts, schemas/
+├── store/          # zustand 스토어
+├── mocks/          # MSW 핸들러 + SSE mock 서버
+└── shared/         # 공용 컴포넌트, 유틸
+```
+
+레이어 경계는 `eslint.config.js`가 강제합니다. `game/`은 React를, `domain/`은 같은 폴더 밖의 어떤 것도 import할 수 없습니다.
