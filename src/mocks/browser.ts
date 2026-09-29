@@ -6,14 +6,23 @@ import { handlers } from './handlers/index.ts';
 
 export const worker = setupWorker(...handlers);
 
+/** msw 3 NetworkFrame: { protocol: 'http', data: { request } } */
 function requestUrlOf(frame: unknown): string | null {
-  if (typeof frame === 'object' && frame !== null && 'request' in frame) {
-    const request = frame.request;
+  if (typeof frame !== 'object' || frame === null || !('data' in frame)) {
+    return null;
+  }
+  const data = frame.data;
+  if (typeof data === 'object' && data !== null && 'request' in data) {
+    const request = data.request;
     if (request instanceof Request) {
       return request.url;
     }
   }
   return null;
+}
+
+export function isApiRequest(url: string): boolean {
+  return new URL(url, 'http://localhost').pathname.startsWith('/api/');
 }
 
 export function isSseMockRequest(url: string): boolean {
@@ -25,8 +34,9 @@ export async function startMockWorker(): Promise<void> {
     serviceWorker: { url: '/mockServiceWorker.js' },
     onUnhandledFrame: ({ frame, defaults }) => {
       const url = requestUrlOf(frame);
-      if (url !== null && isSseMockRequest(url)) {
-        return; // Express mock으로 통과
+      // 계약 경로(/api/)만 경고한다. 문서·정적 자산·SSE(Express mock)는 조용히 통과
+      if (url === null || !isApiRequest(url) || isSseMockRequest(url)) {
+        return;
       }
       defaults.warn();
     },

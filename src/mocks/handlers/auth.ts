@@ -15,8 +15,9 @@ function issueAccessToken(): string {
   return state.session.accessToken;
 }
 
+/** 계약은 Path=/api/v1/auth지만 MSW는 document.cookie로 요청 쿠키를 읽으므로 mock에서는 Path=/ (새로고침 후 세션 복구용) */
 function refreshCookieHeader(value: string, maxAgeSec: number): string {
-  return `${REFRESH_COOKIE}=${value}; Path=/api/v1/auth; Max-Age=${String(maxAgeSec)}; SameSite=Strict`;
+  return `${REFRESH_COOKIE}=${value}; Path=/; Max-Age=${String(maxAgeSec)}; SameSite=Strict`;
 }
 
 function isNicknameTaken(nickname: string): boolean {
