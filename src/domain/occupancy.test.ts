@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { isOccupied, occupantAt } from './occupancy';
-
 import type { Position } from './types';
 
 function pos(x: number, y: number): Position {
