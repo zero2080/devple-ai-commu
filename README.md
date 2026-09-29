@@ -30,6 +30,8 @@ pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 
 Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
 
+Mock SSE 서버는 기본 5174 포트를 씁니다. 다른 개발 서버가 점유하고 있으면 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 Vite 프록시와 서버가 같은 값을 읽습니다. 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `GET /__mock/state`.
+
 ## 스크립트
 
 | 명령                                | 설명                                       |

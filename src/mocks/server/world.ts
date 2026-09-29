@@ -1,0 +1,99 @@
+// 가짜 접속자 랜덤 워크. 점유 규칙(타일당 1명)과 collision을 지킨다 (ROADMAP 4단계).
+import type { Direction, MapData, Presence } from '../../domain/types.ts';
+import { isBlocked } from '../data/map.ts';
+import { pick, type Rng } from '../data/rng.ts';
+
+export interface PositionDelta {
+  userId: string;
+  x: number;
+  y: number;
+  dir: Direction;
+}
+
+const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
+const STEP: Record<Direction, { dx: number; dy: number }> = {
+  up: { dx: 0, dy: -1 },
+  down: { dx: 0, dy: 1 },
+  left: { dx: -1, dy: 0 },
+  right: { dx: 1, dy: 0 },
+};
+
+function key(x: number, y: number): string {
+  return `${String(x)},${String(y)}`;
+}
+
+export interface WorldSimOptions {
+  /** 틱마다 이동을 시도할 확률 */
+  moveChance?: number;
+  /** 이동하지 않는 userId (본인 등) */
+  frozenUserIds?: readonly string[];
+}
+
+export class WorldSim {
+  readonly map: MapData;
+  readonly presences: Presence[];
+  private readonly rng: Rng;
+  private readonly occupied = new Set<string>();
+  private readonly moveChance: number;
+  private readonly frozen: Set<string>;
+
+  constructor(map: MapData, presences: Presence[], rng: Rng, options: WorldSimOptions = {}) {
+    this.map = map;
+    this.presences = presences;
+    this.rng = rng;
+    this.moveChance = options.moveChance ?? 0.35;
+    this.frozen = new Set(options.frozenUserIds ?? []);
+    for (const presence of presences) {
+      const k = key(presence.position.x, presence.position.y);
+      if (this.occupied.has(k)) {
+        throw new Error(`initial presences overlap at ${k}`);
+      }
+      this.occupied.add(k);
+    }
+  }
+
+  isFree(x: number, y: number): boolean {
+    return !isBlocked(this.map, x, y) && !this.occupied.has(key(x, y));
+  }
+
+  /** 한 틱 진행. 위치·방향이 바뀐 사용자만 돌려준다 (world.positions payload) */
+  tick(now: number): PositionDelta[] {
+    const deltas: PositionDelta[] = [];
+    for (const presence of this.presences) {
+      if (this.frozen.has(presence.userId) || presence.state === 'away') {
+        continue;
+      }
+      if (this.rng() >= this.moveChance) {
+        continue;
+      }
+      const dir = pick(this.rng, DIRECTIONS);
+      const { x, y } = presence.position;
+      const nx = x + STEP[dir].dx;
+      const ny = y + STEP[dir].dy;
+      if (this.isFree(nx, ny)) {
+        this.occupied.delete(key(x, y));
+        this.occupied.add(key(nx, ny));
+        presence.position = { ...presence.position, x: nx, y: ny, dir };
+      } else if (presence.position.dir !== dir) {
+        presence.position = { ...presence.position, dir }; // 막히면 방향만 (벽에 부딪힌 것과 동일)
+      } else {
+        continue;
+      }
+      presence.updatedAt = now;
+      deltas.push({ userId: presence.userId, x: presence.position.x, y: presence.position.y, dir });
+    }
+    return deltas;
+  }
+
+  /** 외부(트리거·검증)에서 위치를 강제로 옮길 때 */
+  place(userId: string, x: number, y: number, dir: Direction): boolean {
+    const presence = this.presences.find((p) => p.userId === userId);
+    if (presence === undefined || !this.isFree(x, y)) {
+      return false;
+    }
+    this.occupied.delete(key(presence.position.x, presence.position.y));
+    this.occupied.add(key(x, y));
+    presence.position = { ...presence.position, x, y, dir };
+    return true;
+  }
+}
