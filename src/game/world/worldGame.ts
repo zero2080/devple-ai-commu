@@ -1,9 +1,10 @@
-// 월드 화면 오케스트레이터 (ROADMAP 5단계): 루프·카메라·보간·렌더를 묶는다. React 무관.
+// 월드 화면 오케스트레이터 (ROADMAP 5·6단계): 루프·카메라·보간·내 캐릭터 예측 이동·렌더를 묶는다. React 무관.
 // 스토어는 직접 import하지 않고 WorldSource로 읽는다 (테스트 용이, 60Hz 읽기는 getState() 경로).
-import type { MapData, Presence } from '@/domain';
+import type { Direction, MapData, Position, Presence } from '@/domain';
 
 import { TILE_SIZE } from '../constants';
-import { computeCamera, type Camera } from '../engine/camera';
+import { LocalPlayer } from './localPlayer';
+import { computeCamera, screenToWorld, type Camera } from '../engine/camera';
 import { GameLoop, type LoopOptions } from '../engine/loop';
 import { renderCharacters, type DrawableCharacter } from '../render/characters';
 import { createTilemapCache, renderTilemap, type TilemapCache } from '../render/tilemap';
@@ -11,8 +12,10 @@ import { RemoteInterpolator, tileToPixel } from '../sync/interpolation';
 
 export interface WorldSource {
   presences: () => ReadonlyMap<string, Presence>;
+  positions: () => ReadonlyMap<string, Position>;
   myUserId: () => string | null;
   revision: () => number;
+  snapshotRevision: () => number;
   zoom: () => number;
 }
 
@@ -20,6 +23,8 @@ export interface WorldGameOptions {
   canvas: HTMLCanvasElement;
   map: MapData;
   source: WorldSource;
+  /** 내 캐릭터가 타일에 도착하거나 방향을 바꿀 때 (배처 push·스토어 갱신) */
+  onMyMove?: (position: Position) => void;
   now?: () => number;
   loop?: LoopOptions;
   createTilemap?: (map: MapData) => TilemapCache;
@@ -34,11 +39,14 @@ export class WorldGame {
   private readonly loop: GameLoop;
   private readonly tilemap: TilemapCache;
   private readonly interpolator = new RemoteInterpolator();
+  private readonly player: LocalPlayer;
   private readonly drawables = new Map<string, DrawableCharacter>();
   private lastRevision = -1;
+  private lastSnapshotRevision = -1;
   private camera: Camera = { originX: 0, originY: 0, zoom: 2 };
   private widthPx = 0;
   private heightPx = 0;
+  private lastNow = 0;
 
   constructor(options: WorldGameOptions) {
     this.canvas = options.canvas;
@@ -51,13 +59,20 @@ export class WorldGame {
     this.source = options.source;
     this.now = options.now ?? (() => performance.now());
     this.tilemap = (options.createTilemap ?? createTilemapCache)(options.map);
+    this.player = new LocalPlayer({
+      map: options.map,
+      mapId: options.map.id,
+      positions: () => this.source.positions(),
+      myUserId: () => this.source.myUserId(),
+      onArrive: (position) => options.onMyMove?.(position),
+    });
     this.loop = new GameLoop(
       {
         update: (_dt, nowMs) => {
           this.update(nowMs);
         },
-        render: () => {
-          this.render();
+        render: (_alpha, nowMs) => {
+          this.render(nowMs);
         },
       },
       options.loop,
@@ -71,6 +86,11 @@ export class WorldGame {
 
   get isRunning(): boolean {
     return this.loop.isRunning;
+  }
+
+  /** 클라이언트 예측 위치 (스폰 전이면 null) */
+  get myPosition(): Position | null {
+    return this.player.isSpawned ? this.player.position : null;
   }
 
   start(): void {
@@ -90,33 +110,59 @@ export class WorldGame {
     this.ctx.imageSmoothingEnabled = false;
   }
 
+  /** 키 입력 (InputController → 여기) */
+  setHeldDirection(direction: Direction | null): void {
+    this.player.setHeldDirection(direction);
+  }
+
+  /** 캔버스 클릭/탭 (CSS px) → 타일 → 경로 탐색 */
+  moveToScreen(screenX: number, screenY: number): void {
+    const world = screenToWorld(this.camera, { x: screenX, y: screenY });
+    this.player.moveTo(
+      { x: Math.floor(world.x / TILE_SIZE), y: Math.floor(world.y / TILE_SIZE) },
+      this.lastNow,
+    );
+  }
+
+  /** 409 보정: 서버가 인정한 위치로 즉시 스냅 + 경로 재계산 */
+  snapTo(position: Position): void {
+    this.player.snapTo(position, this.lastNow);
+  }
+
   /** 테스트·디버그용: 한 프레임을 즉시 처리 */
   step(nowMs: number = this.now()): void {
     this.update(nowMs);
-    this.render();
+    this.render(nowMs);
   }
 
   private update(nowMs: number): void {
+    this.lastNow = nowMs;
+    const snapshotRevision = this.source.snapshotRevision();
+    if (snapshotRevision !== this.lastSnapshotRevision) {
+      this.lastSnapshotRevision = snapshotRevision;
+      const myUserId = this.source.myUserId();
+      const mine = myUserId === null ? undefined : this.source.presences().get(myUserId);
+      if (mine !== undefined) {
+        // 초기 위치는 스냅샷의 본인 Presence에서. 재연결 스냅샷은 서버 기준으로 보정 (한 칸 튕김 허용)
+        if (this.player.isSpawned) {
+          this.player.snapTo(mine.position, nowMs);
+        } else {
+          this.player.spawn(mine.position);
+        }
+      }
+    }
     const revision = this.source.revision();
     if (revision !== this.lastRevision) {
       this.lastRevision = revision;
       this.interpolator.sync(this.source.presences(), nowMs, this.source.myUserId());
     }
     this.interpolator.update(nowMs);
+    this.player.update(nowMs);
   }
 
-  private myPixel(): { x: number; y: number } | null {
-    const myUserId = this.source.myUserId();
-    if (myUserId === null) {
-      return null;
-    }
-    const me = this.source.presences().get(myUserId);
-    return me === undefined ? null : tileToPixel(me.position.x, me.position.y);
-  }
-
-  private render(): void {
+  private render(nowMs: number): void {
     const zoom = this.source.zoom();
-    const mine = this.myPixel();
+    const mine = this.player.isSpawned ? this.player.renderPixel(nowMs) : null;
     const center =
       mine === null
         ? { x: (this.map.width * TILE_SIZE) / 2, y: (this.map.height * TILE_SIZE) / 2 }
@@ -135,11 +181,11 @@ export class WorldGame {
     ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
     ctx.imageSmoothingEnabled = false;
     renderTilemap(ctx, this.tilemap, this.camera);
-    this.collectDrawables();
+    this.collectDrawables(nowMs);
     renderCharacters(ctx, this.drawables.values(), this.camera);
   }
 
-  private collectDrawables(): void {
+  private collectDrawables(nowMs: number): void {
     const presences = this.source.presences();
     const myUserId = this.source.myUserId();
     for (const userId of this.drawables.keys()) {
@@ -150,7 +196,9 @@ export class WorldGame {
     for (const [userId, presence] of presences) {
       const isMe = userId === myUserId;
       const pixel = isMe
-        ? tileToPixel(presence.position.x, presence.position.y)
+        ? this.player.isSpawned
+          ? this.player.renderPixel(nowMs)
+          : tileToPixel(presence.position.x, presence.position.y)
         : (this.interpolator.get(userId)?.renderPixel ??
           tileToPixel(presence.position.x, presence.position.y));
       const existing = this.drawables.get(userId);

@@ -112,6 +112,20 @@ export class WorldSim {
     return 'moved';
   }
 
+  /** 초기 배치로 되돌린다 (개발용 /__mock/reset). presences 배열 참조는 유지 */
+  replaceAll(next: readonly Presence[]): void {
+    this.occupied.clear();
+    this.presences.length = 0;
+    for (const presence of next) {
+      const k = key(presence.position.x, presence.position.y);
+      if (this.occupied.has(k)) {
+        throw new Error(`presences overlap at ${k}`);
+      }
+      this.occupied.add(k);
+      this.presences.push(presence);
+    }
+  }
+
   find(userId: string): Presence | undefined {
     return this.presences.find((p) => p.userId === userId);
   }

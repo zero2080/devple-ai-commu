@@ -186,3 +186,22 @@ describe('PUT /me/presence · GET /world/:mapId/presences', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe('/__mock/reset', () => {
+  it('월드를 초기 배치로 되돌리고 seq 기록을 비운다', async () => {
+    const res = await fetch(`${base}/__mock/reset`, { method: 'POST' });
+    expect(res.status).toBe(202);
+    expect(server.world.find(ME.id)?.position).toMatchObject({
+      x: MAIN_MAP.spawn.x,
+      y: MAIN_MAP.spawn.y,
+    });
+    const again = await put('/api/v1/me/position', {
+      mapId: 'main',
+      x: 21,
+      y: 15,
+      dir: 'right',
+      seq: 1,
+    });
+    expect(again.status).toBe(204); // seq 기록이 비었으므로 작은 seq도 수락
+  });
+});

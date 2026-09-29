@@ -246,6 +246,20 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     res.status(202).json({ disconnected: count });
   });
 
+  app.post('/__mock/reset', (_req, res) => {
+    // E2E 격리용: 월드를 초기 배치로, 위치 seq 기록·대기 중 방송을 비운다 (연결은 유지)
+    world.replaceAll(createInitialPresences(MAIN_MAP));
+    positionRecords.clear();
+    pendingDeltas.clear();
+    hub.broadcast('world.snapshot', {
+      mapId: MAIN_MAP.id,
+      presences: world.presences,
+      serverTime: now(),
+    });
+    log('world reset by trigger');
+    res.status(202).json({ presences: world.presences.length });
+  });
+
   app.get('/__mock/state', (_req, res) => {
     res.json({ clients: hub.size, presences: world.presences });
   });

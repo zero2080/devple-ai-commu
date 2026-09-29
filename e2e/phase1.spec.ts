@@ -3,6 +3,12 @@ import { expect, test, type Page } from '@playwright/test';
 
 const SSE_PORT = process.env.MOCK_SSE_PORT ?? '5199';
 
+test.beforeEach(async ({ request }) => {
+  // Mock 서버는 테스트 사이에 살아 있으므로 월드를 초기 배치로 되돌린다
+  const res = await request.post(`http://localhost:${SSE_PORT}/__mock/reset`);
+  if (!res.ok()) throw new Error('mock reset failed');
+});
+
 interface EsStats {
   created: number;
   open: number;
@@ -12,21 +18,6 @@ interface WorldSample {
   revision: number;
   sseState: string;
   positions: [string, number, number][];
-}
-
-declare global {
-  interface Window {
-    __esStats?: () => EsStats;
-    __devple?: {
-      worldStore: {
-        getState: () => {
-          revision: number;
-          sseState: string;
-          presences: Map<string, { userId: string; position: { x: number; y: number } }>;
-        };
-      };
-    };
-  }
 }
 
 async function sampleWorld(page: Page): Promise<WorldSample> {

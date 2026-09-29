@@ -1,8 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { App, exposeDebugHooks } from '@/app';
+import { App } from '@/app';
 import { restoreSession } from '@/features/auth';
+import { exposeDebugHooks } from '@/shared/debug';
 import { authTokenProvider } from '@/store/authStore';
 import { configureHttp } from '@/transport/http';
 
