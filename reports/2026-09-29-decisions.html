@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 결정 사항</title>
+<meta name="description" content="devple-ai-commu Phase 1 진행 중 사용자 결정이 필요한 항목 정리">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+
+<h1>Phase 1 결정 필요 사항</h1>
+<p class="meta">devple-ai-commu · 2026-09-29 · 작성: Claude Code (Fable 5.1) · 기준 커밋 <code>4cb14b0</code> · 함께 보기: <a href="2026-09-29-phase1-result.html">작업 결과 리포트</a></p>
+<p>Phase 1(ROADMAP 1~5단계)을 진행하며 <strong>사용자 결정이 필요해 잠정 처리한 항목</strong>을 우선순위 순으로 정리했어요. 각 항목에 현재 상태(코드가 지금 어떻게 동작하는지), 선택지, 추천안을 적었어요. 결정되면 문서(ROADMAP 선행 결정 표 방식)에 반영하고 코드를 맞추면 돼요.</p>
+
+<h2>높음 — 다음 단계(6단계) 전에 결정</h2>
+
+<div class="card">
+<h3><span class="badge high">높음</span>1. SSE 하트비트를 클라이언트가 관찰할 수 없어요 — 30초 무수신 감시가 꺼져 있어요</h3>
+<p><strong>현상.</strong> API_CONTRACT 3.1은 서버가 15초마다 SSE 주석 <code>: ping</code>을 보내고, ARCHITECTURE 4.1은 클라이언트가 30초 무수신이면 강제 재연결하도록 정해요. 그런데 브라우저 <code>EventSource</code> API는 주석 줄을 JS에 전달하지 않아요(스펙상 무시). 따라서 클라이언트는 하트비트를 볼 수 없고, 이대로 감시를 켜면 아무도 안 움직이는 조용한 월드에서 30초마다 오탐 재연결이 나요.</p>
+<p><strong>현재 처리.</strong> <code>SseClient</code>에 <code>idleTimeoutMs</code>를 구현했지만 기본값 0(끔)이에요. 테스트는 옵션을 켠 경우의 동작만 검증해요.</p>
+<table><tr><th>선택지</th><th>내용</th><th>영향</th></tr>
+<tr><td>A (추천)</td><td>하트비트를 관찰 가능한 이벤트로 바꿈: <code>event: system.heartbeat</code>, payload <code>{ serverTime }</code>, 15초, 재전송 버퍼 제외</td><td>API_CONTRACT 3.1·3.3·3.4, ARCHITECTURE 4.1, 핸들러 1개 추가, 감시 기본 30초로 켬</td></tr>
+<tr><td>B</td><td>주석 유지 + 감시 포기 (끊김은 onerror에만 의존)</td><td>프록시가 조용히 끊는 경우(half-open) 복구 불가</td></tr>
+<tr><td>C</td><td>주석 유지 + <code>fetch</code> 스트리밍으로 SSE를 직접 파싱하는 클라이언트로 교체</td><td>EventSource 포기, 구현 부담 큼</td></tr></table>
+</div>
+
+<div class="card">
+<h3><span class="badge high">높음</span>2. Mock 월드 상태가 MSW와 Express로 갈라져 있어요 — 6단계(내 캐릭터 이동)에서 충돌해요</h3>
+<p><strong>현상.</strong> ROADMAP 결정대로 REST는 브라우저 안 MSW, SSE는 Express가 담당해요. 그런데 <code>PUT /me/position</code>(MSW)과 가짜 접속자의 실시간 위치(Express)가 상태를 공유하지 않아서, 6단계에서 내 캐릭터가 움직이면 (1) MSW의 점유 검사는 초기 배치 기준이라 실제 가짜 접속자 위치와 어긋나고, (2) Express는 내 위치를 모른 채 가짜 접속자가 내 타일로 걸어 들어와요. 또 Express는 티켓에 사용자 바인딩이 없어 <code>world.snapshot</code>의 본인 Presence를 고정 <code>u_me</code>로 넣어요.</p>
+<p><strong>현재 처리.</strong> Phase 1은 내 캐릭터가 스폰에 고정이라 문제가 드러나지 않아요. MSW의 <code>PUT /me/position</code>은 collision·거리·초기 배치 점유만 검사해요.</p>
+<table><tr><th>선택지</th><th>내용</th><th>영향</th></tr>
+<tr><td>A (추천)</td><td>월드 관련 REST(<code>PUT /me/position</code>, <code>PUT /me/presence</code>, <code>GET /world/:mapId/presences</code>)도 Vite proxy로 Express에 넘겨 월드 상태를 한곳에 둠. 티켓 발급 시 Bearer 토큰을 받아 사용자와 바인딩</td><td>vite.config proxy 3경로 추가, MSW 핸들러 3개 이관, ROADMAP 4단계 "MSW 36 + Express 1" 수치 변경</td></tr>
+<tr><td>B</td><td>msw 3에 새로 생긴 <code>sse()</code> 핸들러로 SSE까지 MSW로 통합하고 Express 제거</td><td>ROADMAP 4단계 결정 번복, Service Worker가 EventSource를 가로채는지 검증 필요, 티켓·끊김 트리거 재구현</td></tr>
+<tr><td>C</td><td>그대로 두고 6단계에서 내 위치를 Express에 <code>/__mock/position</code>으로 별도 통지</td><td>Mock 전용 우회 경로가 늘어남</td></tr></table>
+</div>
+
+<h2>중간 — Phase 2 진행 중 결정</h2>
+
+<div class="card">
+<h3><span class="badge mid">중간</span>3. 부팅 시 <code>POST /auth/refresh</code> 401이 브라우저 콘솔에 남아요</h3>
+<p>ARCHITECTURE 6장대로 새로고침마다 refresh를 시도하는데, 로그인 전에는 쿠키가 없어 401이 정상이에요. 브라우저는 이를 "Failed to load resource: 401"로 콘솔에 남기고, ROADMAP 5단계 완료 조건 "콘솔 에러 0건"과 충돌해요. E2E는 이 한 종류만 허용하도록 했어요.</p>
+<ul><li>A (추천): 허용하고 완료 조건 문구를 "앱 에러 0건(브라우저 리소스 로그 제외)"로 정정</li><li>B: 세션 힌트(non-httpOnly 쿠키 <code>hasSession=1</code>)를 계약에 추가해 힌트 없으면 refresh 생략 — 계약 변경</li></ul>
+</div>
+
+<div class="card">
+<h3><span class="badge mid">중간</span>4. React StrictMode 이중 effect로 dev에서 SSE 티켓이 1장 더 발급돼요</h3>
+<p>WorldPage의 effect에서 연결하므로 dev 모드 StrictMode가 effect를 두 번 실행해 첫 티켓이 버려져요. EventSource는 1개라 동작엔 문제없고 프로덕션 빌드에선 발생하지 않아요. Phase 2에서 SSE 연결 수명을 페이지가 아니라 세션(로그인 직후~로그아웃)으로 옮길지 결정이 필요해요. 추천: 세션 수명으로 이동(8단계 DM 패널이 월드 밖에서도 실시간이 필요할 수 있음).</p>
+</div>
+
+<div class="card">
+<h3><span class="badge mid">중간</span>5. 캔버스가 devicePixelRatio를 반영하지 않아요</h3>
+<p>백킹 스토어 = CSS px, 정수 줌만 적용해요. Retina에서 CSS <code>image-rendering: pixelated</code>로 확대되어 픽셀 아트는 또렷하지만 닉네임 글자가 거칠어요. 선택: (A, 추천) 백킹 스토어를 DPR 배율로 두고 줌 배율은 정수 유지 — ARCHITECTURE 2.1에 명시, (B) 현행 유지. 12단계 자산 교체 전까지 결정하면 돼요.</p>
+</div>
+
+<div class="card">
+<h3><span class="badge mid">중간</span>6. 닉네임 최종 렌더 방식</h3>
+<p>5단계는 Canvas <code>fillText</code>(8px monospace)예요. ROADMAP은 12단계 전에 ARCHITECTURE 2장에서 확정하라고 해요. 선택: Canvas 비트맵 폰트(픽셀 느낌 일관, 한글 폰트 자산 필요) vs DOM 오버레이(말풍선과 같은 경로, 텍스트 품질 좋음, 300명이면 DOM 노드 300개).</p>
+</div>
+
+<h2>낮음 — 기록·확인</h2>
+<div class="card">
+<h3><span class="badge low">낮음</span>7. 응답 본문이 계약에 없는 엔드포인트</h3>
+<p><code>PATCH /groups/{id}</code>, <code>DELETE /groups/{id}</code>, <code>DELETE /groups/{id}/members/{userId}</code>, <code>POST /admin/signups/{id}/reject</code>, <code>POST /admin/users/{id}/suspend|unsuspend</code>, <code>POST /admin/notices</code>. 클라이언트 api 함수는 본문을 읽지 않고(<code>void</code>), Mock은 각각 200 Group / 204 / 204 / 204 / 204 / 201 Notice로 구현했어요. API_CONTRACT 2.7·2.8에 응답 코드를 명시해 주세요.</p>
+</div>
+<div class="card">
+<h3><span class="badge low">낮음</span>8. Mock 전용 편차 두 가지</h3>
+<ul><li>refresh 쿠키 <code>Path=/</code> (계약은 <code>/api/v1/auth</code>) — MSW가 <code>document.cookie</code>로 요청 쿠키를 읽기 때문. 실서버 연동(Phase 3)에는 영향 없음</li><li>Express는 <code>lastEventId</code>를 로그만 남기고 재전송 버퍼가 없음 — 10단계 재동기화 테스트 전에 60초 버퍼 구현 여부 결정</li></ul>
+</div>
+<div class="card">
+<h3><span class="badge low">낮음</span>9. Mock SSE 포트 5174가 이 머신에서 다른 프로젝트(VRINGON-WEB Vite)에 점유돼 있어요</h3>
+<p><code>MOCK_SSE_PORT</code> 환경변수로 바꿀 수 있게 했고 E2E는 5199를 써요. ROADMAP·ARCHITECTURE의 기본 포트를 5174로 둘지, 충돌이 덜한 값(예: 5199)으로 바꿀지 확인해 주세요.</p>
+</div>
+<div class="card">
+<h3><span class="badge low">낮음</span>10. PR 단위 진행이 아니라 main 직접 커밋이에요</h3>
+<p>ROADMAP은 "단계 = PR 1개 이상"인데, gh CLI 계정(bs-oh)은 이 저장소에 읽기 권한만 있어 PR을 만들 수 없었어요. 푸시는 <code>DEVPLE_GITHUB_TOKEN</code>으로 했어요. PR 흐름을 원하시면 저장소 소유자 계정으로 <code>gh auth login</code>하거나 bs-oh를 협업자(write)로 추가해 주세요. 커밋은 단계·레이어 단위로 쪼개 두어 PR로 다시 묶기 쉬워요.</p>
+</div>
+<div class="card">
+<h3><span class="badge info">정보</span>11. 그 밖에 알아 두실 것</h3>
+<ul><li>Prettier에서 마크다운을 제외했어요(문서 원문 형식 유지). 포함을 원하시면 <code>.prettierignore</code>에서 <code>*.md</code>를 지우면 돼요</li><li><code>presence.updated</code> 핸들러는 파싱만 해요(5단계 범위 밖). 자리비움 표시(10단계)에서 채워요</li><li>가짜 접속자 중 1명(<code>u_20</code>)은 정지 상태라 월드에 없어요 — 접속자 20명 = 본인 + 19명</li><li>이동 검증 <code>max(3, elapsedMs/100)</code>과 seq=<code>Date.now()</code>는 MSW에 구현돼 있지만 6단계 전까지는 호출되지 않아요</li></ul>
+</div>
+
+</main></body>
+</html>

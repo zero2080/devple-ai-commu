@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 작업 결과</title>
+<meta name="description" content="devple-ai-commu ROADMAP Phase 1(1~5단계) 작업 결과와 검증">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+
+<h1>Phase 1 작업 결과</h1>
+<p class="meta">devple-ai-commu · 2026-09-29 · 작성: Claude Code (Fable 5.1) · 원격 <code>origin/main</code> = <code>4cb14b0</code> · 함께 보기: <a href="2026-09-29-decisions.html">결정 필요 사항</a></p>
+<p><strong>결론.</strong> ROADMAP Phase 1(1~5단계)을 완료하고 전부 푸시했어요. Mock만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 200ms 틱으로 움직이는 화면이 동작하고, 강제 끊김 후 새 티켓으로 자동 재연결되며, 새로고침 후 세션이 복구돼요. 완료 조건은 단위 테스트 103건과 Playwright E2E 2건으로 재현 가능하게 남겼어요.</p>
+
+<div class="grid">
+<div class="stat"><b>29</b><span>커밋 (first commit 이후)</span></div>
+<div class="stat"><b>5 / 5</b><span>ROADMAP 단계 완료</span></div>
+<div class="stat"><b>103</b><span>단위 테스트 (21 파일)</span></div>
+<div class="stat"><b>2</b><span>E2E (headless Chromium)</span></div>
+<div class="stat"><b>100%</b><span>domain/ 커버리지</span></div>
+<div class="stat"><b>5,020 / 1,726</b><span>소스 / 테스트 줄 수</span></div>
+</div>
+
+<h2>검증 결과</h2>
+<table><tr><th>검사</th><th>명령</th><th>결과</th></tr>
+<tr><td>린트 (타입 인식 + 레이어 경계)</td><td><code>pnpm lint</code></td><td class="ok">통과, 경고 0</td></tr>
+<tr><td>타입 검사</td><td><code>pnpm typecheck</code></td><td class="ok">통과</td></tr>
+<tr><td>단위 테스트</td><td><code>pnpm test</code></td><td class="ok">21 파일 103건 통과</td></tr>
+<tr><td>domain 커버리지</td><td><code>pnpm test:coverage</code></td><td class="ok">Statements·Branches·Functions·Lines 100%</td></tr>
+<tr><td>포맷</td><td><code>pnpm format:check</code></td><td class="ok">통과</td></tr>
+<tr><td>E2E</td><td><code>pnpm test:e2e</code></td><td class="ok">2건 통과 (5.1초)</td></tr>
+<tr><td>Mock SSE 서버 스모크</td><td>curl</td><td class="ok">티켓 발급 → 1.5초 스트림에 snapshot 1·positions 7 → 같은 티켓 재사용 401 → emit/disconnect 202</td></tr></table>
+
+<h3>E2E가 확인하는 것 (<code>e2e/phase1.spec.ts</code>)</h3>
+<ul>
+<li>접근 키 <code>DEMO-0000-0000</code> 로그인 → <code>/</code> 진입, 연결 배지 <code>open</code>, 접속자 20명, 캔버스 표시</li>
+<li>1.5초 뒤 worldStore revision 증가, 위치가 바뀐 접속자 존재, 같은 타일에 둘 이상 없음, 본인은 스폰 (20,15) 유지</li>
+<li><code>EventSource</code> 생성 1개·열림 1개 (탭당 1연결)</li>
+<li><code>POST /__mock/disconnect</code> → 배지 <code>reconnecting</code> → <code>open</code>, 새 티켓 요청 정확히 1건 추가, EventSource 생성 2·열림 1</li>
+<li>콘솔 에러 0건(부팅 refresh 401 리소스 로그만 허용), <code>[sse]</code>·zod 경고 0건</li>
+<li>새로고침 후 refresh 쿠키로 세션 복구 → 다시 <code>open</code></li>
+<li>틀린 키는 계약 코드 <code>AUTH_INVALID_KEY</code> 문구를 보여주고 <code>/login</code>에 머묾</li></ul>
+
+<h2>단계별 결과</h2>
+<table><tr><th>단계</th><th>커밋</th><th>완료 조건 확인</th></tr>
+<tr><td>1. 프로젝트 초기화</td><td><code>d8e6984</code> pnpm 전환·스택 설치<br><code>92b7e6f</code> ESLint 경계 규칙·Prettier<br><code>4dfa0ea</code> Vite·Vitest·TS strict·정리</td><td>install 성공, lint·typecheck 통과, <code>game/</code>의 React import와 <code>domain/</code>의 zod·<code>@/</code> import가 lint 실패, <code>./y</code>는 통과</td></tr>
+<tr><td>2. 골격 + 도메인</td><td><code>e5c5e48</code> 디렉토리·상수·테스트 셋업<br><code>1d3a2fc</code> 타입·순수 함수·테스트</td><td>테스트 통과, domain 커버리지 100%, DOMAIN.md 타입 이름 1:1 대조</td></tr>
+<tr><td>3. Transport</td><td><code>b639ba7</code> zod 스키마·엔드포인트 37개<br><code>a4a27fa</code> http.ts (refresh 단일 진행)<br><code>7ced77d</code> API 모듈 8개<br><code>63d397a</code> SSE 클라이언트·registry·핸들러 16종<br><code>6a54eff</code> positionBatcher</td><td>401 재시도, 동시 401 3건 → refresh 1회, 에러 → 새 티켓 + lastEventId 쿼리, 200ms 내 5회 → 요청 1회, 엔드포인트 37 = api 함수 수</td></tr>
+<tr><td>4. Mock 환경</td><td><code>fe11e85</code> 시드·맵·초기 배치<br><code>6939128</code> MSW 핸들러 36개·워커<br><code>b1f62f0</code> Express SSE 서버</td><td>curl 스모크(위 표), MSW 36 + Express 1 = 37 자동 검사, 500틱 동안 겹침 0·벽 침범 0</td></tr>
+<tr><td>5. 최소 실행 화면</td><td><code>0c7848a</code> 스토어 4개<br><code>5686aa0</code> 게임 엔진<br><code>e7cbfe7</code> 핸들러 → 스토어<br><code>1aef930</code> 로그인·세션<br><code>2aa9ee1</code> 월드 페이지·앱<br><code>d90d121</code> mock 수정<br><code>10bf43f</code> Playwright E2E</td><td>완료 조건 6개 전부 E2E로 자동 검증</td></tr></table>
+
+<h2>문서 변경</h2>
+<table><tr><th>문서</th><th>버전</th><th>주요 변경</th></tr>
+<tr><td>ROADMAP</td><td>1.0 → 1.2</td><td>스택을 2026-09 최신 메이저로, 선행 결정 표(전부 해소), 엔드포인트 37개, 1~5단계 체크 완료, E2E 검증 자산 명시</td></tr>
+<tr><td>ARCHITECTURE</td><td>1.1 → 1.3</td><td>position batcher는 <code>game/sync</code>, isOccupied 순수 함수, refresh 단일 진행, seq=Date.now(), positions 본인 무시(보정은 PUT 응답으로만), 채팅 포커스 규칙, Mock 티켓은 Express</td></tr>
+<tr><td>CONVENTIONS</td><td>1.1 → 1.3</td><td>버전표 갱신, domain은 같은 폴더 상대 import만, exactOptionalPropertyTypes 미사용, 문서 동기화 표에 ROADMAP</td></tr>
+<tr><td>API_CONTRACT / DOMAIN / PRD</td><td>1.1 → 1.2</td><td>사용자 갱신분(선행 결정 해소) 반영, API_CONTRACT 기준 버전 표기 정정</td></tr>
+<tr><td>CLAUDE.md</td><td>—</td><td>ROADMAP 지도, 금지 항목 추가, 현재 상태 "Phase 1 완료"</td></tr></table>
+
+<h2>진행 중 발견해서 고친 문제</h2>
+<table><tr><th>문제</th><th>처리</th></tr>
+<tr><td>ROADMAP 버전표(Vite 5·Vitest 2·TS 5)가 현재 도구와 호환되지 않음</td><td>npm 실측 후 React 19·Vite 8·TS ~6.0·Vitest 5·zod 4·msw 3로 갱신 (사용자 승인)</td></tr>
+<tr><td>pnpm 12가 의존성 빌드 스크립트를 기본 차단</td><td><code>pnpm approve-builds</code>로 esbuild·unrs-resolver 허용, <code>pnpm-workspace.yaml</code> 커밋</td></tr>
+<tr><td>import-x TS 리졸버 인터페이스 불일치</td><td><code>eslint-import-resolver-typescript</code>의 resolver-next 사용</td></tr>
+<tr><td>gitignore식 부정 패턴으로는 domain 경계를 표현 불가</td><td><code>no-restricted-syntax</code> AST 셀렉터로 구현, 완료 조건에 검증 추가</td></tr>
+<tr><td><code>erasableSyntaxOnly</code>가 생성자 파라미터 프로퍼티를 거부</td><td>필드 명시 선언으로 통일</td></tr>
+<tr><td>zod optional 추론과 <code>exactOptionalPropertyTypes</code> 충돌 예상</td><td>옵션 미사용으로 결정, 타입 동등성 테스트로 확인</td></tr>
+<tr><td>msw 3 API 변경 (<code>onUnhandledFrame</code>, <code>HttpResponse</code> 제네릭 필수, 프레임 구조)</td><td>타입 정의를 읽고 맞춤, 계약 경로만 경고하도록 조정</td></tr>
+<tr><td>HANDOFF 반영 시 <code>36개</code>·<code>선행 결정 참조</code> 잔존 여부</td><td>grep으로 확인, 엔드포인트 37개 재계산</td></tr>
+<tr><td>Mock SSE 포트 5174를 다른 프로젝트 Vite가 점유, macOS에 <code>timeout</code> 없음</td><td><code>MOCK_SSE_PORT</code> 도입, 백그라운드 실행으로 스모크</td></tr>
+<tr><td>Playwright webServer가 <code>pnpm exec</code> 자식을 못 죽여 매달림</td><td>바이너리 직접 실행</td></tr>
+<tr><td><code>getByLabel('접근 키')</code>가 폼 제목까지 매칭</td><td>textbox 역할로 셀렉터 좁힘</td></tr>
+<tr><td>StrictMode 이중 effect로 티켓 2장, 부팅 refresh 401 콘솔 로그, MSW 쿠키 Path</td><td>E2E 기준선·허용 규칙 조정, mock 쿠키 Path=/ (결정 리포트 3·4·8)</td></tr>
+<tr><td>커밋 A에 스테이징된 삭제 파일이 섞여 들어감</td><td>푸시 전 soft reset으로 문서만 담아 다시 커밋</td></tr></table>
+
+<h2>실행 방법</h2>
+<pre>pnpm install
+cp .env.example .env
+pnpm dev                     # Vite 5173 + Mock SSE 5174 (점유 시 MOCK_SSE_PORT=5199 pnpm dev)
+# 브라우저 http://localhost:5173 → 접근 키 DEMO-0000-0000
+
+pnpm lint && pnpm typecheck && pnpm test
+pnpm exec playwright install chromium   # 최초 1회
+pnpm test:e2e</pre>
+
+<h2>다음 단계</h2>
+<ul>
+<li><a href="2026-09-29-decisions.html">결정 리포트</a>의 높음 2건(하트비트 이벤트, Mock 월드 상태 일원화)을 정한 뒤 Phase 2 6단계(내 캐릭터 이동: 키보드·클릭 A*·충돌·점유·배칭·409 보정) 착수</li>
+<li>6단계 완료 조건은 ROADMAP에 아직 상세화되지 않았어요. 착수 전에 3~5단계 형식으로 "만들 것 / 완료 조건"을 정의하는 걸 권해요</li>
+<li>PR 흐름을 원하시면 gh 계정 권한 정리(결정 리포트 10)</li></ul>
+
+</main></body>
+</html>
