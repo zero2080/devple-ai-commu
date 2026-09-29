@@ -19,5 +19,5 @@ export interface RemoteCharacter {
   presence: Presence;
   renderPixel: PixelPoint; // 보간 중인 픽셀 좌표 (월드 기준)
   targetPixel: PixelPoint;
-  animFrame: number;
+  animFrame: number; // GRAPHICS 2.1 프레임 인덱스 (0~3)
 }

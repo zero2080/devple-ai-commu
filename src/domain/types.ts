@@ -10,7 +10,7 @@ export type UserStatus = 'active' | 'suspended';
 export interface User {
   id: string;
   nickname: string; // 2~12자, 유니크
-  avatarId: string; // 기본 제공 아바타 ID (예: 'char_01')
+  avatarId: string; // 기본 제공 아바타 ID, 형식 'char_NN' (GRAPHICS 2.3)
   statusMessage?: string; // 최대 40자
   role: UserRole;
   status: UserStatus;
@@ -97,8 +97,9 @@ export interface MapData {
   width: number; // 타일 수
   height: number;
   tileSize: 16;
+  tileset: string; // 타일셋 ID (GRAPHICS 3장). 맵당 1개
   spawn: { x: number; y: number };
-  layers: TileLayer[]; // 그리기 순서대로
+  layers: TileLayer[]; // 그리기 순서대로. 표준 구성은 GRAPHICS 4장 (floor / objects / overhead)
   collision: number[]; // width*height, 0=통행 1=차단
 }
 

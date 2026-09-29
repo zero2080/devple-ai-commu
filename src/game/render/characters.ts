@@ -1,5 +1,5 @@
 // 캐릭터 플레이스홀더 (ROADMAP 5단계): 16×32 색 사각형 + 머리 위 닉네임.
-// 닉네임은 말풍선이 아니므로 Canvas fillText 허용. 최종 방식은 12단계 전에 ARCHITECTURE 2장에 확정.
+// 닉네임은 말풍선이 아니므로 Canvas fillText 허용. 12단계에서 DOM 오버레이로 전환한다 (ARCHITECTURE 2.3, GRAPHICS 5.3).
 import { CHARACTER_HEIGHT_TILES, TILE_SIZE } from '../constants';
 import type { Camera } from '../engine/camera';
 

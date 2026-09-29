@@ -37,6 +37,7 @@ export const mapDataSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   tileSize: z.literal(16),
+  tileset: z.string(),
   spawn: z.object({ x: tileCoord, y: tileCoord }),
   layers: z.array(tileLayerSchema),
   collision: z.array(z.number().int()),

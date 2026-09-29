@@ -114,6 +114,7 @@ describe('런타임 검증', () => {
       id: 'main',
       width: 2,
       height: 1,
+      tileset: 'main',
       spawn: { x: 0, y: 0 },
       layers: [],
       collision: [0, 0],
