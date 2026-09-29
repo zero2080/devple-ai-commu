@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 1.1 (2026-09-29, 교차 검토 반영)
+> 문서 버전: 1.2 (2026-09-29, API 합성 타입 9장 신설)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -295,3 +295,61 @@ interface RemoteCharacter {
 | 그룹 인원 ≤ maxGroupMembers(10) | 초대 시 |
 | 정지 회원은 모든 쓰기 API 거부 | 인증 미들웨어 |
 | 메시지 수정·삭제 불가. DM 회수는 본인 && readAt==null 일 때만 | 회수 요청 시 |
+
+## 9. API 응답·이벤트 합성 타입 (zod 스키마 원천)
+
+API_CONTRACT가 기본 엔티티에 필드를 덧붙여 내려주는 경우의 **이름**을 여기서 정한다. `transport/schemas/`는 이 이름 그대로 스키마를 만들고, `domain/types.ts`에도 동일하게 export한다.
+
+```ts
+// 2.6 GET /dm
+interface DmConversationWithPeer extends DmConversation {
+  peer: User;                          // 조회자 관점의 상대
+}
+
+// 2.7 GET /groups
+interface GroupListItem extends Group {
+  unreadCount: number;                 // 조회자 기준
+  lastMessage?: GroupMessage;
+}
+
+// 2.7 GET /groups/{id}, SSE group.updated
+interface GroupMemberWithUser extends GroupMember {
+  user: User;
+}
+interface GroupDetail {
+  group: Group;
+  members: GroupMemberWithUser[];
+}
+
+// SSE chat.public
+interface ChatPublicEvent extends PublicMessage {
+  sender: Pick<User, 'nickname' | 'avatarId'>;
+}
+
+// SSE chat.dm
+interface ChatDmEvent extends DmMessage {
+  sender: User;
+  peerId: string;                      // 수신자 관점의 상대. 발신자 자기 사본에는 수신자 ID
+}
+
+// SSE chat.group
+interface ChatGroupEvent extends GroupMessage {
+  sender: User;
+}
+
+// SSE group.updated
+interface GroupUpdatedEvent extends Group {
+  members: GroupMemberWithUser[];
+}
+```
+
+- 합성 타입은 **읽기 전용 응답 형태**다. 스토어·캐시에 저장할 때는 기본 엔티티로 분해해 저장하고, `sender`/`peer`는 별도 사용자 캐시로 보낸다 (이중 저장 금지 원칙)
+- 새 합성이 필요하면 여기 추가한 뒤 API_CONTRACT에서 이름으로 참조한다. 인라인 `& { ... }` 표기는 계약에 쓰지 않는다
+
+## 10. 결정 이력
+
+| 날짜 | 결정 |
+|---|---|
+| 2026-09-29 | 1.0 확정 |
+| 2026-09-29 | 1.1: 교차 검토 (RemoteCharacter 픽셀 좌표 명명) |
+| 2026-09-29 | 1.2: 9장 합성 타입 신설 (ROADMAP 3단계 선행 결정) |

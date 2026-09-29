@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.1 (2026-09-29, 교차 검토 반영)
+> 문서 버전: 1.2 (2026-09-29, ROADMAP 선행 결정 반영)
 > 상태: 확정
-> 기준: DOMAIN.md 1.0, ARCHITECTURE.md 1.0
+> 기준: DOMAIN.md 1.2, ARCHITECTURE.md 1.3
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -111,10 +111,10 @@
 // 409 POSITION_REJECTED
 { "code": "POSITION_REJECTED", "message": "...", "details": { "position": Position, "seq": 1041, "reason": "occupied" } }
 ```
-- 서버는 `seq`가 마지막 인정값보다 작거나 같으면 **204로 무시** (에러 아님)
+- `seq`는 클라이언트가 **`Date.now()` 밀리초 정수**로 생성. 서버는 사용자 단위로 마지막 인정 seq를 보관하고, 작거나 같으면 **204로 무시** (에러 아님). 다중 탭은 같은 시계를 쓰므로 나중 요청이 자연히 이김
 - 검증 (순서대로):
   1. collision=0
-  2. 이전 인정 위치에서 경과 시간 내 도달 가능 거리 (관대하게: `elapsedMs / 100` 타일 이내)
+  2. 이전 인정 위치에서 도달 가능 거리: `max(3, elapsedMs / 100)` 타일 이내 (체비쇼프 거리). 하한 3타일은 200ms 배칭 중 이동량 + 네트워크 지연 여유
   3. **해당 타일에 다른 Presence 없음** — 같은 타일로의 동시 요청은 서버 수신 순서로 선착순 판정
 - 검증 실패 시 `409 POSITION_REJECTED`, `details.position` = 서버가 인정하는 현재 위치(마지막 성공 위치), `details.reason` = `'collision' | 'too_far' | 'occupied'`
 - 409 수신 시 프론트는 `details.position`으로 즉시 보정. `occupied`면 경로 재계산 (ARCHITECTURE 3.2.1)
@@ -165,7 +165,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | POST | `/dm/messages/{messageId}/recall` | 🔒 | 내 메시지 회수 (상대 미열람 시에만) |
 | POST | `/dm/{userId}/read` | 🔒 | 읽음 처리 |
 
-**GET /dm** → `200 { "items": DmConversation[], "nextCursor" }` — `DmConversation`에 상대 `User` 포함: `{ ...DmConversation, "peer": User }`
+**GET /dm** → `200 { "items": DmConversationWithPeer[], "nextCursor" }` (DOMAIN 9장)
 
 **GET /dm/{userId}/messages?cursor=&limit=50** → `200 { "items": DmMessage[], "nextCursor" }` — 최신순, `cursor`는 이전 페이지의 가장 오래된 messageId
 
@@ -192,15 +192,16 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | DELETE | `/groups/{groupId}/members/{userId}` | 🔒 | owner: 강퇴 / 본인: 나가기 |
 | GET | `/groups/{groupId}/messages` | 🔒 멤버 | 히스토리 |
 | POST | `/groups/{groupId}/messages` | 🔒 멤버 | 전송 |
-| POST | `/groups/{groupId}/read` | 🔒 멤버 | 읽음 처리 |
+| POST | `/groups/{groupId}/read` | 🔒 멤버 | 읽음 처리 `{ lastMessageId }` |
 
-**GET /groups** → `200 { "items": (Group & { "unreadCount": number, "lastMessage"?: GroupMessage })[] }`
+**GET /groups** → `200 { "items": GroupListItem[] }` (DOMAIN 9장)
 **POST /groups** — body `{ "name" }` → `201 Group`
-**GET /groups/{id}** → `200 { "group": Group, "members": (GroupMember & { "user": User })[] }`
+**GET /groups/{id}** → `200 GroupDetail` = `{ group: Group, members: GroupMemberWithUser[] }`
 **POST /groups/{id}/members** — body `{ "userId" }` → `201 GroupMember` / `409 GROUP_FULL`
 - 초대는 즉시 가입 (수락 절차 없음). 초대된 사용자에게 `group.joined` 이벤트
 - owner 나가기 → 가장 오래된 `joinedAt` 멤버가 owner, `group.updated` 이벤트. 마지막 멤버 나가기 → 그룹 삭제
 **GET /groups/{id}/messages?cursor=&limit=50** → DM과 동일 구조
+**POST /groups/{id}/read** — body `{ "lastMessageId" }` → `204` (`GroupMember.lastReadMessageId` 갱신, 이벤트 없음)
 **POST /groups/{id}/messages** — body `{ "content" }` → `201 GroupMessage` (전 멤버에게 `chat.group`)
 
 ### 2.8 운영자
@@ -213,11 +214,13 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | GET | `/admin/users?status=&cursor=` | 🔒👑 | 회원 목록 |
 | POST | `/admin/users/{id}/suspend` | 🔒👑 | 정지 → SSE 강제 종료 |
 | POST | `/admin/users/{id}/unsuspend` | 🔒👑 | 해제 |
+| POST | `/admin/users/{id}/reissue-key` | 🔒👑 | 접근 키 재발급 → 기존 키·Refresh 무효 + 새 키 이메일 |
 | POST | `/admin/notices` | 🔒👑 | 공지 `{ content }` → 전체 `system.notice` |
 
 **GET /admin/signups** → `200 { "items": SignupRequest[], "nextCursor" }`
 **POST /admin/signups/{id}/approve** → `200 { "userId": string }` / `409 SIGNUP_ALREADY_REVIEWED`
 **GET /admin/users** → `200 { "items": Me[], "nextCursor" }` (email/phone 포함)
+**POST /admin/users/{id}/reissue-key** → `204`. 기존 접근 키 즉시 무효, 해당 사용자의 Refresh 토큰 전부 무효(접속 중이면 다음 refresh에서 재로그인 유도), 새 키 이메일 발송. 사용자 셀프 재발급 API는 없다 (폐쇄형 원칙)
 
 ---
 
@@ -251,17 +254,17 @@ data: {"id":"1234","type":"chat.public","ts":1727600000000,"payload":{...}}
 | type | 대상 | payload |
 |---|---|---|
 | `world.snapshot` | 접속자 본인 | `{ mapId, presences: Presence[], serverTime }` — 본인 Presence 포함, 서버가 배치한 초기 위치 |
-| `world.positions` | 같은 맵 전원 | `{ mapId, positions: { userId, x, y, dir }[] }` — 200ms 틱, 변경분만 |
+| `world.positions` | 같은 맵 전원 | `{ mapId, positions: { userId, x, y, dir }[] }` — 200ms 틱, 변경분만. **본인 포함**. 클라이언트는 본인 항목을 무시하고 내 위치 보정은 `PUT /me/position` 응답으로만 한다 |
 | `presence.joined` | 같은 맵 전원 | `Presence` |
 | `presence.left` | 같은 맵 전원 | `{ userId }` |
 | `presence.updated` | 같은 맵 전원 | `{ userId, state?: 'online'\|'away', nickname?, avatarId? }` — 렌더에 필요한 필드만. statusMessage는 프로필 카드 REST로 조회 |
-| `chat.public` | 반경 내 접속자 | `PublicMessage & { sender: { nickname, avatarId } }` |
-| `chat.dm` | 대화 양측 | `DmMessage & { sender: User }` |
+| `chat.public` | 반경 내 접속자 | `ChatPublicEvent` (DOMAIN 9장) |
+| `chat.dm` | 대화 양측 | `ChatDmEvent` = `DmMessage & { sender: User, peerId }`. `peerId`는 **수신자 관점의 상대** (발신자 자기 사본에는 수신자 ID). 첫 DM은 수신자에게 대화 캐시가 없으므로 필수 |
 | `chat.dm.recalled` | 대화 양측 | `{ conversationId, messageId }` |
 | `chat.dm.read` | 발신자 | `{ conversationId, readerId, lastMessageId, readAt }` |
-| `chat.group` | 그룹 전원 | `GroupMessage & { sender: User }` |
+| `chat.group` | 그룹 전원 | `ChatGroupEvent` = `GroupMessage & { sender: User }` |
 | `group.joined` | 초대된 사용자 | `Group` |
-| `group.updated` | 그룹 전원 | `Group & { members: GroupMember[] }` — 이름 변경, owner 승계, 멤버 변동 |
+| `group.updated` | 그룹 전원 | `GroupUpdatedEvent` = `Group & { members: GroupMemberWithUser[] }` — 이름 변경, owner 승계, 멤버 변동 |
 | `group.removed` | 강퇴/해산 대상 | `{ groupId, reason: 'kicked'\|'dissolved' }` |
 | `system.notice` | 전원 | `Notice` |
 | `system.suspended` | 본인 | `{}` — 직후 서버가 연결 종료 |
@@ -269,8 +272,8 @@ data: {"id":"1234","type":"chat.public","ts":1727600000000,"payload":{...}}
 
 ### 3.4 순서 보장
 - 단일 SSE 연결 내 이벤트 순서는 `id` 오름차순으로 보장
-- `world.positions`는 유실되어도 다음 틱이 덮어쓰므로 재전송 버퍼에 **넣지 않는다**
-- 채팅·그룹·시스템 이벤트는 버퍼에 넣는다
+- `world.positions`와 `presence.*`는 재전송 버퍼에 **넣지 않는다** — positions는 다음 틱이 덮어쓰고, presence는 재연결 시 `world.snapshot`이 먼저 와서 복구됨
+- `chat.*`, `group.*`, `system.*`는 버퍼에 넣는다
 
 ### 3.5 프론트 재동기화 절차 (`sync.required` 또는 60초 초과 단절)
 1. `GET /world/{mapId}/presences` → worldStore 교체
@@ -318,9 +321,10 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-29 | 메시지 수정 금지. 전송 후 불변 (DM 미열람 회수만 예외) |
 | 2026-09-29 | 위치 검증에 점유 조건 추가, `details.reason` 필드 추가 |
 | 2026-09-29 | 교차 검토: `GET /me` 응답 정의, SSE `lastEventId` 쿼리 추가, `presence.updated`에서 statusMessage 제거 |
+| 2026-09-29 | 1.2 (ROADMAP 선행 결정): seq=`Date.now()`, 이동 검증 `max(3, elapsedMs/100)`, positions 본인 포함·클라이언트 무시, `chat.dm.peerId`, 그룹 read body, 합성 타입명 DOMAIN 9장 참조, `presence.*` 버퍼 제외, `POST /admin/users/{id}/reissue-key` 추가 (엔드포인트 37개) |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
-- `PUT /me/position` 이동 검증 관대함 (`elapsedMs/100`)
+- `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
 - 사용자당 SSE 동시 연결 수 (3)
 - 재전송 버퍼 보관 시간 (60초), 하트비트 간격 (15초)
 - 레이트 리밋 수치
