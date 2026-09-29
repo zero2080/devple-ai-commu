@@ -143,7 +143,7 @@
 
 ---
 
-### 5단계: 최소 실행 화면 `[ ]`
+### 5단계: 최소 실행 화면 `[x]`
 
 **만들 것**
 - `src/app/` — Router, QueryClientProvider, 인증 가드
@@ -157,13 +157,13 @@
 - `src/game/engine/camera.ts` — 내 캐릭터 중심, 맵 경계 클램프, 줌 2x
 - SSE 핸들러 `world.snapshot`, `world.positions`, `presence.joined/left` → `worldStore` 갱신 (3단계 껍데기에 로직 채움). `world.positions`의 본인 항목은 무시한다 (API_CONTRACT 3.3)
 
-**완료 조건 (= Phase 1 목표)**
-- [ ] `pnpm dev` → 로그인 페이지 → `DEMO-0000-0000` 입력 → 월드 진입
-- [ ] 가짜 접속자 20명이 끊김 없이 움직이는 게 보임
-- [ ] 아무도 같은 타일에 겹치지 않음
-- [ ] 브라우저 콘솔에 에러 0건, zod warn 0건
-- [ ] 개발자 도구에서 SSE 연결 1개만 존재
-- [ ] `POST /__mock/disconnect` 후 새 티켓 발급 요청이 나가고 자동 복구되며, 연결은 여전히 1개
+**완료 조건 (= Phase 1 목표)** — 검증 자산: `e2e/phase1.spec.ts` (`pnpm test:e2e`, headless Chromium)
+- [x] `pnpm dev` → 로그인 페이지 → `DEMO-0000-0000` 입력 → 월드 진입
+- [x] 가짜 접속자 20명이 끊김 없이 움직이는 게 보임
+- [x] 아무도 같은 타일에 겹치지 않음
+- [x] 브라우저 콘솔에 에러 0건, zod warn 0건
+- [x] 개발자 도구에서 SSE 연결 1개만 존재
+- [x] `POST /__mock/disconnect` 후 새 티켓 발급 요청이 나가고 자동 복구되며, 연결은 여전히 1개
 
 ---
 

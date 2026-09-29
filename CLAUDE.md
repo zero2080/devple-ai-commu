@@ -83,4 +83,4 @@
 ## 현재 상태
 
 - 문서: PRD·DOMAIN·API_CONTRACT 1.2, ARCHITECTURE·CONVENTIONS 1.3, ROADMAP 1.2 (2026-09-29, 선행 결정 전부 해소)
-- 코드: Vite 템플릿만 있음 (React 19, Vite 8, TS 6, oxlint, npm). `docs/ROADMAP.md` 1단계에서 규칙에 맞게 갱신·정리하는 것부터 시작. 1차 목표는 Mock만으로 실행되는 월드 화면
+- 코드: **Phase 1 완료** (ROADMAP 1~5단계, 2026-09-29). Mock만으로 로그인 → 월드 → 가짜 접속자 20명 이동까지 동작하며 `pnpm test:e2e`로 검증. 다음은 Phase 2 6단계(내 캐릭터 이동). 설계 결정 대기 항목은 `reports/` 참조

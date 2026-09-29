@@ -28,6 +28,8 @@ cp .env.example .env
 pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 ```
 
+브라우저에서 `http://localhost:5173`을 열고 접근 키 `DEMO-0000-0000`으로 입장하면 가짜 접속자 20명이 움직이는 월드가 보입니다 (Phase 1).
+
 Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
 
 Mock SSE 서버는 기본 5174 포트를 씁니다. 다른 개발 서버가 점유하고 있으면 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 Vite 프록시와 서버가 같은 값을 읽습니다. 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `GET /__mock/state`.
@@ -41,6 +43,7 @@ Mock SSE 서버는 기본 5174 포트를 씁니다. 다른 개발 서버가 점�
 | `pnpm lint`                         | ESLint (타입 인식 규칙 + 레이어 경계 규칙) |
 | `pnpm typecheck`                    | `tsc -b`                                   |
 | `pnpm test` / `pnpm test:coverage`  | Vitest (`domain/` 커버리지 100% 요구)      |
+| `pnpm test:e2e` | Playwright (headless Chromium). Mock SSE 5199 + Vite 5180을 자동으로 띄워 Phase 1 시나리오 검증. 최초 1회 `pnpm exec playwright install chromium` |
 | `pnpm format` / `pnpm format:check` | Prettier                                   |
 | `pnpm build`                        | 타입 검사 후 프로덕션 빌드                 |
 
