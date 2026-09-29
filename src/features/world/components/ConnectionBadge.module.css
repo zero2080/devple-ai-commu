@@ -1,0 +1,32 @@
+.badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 55%);
+  color: #f0f0f0;
+  font-size: 12px;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #9a9ab0;
+}
+
+.open .dot {
+  background: #5dd67a;
+}
+
+.reconnecting .dot,
+.connecting .dot {
+  background: #e0a35d;
+}
+
+.closed .dot {
+  background: #e05d5d;
+}

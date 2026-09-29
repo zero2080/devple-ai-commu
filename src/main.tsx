@@ -1,17 +1,31 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import App from './App.tsx';
+import { App, exposeDebugHooks } from '@/app';
+import { restoreSession } from '@/features/auth';
+import { authTokenProvider } from '@/store/authStore';
+import { configureHttp } from '@/transport/http';
 
 import './index.css';
 
-const container = document.getElementById('root');
-if (container === null) {
-  throw new Error('#root element not found');
+async function bootstrap(): Promise<void> {
+  if (import.meta.env.VITE_MOCK === 'true') {
+    const { startMockWorker } = await import('@/mocks/browser');
+    await startMockWorker();
+  }
+  configureHttp({ tokens: authTokenProvider });
+  exposeDebugHooks();
+  await restoreSession();
+
+  const container = document.getElementById('root');
+  if (container === null) {
+    throw new Error('#root element not found');
+  }
+  createRoot(container).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
 }
 
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+void bootstrap();
