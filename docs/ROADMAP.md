@@ -124,7 +124,7 @@
 
 ---
 
-### 4단계: Mock 환경 `[ ]`
+### 4단계: Mock 환경 `[x]`
 
 **만들 것**
 - `src/mocks/data/` — 고정 시드 데이터: 사용자 21명(본인 + 20), 맵 `main` 40×30, DM 대화 3개, 그룹 2개
@@ -138,8 +138,8 @@
 - `src/mocks/maps/main.json` — 테두리 벽 + 내부 장애물 몇 개, `spawn: {20, 15}`
 
 **완료 조건**
-- [ ] `pnpm dev:sse` 실행 후 `curl -X POST localhost:5174/api/v1/sse/ticket`로 티켓 발급 → `curl -N "localhost:5174/api/v1/sse?ticket=…"`로 스트림 확인 → 같은 티켓 재사용 시 `401`
-- [ ] MSW 핸들러 36개 + Express 티켓 1개 = `endpoints.ts` 37개 (테스트로 자동 검사)
+- [x] `pnpm dev:sse` 실행 후 `curl -X POST localhost:5174/api/v1/sse/ticket`로 티켓 발급 → `curl -N "localhost:5174/api/v1/sse?ticket=…"`로 스트림 확인 → 같은 티켓 재사용 시 `401`
+- [x] MSW 핸들러 36개 + Express 티켓 1개 = `endpoints.ts` 37개 (테스트로 자동 검사)
 
 ---
 
