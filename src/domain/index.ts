@@ -5,3 +5,6 @@ export * from './proximity';
 export * from './occupancy';
 export * from './dm';
 export * from './message';
+export * from './map';
+export * from './movement';
+export * from './pathfinding';
