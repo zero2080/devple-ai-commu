@@ -41,6 +41,7 @@ export interface WorldState {
     avatarId?: string;
   }) => void;
   setSseState: (state: SseConnectionState) => void;
+  setServerTime: (serverTime: number) => void;
   reset: () => void;
 }
 
@@ -138,6 +139,9 @@ export const useWorldStore = create<WorldState>()((set, get) => ({
   },
   setSseState: (sseState) => {
     set({ sseState });
+  },
+  setServerTime: (serverTime) => {
+    set({ serverTime });
   },
   reset: () => {
     set({ ...initial, presences: new Map(), positions: new Map() });

@@ -50,7 +50,7 @@ class FakeEventSource implements EventSourceLike {
 
 const BASE = '/api/v1';
 
-function setup(overrides: { idleTimeoutMs?: number } = {}) {
+function setup(overrides: { idleTimeoutMs?: number } = { idleTimeoutMs: 0 }) {
   let ticketNo = 0;
   const requestTicket = vi.fn(() => Promise.resolve(`t${String(++ticketNo)}`));
   const onEnvelope = vi.fn<(envelope: SseEnvelope) => void>();
@@ -100,14 +100,14 @@ describe('buildSseUrl', () => {
 });
 
 describe('SseClient', () => {
-  it('연결 시 새 티켓으로 EventSource를 만들고 이벤트 16종을 구독한다', async () => {
+  it('연결 시 새 티켓으로 EventSource를 만들고 이벤트 17종을 구독한다', async () => {
     const { client, requestTicket, states } = setup();
     await client.connect();
 
     expect(requestTicket).toHaveBeenCalledTimes(1);
     const source = FakeEventSource.instances[0];
     expect(source?.url).toBe('/api/v1/sse?ticket=t1');
-    expect(source?.listenerTypes).toHaveLength(16);
+    expect(source?.listenerTypes).toHaveLength(17);
     source?.open();
     expect(client.connectionState).toBe('open');
     expect(states).toEqual(['connecting', 'open']);
@@ -204,8 +204,8 @@ describe('SseClient', () => {
     expect(client.connectionState).toBe('closed');
   });
 
-  it('idleTimeoutMs가 켜져 있으면 무수신 시 재연결한다', async () => {
-    const { client, requestTicket } = setup({ idleTimeoutMs: 30_000 });
+  it('기본 30초 무수신이면 재연결한다 (하트비트 이벤트가 리셋)', async () => {
+    const { client, requestTicket } = setup({});
     await client.connect();
     FakeEventSource.instances[0]?.open();
     await vi.advanceTimersByTimeAsync(29_999);

@@ -29,11 +29,7 @@ export interface SseClientOptions {
   /** 기본값은 http 설정의 baseUrl */
   baseUrl?: string;
   createEventSource?: (url: string) => EventSourceLike;
-  /**
-   * 무수신 감시(ms). 0이면 끔.
-   * 서버 하트비트가 SSE 주석(`: ping`)이면 EventSource API로는 관찰할 수 없어 감시가 오탐한다.
-   * 관찰 가능한 하트비트 이벤트가 계약에 들어오기 전까지 기본 0 (결정 필요 항목).
-   */
+  /** 무수신 감시(ms). 기본 30초 (서버 `system.heartbeat` 15초 간격, API_CONTRACT 3.1). 0이면 끔 */
   idleTimeoutMs?: number;
   backoff?: Partial<BackoffOptions>;
   /** 지터용. 기본 Math.random */
@@ -41,6 +37,7 @@ export interface SseClientOptions {
 }
 
 export const DEFAULT_BACKOFF: BackoffOptions = { initialMs: 1000, maxMs: 30000, jitter: 0.2 };
+export const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
 
 /** attempt번째(0부터) 재시도 대기: 1s → 2s → 4s … 최대 30s, 지터 ±20% */
 export function computeBackoffMs(
@@ -196,7 +193,7 @@ export class SseClient {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
-    const timeout = this.options.idleTimeoutMs ?? 0;
+    const timeout = this.options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
     if (timeout <= 0) {
       return;
     }

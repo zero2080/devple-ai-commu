@@ -62,15 +62,15 @@ describe('SseRegistry.dispatch', () => {
 });
 
 describe('ALL_SSE_HANDLERS', () => {
-  it('API_CONTRACT 3.3 이벤트 16종과 1:1이다', () => {
+  it('API_CONTRACT 3.3 이벤트 17종과 1:1이다', () => {
     const types = ALL_SSE_HANDLERS.map((h) => h.type).sort();
     expect(types).toEqual([...SSE_EVENT_TYPES].sort());
-    expect(types).toHaveLength(16);
+    expect(types).toHaveLength(17);
   });
 
   it('registry에 전부 등록된다', () => {
     const registry = new SseRegistry();
     registry.registerAll(ALL_SSE_HANDLERS);
-    expect(registry.size).toBe(16);
+    expect(registry.size).toBe(17);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatSseEvent, HEARTBEAT_COMMENT, SseHub, type SseSink } from './sse.ts';
+import { formatSseEvent, SseHub, type SseSink } from './sse.ts';
 
 function sink(): SseSink & { chunks: string[]; ended: boolean } {
   const s = {
@@ -37,8 +37,9 @@ describe('SseHub', () => {
     expect(Number(second.id)).toBe(Number(first.id) + 1);
     expect(a.chunks).toHaveLength(2);
     expect(b.chunks).toHaveLength(2);
-    hub.heartbeat();
-    expect(a.chunks[2]).toBe(HEARTBEAT_COMMENT);
+    hub.heartbeat(123);
+    expect(a.chunks[2]).toContain('event: system.heartbeat');
+    expect(a.chunks[2]).toContain('"serverTime":123');
   });
 
   it('disconnectAll은 연결을 끝내고 비운다', () => {

@@ -28,6 +28,7 @@ export const SSE_EVENT_TYPES = [
   'group.removed',
   'system.notice',
   'system.suspended',
+  'system.heartbeat',
   'sync.required',
 ] as const;
 
@@ -100,6 +101,9 @@ export const groupRemovedPayloadSchema = z.object({
 
 export const systemNoticePayloadSchema = noticeSchema;
 export const systemSuspendedPayloadSchema = z.object({});
+
+/** 15초 간격 생존 신호 (API_CONTRACT 3.1). 재전송 버퍼 제외 */
+export const systemHeartbeatPayloadSchema = z.object({ serverTime: epochMs });
 
 export const syncRequiredPayloadSchema = z.object({
   reason: z.enum(['buffer_overflow', 'server_restart']),

@@ -16,8 +16,6 @@ export function formatSseEvent(envelope: SseEnvelopeLike): string {
   return `id: ${envelope.id}\nevent: ${envelope.type}\ndata: ${JSON.stringify(envelope)}\n\n`;
 }
 
-export const HEARTBEAT_COMMENT = ': ping\n\n';
-
 export class SseHub {
   private readonly sinks = new Set<SseSink>();
   private nextId = 1;
@@ -56,10 +54,9 @@ export class SseHub {
     return envelope;
   }
 
-  heartbeat(): void {
-    for (const sink of this.sinks) {
-      sink.write(HEARTBEAT_COMMENT);
-    }
+  /** 15초 생존 신호 (API_CONTRACT 3.1). 주석 대신 이벤트로 보내야 EventSource가 관찰한다 */
+  heartbeat(now: number = Date.now()): SseEnvelopeLike {
+    return this.broadcast('system.heartbeat', { serverTime: now });
   }
 
   /** 개발용 강제 끊김: 모든 연결을 닫아 클라이언트 onerror를 유발한다 */
