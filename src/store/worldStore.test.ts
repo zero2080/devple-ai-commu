@@ -32,6 +32,8 @@ describe('worldStore', () => {
     expect(s.presences.size).toBe(2);
     expect(s.positions.get('a')).toEqual({ mapId: 'main', x: 2, y: 2, dir: 'down' });
     expect(s.revision).toBe(1);
+    expect(s.snapshotRevision).toBe(1);
+    expect(s.myPosition).toEqual({ mapId: 'main', x: 1, y: 1, dir: 'down' });
   });
 
   it('world.positions는 본인 항목을 무시한다', () => {

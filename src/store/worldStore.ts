@@ -20,6 +20,8 @@ export interface PositionDeltaInput {
 export interface WorldState {
   mapId: string | null;
   myUserId: string | null;
+  /** 클라이언트 예측 위치 (게임 엔진이 갱신). 서버 기준은 presences[myUserId] */
+  myPosition: Position | null;
   /** 본인 포함 접속자 전원 */
   presences: ReadonlyMap<string, Presence>;
   /** userId → 위치. 점유 판정(domain/occupancy)에 그대로 넘긴다 */
@@ -27,8 +29,11 @@ export interface WorldState {
   serverTime: number | null;
   /** 스냅샷 이후 갱신 횟수. 렌더 쪽이 변경 감지에 쓴다 */
   revision: number;
+  /** world.snapshot 적용 횟수. 바뀌면 내 위치를 서버 기준으로 다시 잡는다 */
+  snapshotRevision: number;
   sseState: SseConnectionState;
   setMyUserId: (userId: string | null) => void;
+  setMyPosition: (position: Position) => void;
   applySnapshot: (snapshot: WorldSnapshotInput) => void;
   /** world.positions. 본인 항목은 무시한다 (API_CONTRACT 3.3) */
   applyPositions: (mapId: string, deltas: readonly PositionDeltaInput[]) => void;
@@ -56,10 +61,12 @@ function positionsOf(presences: ReadonlyMap<string, Presence>): Map<string, Posi
 const initial = {
   mapId: null,
   myUserId: null,
+  myPosition: null,
   presences: new Map<string, Presence>(),
   positions: new Map<string, Position>(),
   serverTime: null,
   revision: 0,
+  snapshotRevision: 0,
   sseState: 'idle' as SseConnectionState,
 };
 
@@ -68,18 +75,27 @@ export const useWorldStore = create<WorldState>()((set, get) => ({
   setMyUserId: (userId) => {
     set({ myUserId: userId });
   },
+  setMyPosition: (position) => {
+    set({ myPosition: position });
+  },
   applySnapshot: (snapshot) => {
     const presences = new Map<string, Presence>();
     for (const presence of snapshot.presences) {
       presences.set(presence.userId, presence);
     }
-    set((s) => ({
-      mapId: snapshot.mapId,
-      presences,
-      positions: positionsOf(presences),
-      serverTime: snapshot.serverTime,
-      revision: s.revision + 1,
-    }));
+    set((s) => {
+      const mine = s.myUserId === null ? undefined : presences.get(s.myUserId);
+      return {
+        mapId: snapshot.mapId,
+        presences,
+        positions: positionsOf(presences),
+        serverTime: snapshot.serverTime,
+        revision: s.revision + 1,
+        snapshotRevision: s.snapshotRevision + 1,
+        // 초기 위치는 항상 스냅샷의 본인 Presence에서 (클라이언트가 스폰 좌표를 가정하지 않음)
+        ...(mine === undefined ? {} : { myPosition: mine.position }),
+      };
+    });
   },
   applyPositions: (mapId, deltas) => {
     const { presences, myUserId, mapId: currentMapId } = get();
