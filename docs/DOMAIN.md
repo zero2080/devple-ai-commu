@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 1.2 (2026-09-29, API 합성 타입 9장 신설)
+> 문서 버전: 1.3 (2026-09-30, MapData.tileset 추가·GRAPHICS 참조)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -37,7 +37,7 @@ SignupRequest ──(승인)──▶ User ──1:1──▶ AccessKey
 interface User {
   id: string;
   nickname: string;          // 2~12자, 유니크
-  avatarId: string;          // 기본 제공 아바타 ID (예: 'char_01')
+  avatarId: string;          // 기본 제공 아바타 ID, 형식 'char_NN' (GRAPHICS 2.3)
   statusMessage?: string;    // 최대 40자
   role: 'member' | 'admin';
   status: 'active' | 'suspended';
@@ -141,8 +141,9 @@ interface MapData {
   width: number;             // 타일 수
   height: number;
   tileSize: 16;
+  tileset: string;           // 타일셋 ID (GRAPHICS 3장). 맵당 1개
   spawn: { x: number; y: number };
-  layers: TileLayer[];       // 그리기 순서대로
+  layers: TileLayer[];       // 그리기 순서대로. 표준 구성은 GRAPHICS 4장 (floor / objects / overhead)
   collision: number[];       // width*height, 0=통행 1=차단
 }
 interface TileLayer {
@@ -154,6 +155,7 @@ interface TileLayer {
 - 서버는 collision 배열을 동일하게 보유해 이동 검증
 - **점유 규칙**: 정적 `collision`과 별도로, 접속자 위치(`Presence.position`)도 동적 차단으로 취급. 한 타일에는 Presence 1개만 존재할 수 있다
 - `spawn`이 점유되어 있으면 서버가 가장 가까운 빈 타일(BFS)에 배치
+- 이미지·타일셋·스프라이트 규격은 **GRAPHICS.md**가 기준. `tileset`은 `src/assets/tilesets/<id>.tileset.json`을 가리킨다
 
 ## 5. 메시지
 
@@ -276,7 +278,7 @@ interface RemoteCharacter {
   presence: Presence;
   renderPixel: { x: number; y: number };   // 보간 중인 픽셀 좌표 (월드 기준)
   targetPixel: { x: number; y: number };
-  animFrame: number;
+  animFrame: number;                       // GRAPHICS 2.1 프레임 인덱스 (0~3)
 }
 ```
 
@@ -285,6 +287,7 @@ interface RemoteCharacter {
 | 규칙 | 검증 위치 |
 |---|---|
 | 닉네임 유니크, 2~12자 | 가입 신청 시 |
+| `avatarId`는 서버가 보유한 아바타 목록 안의 값 | 가입 승인·`PATCH /me` 시 |
 | 두 사용자 간 DmConversation 1개 | 첫 전송 시 자동 생성 |
 | DM 대상은 active 상태 회원 | 전송 시 |
 | 이동 목적지는 collision=0 이며 이전 위치에서 도달 가능 | 위치 갱신 시 |
@@ -353,3 +356,4 @@ interface GroupUpdatedEvent extends Group {
 | 2026-09-29 | 1.0 확정 |
 | 2026-09-29 | 1.1: 교차 검토 (RemoteCharacter 픽셀 좌표 명명) |
 | 2026-09-29 | 1.2: 9장 합성 타입 신설 (ROADMAP 3단계 선행 결정) |
+| 2026-09-30 | 1.3: `MapData.tileset` 추가, `avatarId` 형식 `char_NN`·서버 검증 명시, 자산 규격은 GRAPHICS.md 참조 |
