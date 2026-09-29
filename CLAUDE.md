@@ -16,6 +16,7 @@
 | API 경로, 요청/응답, SSE 이벤트, 에러 코드는? | `docs/API_CONTRACT.md` |
 | 네이밍, 디렉토리, 테스트, 커밋 규칙은? | `docs/CONVENTIONS.md` |
 | 지금 무엇을 만들 차례인가? 완료 조건은? | `docs/ROADMAP.md` |
+| 스프라이트·타일셋·팔레트·말풍선 CSS 규격은? | `docs/GRAPHICS.md` |
 
 문서와 코드가 다르면 **문서가 기준**이다. 문서가 틀렸다고 판단되면 코드를 고치지 말고 먼저 알린다.
 
@@ -35,6 +36,7 @@
 ## 작업 방식
 
 ### 시작 전
+- `docs/handoff/to-code/`에 파일이 있으면 먼저 처리한다 (규칙은 `docs/handoff/README.md`). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
 - 요청을 PRD 기능 번호(예: 5.4 근접 대화)와 ROADMAP 단계에 매핑한다. 매핑이 안 되면 범위 밖일 가능성이 있으니 확인한다.
 - 현재 단계보다 앞선 단계의 기능을 구현하지 않는다 (예: 5단계 중에 말풍선 만들지 않기).
 - 관련 문서 섹션을 읽고, 영향받는 레이어(`game` / `transport` / `store` / `features` / `domain`)를 먼저 나열한다.
@@ -79,8 +81,10 @@
 - ❌ `navigator.sendBeacon`으로 위치 전송 (PUT·헤더 불가) → `fetch keepalive`
 - ❌ DM 목록·히스토리를 Zustand와 Query 캐시에 이중 저장
 - ❌ 테스트에서 스냅샷 사용
+- ❌ 스프라이트를 좌우 미러로 재사용 (GRAPHICS 2.1, 4방향 별도 자산)
+- ❌ 비정수 폰트 배율·서브픽셀 좌표로 그리기 (GRAPHICS 1.2·5.1)
 
 ## 현재 상태
 
-- 문서: PRD·DOMAIN 1.2, API_CONTRACT 1.3, ARCHITECTURE 1.4, CONVENTIONS 1.3, ROADMAP 1.3 (2026-09-30)
-- 코드: **Phase 2 6단계 완료** (ROADMAP 1~6단계, 2026-09-30). Mock만으로 로그인 → 월드 → 가짜 접속자 이동 → 내 캐릭터 키·클릭 이동(예측·배칭·409 보정)까지 동작하며 `pnpm test:e2e`로 검증. 다음은 7단계(근접 대화·말풍선) — ROADMAP에 만들 것·완료 조건부터 정의. 결정 대기 항목은 `reports/` 참조
+- 진행 상태·완료 조건은 `docs/ROADMAP.md`의 체크박스가 기준이다 (여기에 이중 관리하지 않는다). 문서 버전은 각 문서 상단 표기를 본다.
+- 결정 대기 항목과 작업 결과 리포트는 `reports/`, 도구 간 요청은 `docs/handoff/`.

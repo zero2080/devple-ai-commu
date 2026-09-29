@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.4 (2026-09-30, 하트비트 이벤트·Mock 월드 상태 일원화)
+> 문서 버전: 1.5 (2026-09-30, GRAPHICS.md 연결·닉네임 렌더 방식 확정)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -41,6 +41,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 줌은 **정수 배율만** 허용 (2x, 3x, 4x). **기본 2x**. 비정수 배율은 픽셀이 뭉개진다
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 스프라이트시트 1장 + JSON atlas. 애니메이션은 프레임 인덱스 배열
+- 자산 규격·시트 배치·atlas 스키마는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 16×32 4방향×4프레임 64×128 시트, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
 
 ### 2.2 렌더 루프
 - `requestAnimationFrame` 기반 고정 로직 틱(60Hz) + 가변 렌더
@@ -54,6 +55,8 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 표시 시간: 텍스트 길이 비례 (기본 3초 + 글자당 50ms, 최대 8초). 링크 버튼이 있으면 최소 6초
 - 본문은 **항상 plain text**로 렌더 (`textContent`, HTML 해석 없음)
 - `links`가 있으면 말풍선 하단에 링크 열기 버튼(도메인만 표시, 예: `↗ example.com`). 버튼이 있는 말풍선은 마우스 호버/터치 중 사라지지 않음
+- 폰트·크기·테두리·최대 폭·꼬리 위치는 **GRAPHICS 5.1~5.2** 참조 (픽셀 웹폰트, 폰트 기본 px × 줌 배율만, 최대 폭 12타일, `box-shadow` 픽셀 외곽선)
+- **닉네임**: 5단계 플레이스홀더는 Canvas `fillText`. **12단계에서 DOM 오버레이로 전환**한다 (GRAPHICS 5.3 — 말풍선과 같은 레이어·폰트, 화면 밖 캐릭터의 노드는 만들지 않음). 확정
 
 ### 2.4 링크 처리 (말풍선 · 채팅 목록 공통)
 - 본문 내 URL 텍스트는 클릭 불가, 서버가 준 `links[]`로만 버튼 생성
@@ -231,3 +234,4 @@ src/
 | 2026-09-29 | 1.2: position batcher는 `game/sync/` 소속(1장 그림 정정), `isOccupied`는 presences를 인자로 받는 순수 함수, refresh 단일 진행, `transport/` 하위 구조를 CONVENTIONS와 일치 |
 | 2026-09-29 | 1.3: `seq`는 `Date.now()`, `world.positions` 본인 항목 무시(보정은 PUT 응답으로만), 채팅 입력 포커스 규칙, Mock 티켓은 Express |
 | 2026-09-30 | 1.4: 하트비트를 `system.heartbeat` 이벤트로(무수신 감시 30초 기본 활성). Mock 월드 REST 3개를 Express로 일원화하고 티켓에 사용자 바인딩 (Phase 1 결정 리포트 1·2) |
+| 2026-09-30 | 1.5: 자산 규격은 GRAPHICS.md(2.1·2.3 참조 추가). 닉네임 렌더는 12단계에서 Canvas fillText → DOM 오버레이로 확정 |

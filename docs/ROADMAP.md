@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.3 (2026-09-30, Phase 1 결정 반영·6단계 상세화)
+> 문서 버전: 1.4 (2026-09-30, GRAPHICS.md 연결 — 7·12단계 상세화 시 포함할 것)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -152,7 +152,7 @@
 - `src/pages/WorldPage.tsx` — `<canvas>` + 게임 엔진 마운트
 - `src/game/engine/loop.ts` — rAF 고정 틱 60Hz
 - `src/game/render/tilemap.ts` — collision 기준 벽=회색, 바닥=녹색 사각형 (플레이스홀더)
-- `src/game/render/characters.ts` — **플레이스홀더**: 16×32 색 사각형 + 머리 위 닉네임. 닉네임은 Canvas `fillText`로 그린다 (말풍선이 아니므로 허용). 최종 닉네임 렌더 방식은 12단계 전에 ARCHITECTURE 2장에 확정
+- `src/game/render/characters.ts` — **플레이스홀더**: 16×32 색 사각형 + 머리 위 닉네임. 닉네임은 Canvas `fillText`로 그린다 (말풍선이 아니므로 허용). 닉네임은 12단계에서 DOM 오버레이로 전환 (ARCHITECTURE 1.5·GRAPHICS 5.3에서 확정)
 - `src/game/sync/interpolation.ts` — 원격 캐릭터 200ms 선형 보간
 - `src/game/engine/camera.ts` — 내 캐릭터 중심, 맵 경계 클램프, 줌 2x
 - SSE 핸들러 `world.snapshot`, `world.positions`, `presence.joined/left` → `worldStore` 갱신 (3단계 껍데기에 로직 채움). `world.positions`의 본인 항목은 무시한다 (API_CONTRACT 3.3)
@@ -185,14 +185,23 @@
 - [x] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
 - [x] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
 
-### 7~12단계 (6단계 완료 후 상세화)
+### 7~12단계 (각 단계 착수 전에 3~6단계 형식으로 상세화)
 
 - 7단계: 근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼
+    - 상세화 시 명시: 말풍선·링크 버튼 CSS는 **GRAPHICS 5.1~5.2** 기준. 픽셀 웹폰트를 `src/assets/fonts/`에 동봉하고 라이선스 파일을 함께 둔다. 폰트 채택 전 OFL 원문 확인. 폰트 크기는 기본 px × 줌 배율만
+    - `POST /chat/public`은 근접 판정 브로드캐스트를 위해 Express mock으로 이관 (ARCHITECTURE 9장)
 - 8단계: 프로필 카드, DM 패널, 회수
 - 9단계: 그룹 채팅 패널
 - 10단계: 자리비움, 재동기화(`sync.required`), 정지 처리
 - 11단계: 운영자 콘솔
-- 12단계: 실제 도트 아트 자산 교체 (스프라이트시트 + atlas)
+- 12단계: 실제 도트 아트 자산 교체 (스프라이트시트 + atlas) — 완료 조건은 GRAPHICS.md 8장 검수 체크리스트
+    - `MapData.tileset` 대응: `transport/schemas` mapData 스키마와 `main.json`은 반영 완료(1.4). `game/assets/loader.ts`에 `loadTileset`·`loadCharacterAtlas` 추가
+    - `game/render/sprite.ts`: atlas 기반 프레임 좌표 `(frame*16, rowOf(dir)*32)`, 걷기 `1→2→3→0` 75ms/프레임(150ms/타일 = 2프레임), away는 idle + 알파 0.5
+    - `tilemap.ts` 플레이스홀더 → 타일셋 렌더, 레이어 `floor`/`objects`(below) → 캐릭터 → `overhead`(above)
+    - 닉네임 Canvas `fillText` → DOM 오버레이 전환 (화면 밖 캐릭터 노드 생성 금지, 말풍선과 같은 레이어·폰트)
+    - `scripts/check-assets.ts` 검수 자동화(크기·알파·팔레트·여백, GRAPHICS 8장) + CI
+    - `src/assets/LICENSES.md`, `src/assets/palette.json`
+    - 완료 조건: 아바타 8종 시트가 검수 스크립트 통과, 가짜 접속자 20명 걷기 애니메이션에서 rAF 프레임 간격 p95 ≤ 20ms (60fps 유지의 측정 가능한 대리 지표)
 
 ## Phase 3 — 백엔드 연동
 - `VITE_MOCK=false` 전환, 실서버 계약 검증, E2E(Playwright)
@@ -208,6 +217,7 @@
 | 2026-09-29 | 1.1: `exactOptionalPropertyTypes` 제외, domain 경계는 AST 셀렉터, refresh 단일 진행, `positionBatcher`는 `game/sync/`, SSE 티켓 발급·검증은 Express mock, 선행 결정 표 신설 |
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
+| 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
 
 ---
 
