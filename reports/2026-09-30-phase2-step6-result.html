@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 2 6단계 결과</title>
+<meta name="description" content="Phase 1 결정 반영과 ROADMAP 6단계(내 캐릭터 이동) 작업 결과">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+
+<h1>Phase 1 결정 반영과 6단계 결과</h1>
+<p class="meta">devple-ai-commu · 2026-09-30 · 작성: Claude Code (Fable 5.1) · 원격 <code>origin/main</code> = <code>5e24efb</code> (first commit 이후 37 커밋) · 이전 리포트: <a href="2026-09-29-decisions.html">결정 필요 사항</a> · <a href="2026-09-29-phase1-result.html">Phase 1 결과</a></p>
+<p><strong>결론.</strong> 결정 리포트의 높음 2건을 추천안대로 반영했고(사용자 승인), 이어서 Phase 2 6단계(내 캐릭터 이동)를 ROADMAP에 정의하고 구현·검증했어요. 방향키·WASD·클릭 이동이 클라이언트 예측으로 동작하고, 200ms 배칭으로 Express mock에 반영되며, 벽·다른 캐릭터 앞에서 멈추고, 경로가 막히면 재계산해요. 검증은 단위 테스트 148건, domain 커버리지 100%, E2E 4건(두 번 연속 통과)이에요.</p>
+
+<div class="grid">
+<div class="stat"><b>37</b><span>누적 커밋</span></div>
+<div class="stat"><b>6 / 12</b><span>ROADMAP 단계 완료</span></div>
+<div class="stat"><b>148</b><span>단위 테스트 (27 파일)</span></div>
+<div class="stat"><b>4</b><span>E2E (Phase 1 · 6단계)</span></div>
+<div class="stat"><b>100%</b><span>domain/ 커버리지 (분기 포함)</span></div>
+</div>
+
+<h2>1. 결정 반영</h2>
+<table><tr><th>결정</th><th>반영 내용</th><th>커밋</th></tr>
+<tr><td>하트비트를 관찰 가능한 이벤트로</td><td>API_CONTRACT 1.3: <code>system.heartbeat</code> { serverTime } 15초, 재전송 버퍼 제외, 이벤트 17종. 클라이언트 무수신 감시 기본 30초 활성. Mock 서버는 주석 대신 이벤트 방송</td><td><code>2abfef5</code> <code>b57929f</code></td></tr>
+<tr><td>Mock 월드 상태 일원화</td><td>ARCHITECTURE 1.4 9장: 티켓과 월드 REST 3개(<code>PUT /me/position</code>, <code>PUT /me/presence</code>, <code>GET /world/{mapId}/presences</code>)는 Express. Vite proxy·MSW 통과·핸들러 수 검사가 한 목록을 공유. 티켓에 Bearer 사용자 바인딩. MSW 33 + Express 4 = 37</td><td><code>9bea19d</code></td></tr></table>
+
+<h2>2. 6단계 결과</h2>
+<table><tr><th>영역</th><th>구현</th><th>커밋</th></tr>
+<tr><td>domain</td><td><code>map.ts</code> 벽 판정, <code>movement.ts</code> 4방향 규칙, <code>pathfinding.ts</code> A*(정적 벽 + 동적 점유, 목적지 벽이면 가장 가까운 통행 타일, 점유면 직전 타일, 도달 불가면 가장 가까운 타일)</td><td><code>a250936</code></td></tr>
+<tr><td>game</td><td><code>engine/input.ts</code> 키·클릭 입력(텍스트 입력 중 키 이동 차단), <code>world/localPlayer.ts</code> 예측 이동(150ms/타일, 벽·점유 시 dir만, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀 재계산, 409 스냅)</td><td><code>b2dbdab</code></td></tr>
+<tr><td>연결</td><td>WorldGame이 LocalPlayer 소유, 카메라 예측 추종, 클릭 → 타일 → 경로, PositionBatcher 시작·409 보정, <code>worldStore.myPosition</code></td><td><code>239b773</code></td></tr>
+<tr><td>Mock</td><td>Express가 실제 월드 상태로 검증(선착순 점유), 본인 포함 방송, <code>POST /__mock/reset</code>(E2E 격리)</td><td><code>9bea19d</code> <code>239b773</code></td></tr></table>
+
+<h3>검증</h3>
+<table><tr><th>검사</th><th>결과</th></tr>
+<tr><td><code>pnpm lint</code> · <code>pnpm typecheck</code> · <code>pnpm format:check</code></td><td class="ok">통과</td></tr>
+<tr><td><code>pnpm test</code></td><td class="ok">27 파일 148건</td></tr>
+<tr><td><code>pnpm test:coverage</code> (domain)</td><td class="ok">Statements·Branches·Functions·Lines 100%</td></tr>
+<tr><td><code>pnpm test:e2e</code></td><td class="ok">4건 통과, 재실행 4건 통과 (약 12초)</td></tr></table>
+<ul>
+<li><strong>E2E 6단계</strong>: 방향키 500ms → 오른쪽으로 이동·dir=right, 배칭 뒤 Express <code>/__mock/state</code>에 같은 위치. 위로 계속 누르면 테두리 벽 앞(y=1)에서 멈추거나 바로 위 타일을 점유한 가짜 접속자 앞에서 멈춤(둘 중 하나가 반드시 성립). 클릭한 타일(16,18)까지 경로 이동 후 서버 반영. 2초 샘플링 동안 내 타일에 아무도 없고 접속자끼리 겹침 0</li>
+<li><strong>서버 테스트</strong>(<code>src/mocks/server/app.test.ts</code>): 티켓 401/201, collision·too_far(하한 3타일)·occupied·오래된 seq·방향 전환·400, presence.updated 방송, presences 20명, reset</li></ul>
+
+<h2>3. 진행 중 발견해서 고친 것</h2>
+<table><tr><th>문제</th><th>처리</th></tr>
+<tr><td>A* open 목록의 배열 <code>includes</code> 분기가 단위 비용 격자에서 도달 불가라 커버리지 100%를 못 채움</td><td>open을 Set으로, 탐색 노드를 객체로 바꿔 불필요한 <code>??</code> 분기 제거</td></tr>
+<tr><td>경로가 막혀 재계산한 뒤 한 틱을 쉬어 미세하게 멈칫함</td><td>재계산 성공 시 같은 틱에 첫 칸을 밟도록 변경</td></tr>
+<tr><td>E2E 두 번째 테스트가 첫 테스트가 옮겨 둔 서버 위치(24,1)를 스냅샷으로 받아 스폰 가정이 깨짐</td><td>동작은 정상. <code>POST /__mock/reset</code> 추가, 각 테스트 전에 호출</td></tr>
+<tr><td>가짜 접속자가 내 경로를 막아 벽 도달 검사가 흔들림</td><td>"벽 앞 정지 또는 바로 위 타일 점유" 조건으로 누르는 동안 폴링</td></tr>
+<tr><td>내 타일 점유 검사에서 <code>presences[me]</code>가 스냅샷 기준이라 갱신되지 않음</td><td>설계대로(world.positions 본인 무시). 검사는 <code>myPosition</code> + 타인 presences로</td></tr>
+<tr><td>features가 app/debug를 올려다봄</td><td>디버그 훅을 <code>shared/debug.ts</code>로 이동</td></tr></table>
+
+<h2>4. 결정 항목 상태</h2>
+<table><tr><th>#</th><th>항목</th><th>상태</th></tr>
+<tr><td>1</td><td>하트비트 이벤트</td><td class="ok">반영 완료</td></tr>
+<tr><td>2</td><td>Mock 월드 상태 일원화</td><td class="ok">반영 완료. 공개·DM·그룹 메시지·공지 엔드포인트는 7~9·11단계에서 Express로 이관 예정(ARCHITECTURE 9장)</td></tr>
+<tr><td>3</td><td>부팅 refresh 401 콘솔 로그</td><td>미결 (E2E는 허용 규칙으로 처리 중)</td></tr>
+<tr><td>4</td><td>StrictMode 이중 effect 티켓</td><td>미결. SSE 수명을 세션으로 옮길지는 8단계 전에</td></tr>
+<tr><td>5</td><td>캔버스 DPR</td><td>미결 (12단계 전)</td></tr>
+<tr><td>6</td><td>닉네임 렌더 방식</td><td>미결 (12단계 전)</td></tr>
+<tr><td>7</td><td>응답 본문 미정의 엔드포인트</td><td>미결 (계약 명시 필요)</td></tr>
+<tr><td>8~11</td><td>Mock 편차·포트·PR 흐름·기타</td><td>기록됨, 변경 없음</td></tr></table>
+<p><strong>새로 확인된 사항 (결정 불필요, 참고).</strong> 내 캐릭터의 <code>presences</code> 항목은 스냅샷 시점 값으로 남고 예측 위치는 <code>worldStore.myPosition</code>에 있어요. 다른 클라이언트에는 서버가 본인 포함으로 방송하므로 문제없지만, 프로필 카드(8단계)에서 내 위치를 보여줄 일이 있으면 <code>myPosition</code>을 써야 해요.</p>
+
+<h2>5. 다음 단계</h2>
+<ul>
+<li>7단계(근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼)는 ROADMAP에 "만들 것 / 완료 조건"이 아직 없어요. 6단계처럼 정의한 뒤 착수하는 걸 권해요. 이때 <code>POST /chat/public</code>을 Express로 옮겨야 근접 판정 브로드캐스트가 가능해요</li>
+<li>결정 항목 3·4는 7~8단계 설계에 영향을 주니 함께 정하면 좋아요</li></ul>
+
+</main></body>
+</html>
