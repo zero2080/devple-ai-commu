@@ -1,6 +1,6 @@
 # CONVENTIONS — 개발 규칙
 
-> 문서 버전: 1.1 (2026-09-29, 교차 검토 반영)
+> 문서 버전: 1.2 (2026-09-29, 스택 버전·domain import 규칙·refresh 동시성 반영)
 > 상태: 확정
 > 적용 범위: 프론트엔드 저장소 전체. AI(Claude)와 사람 모두 동일하게 따른다.
 
@@ -11,16 +11,18 @@
 | 항목 | 선택 |
 |---|---|
 | 패키지 매니저 | pnpm |
-| 빌드 | Vite 5+ |
-| 언어 | TypeScript 5+, `strict: true`, `noUncheckedIndexedAccess: true` |
-| UI | React 18+ (함수 컴포넌트만) |
-| 라우팅 | React Router |
-| 상태 | Zustand (클라이언트) · TanStack Query (서버 상태) |
+| 빌드 | Vite 8 |
+| 언어 | TypeScript ~6.0 (typescript-eslint 지원 범위), `strict: true`, `noUncheckedIndexedAccess: true` |
+| UI | React 19 (함수 컴포넌트만) |
+| 라우팅 | React Router 7 (`react-router` 단일 패키지) |
+| 상태 | Zustand 5 (클라이언트, 얕은 비교는 `useShallow`) · TanStack Query 5 (서버 상태) |
 | 스타일 | CSS Modules (`*.module.css`). 게임 UI 특성상 유틸리티 프레임워크 미사용 |
-| 린트/포맷 | ESLint (typescript-eslint, react-hooks, import 순서) + Prettier |
-| 테스트 | Vitest + React Testing Library · Playwright (E2E) |
-| Mock | MSW (REST) · Express (SSE mock) |
-| Node | 20 LTS (`.nvmrc`) |
+| 린트/포맷 | ESLint 10 flat config (typescript-eslint 8 `strictTypeChecked`, react-hooks, import-x 순서, 레이어 경계) + Prettier 3 |
+| 테스트 | Vitest 5 + React Testing Library 16 · Playwright (E2E) |
+| Mock | MSW 3 (REST) · Express 5 (SSE mock) |
+| Node | 24 LTS (`.nvmrc`) |
+
+- 메이저 버전의 기준은 ROADMAP 1단계 의존성 표다. 버전을 올리면 두 문서를 같은 PR에서 갱신한다
 
 ## 2. 네이밍
 
@@ -41,7 +43,7 @@
 ## 3. 디렉토리 규칙 (ARCHITECTURE.md 8장 기준)
 
 - `game/`은 **React를 import하지 않는다**. ESLint `no-restricted-imports`로 강제
-- `domain/`은 **아무것도 import하지 않는다** (순수 함수 + 타입만). 테스트 커버리지 100% 목표
+- `domain/`은 **같은 폴더의 상대 import(`./*`) 외에 아무것도 import하지 않는다** (외부 패키지·다른 레이어 금지, 순수 함수 + 타입만). ESLint `no-restricted-syntax` 셀렉터로 강제. 테스트 커버리지 100% 목표
 - `transport/`는 `store/`에 쓰기만 하고 `features/`를 알지 못한다
 - `features/<name>/` 내부 구조: `components/`, `hooks/`, `index.ts` (public API만 export)
 - 기능 간 import는 `features/<a>`에서 `features/<b>/index.ts`만 허용. 내부 파일 직접 import 금지
@@ -55,6 +57,7 @@
 - 런타임 검증: 외부 입력(API 응답, SSE payload)은 `zod` 스키마로 파싱. 스키마는 `transport/schemas/`
 - `enum` 금지 → 문자열 리터럴 유니온
 - 함수 반환 타입은 export되는 함수에만 명시
+- `exactOptionalPropertyTypes`는 켜지 않는다. zod `.optional()` 추론(`?: T | undefined`)이 `domain/types.ts`의 `?: T`와 호환되지 않는다
 
 ## 5. React
 
@@ -99,7 +102,7 @@
 |---|---|---|
 | `domain/` | Vitest | 모든 함수. 근접 판정·경로 탐색·좌표 변환은 경계값 포함 |
 | `game/sync/` | Vitest | 배칭 타이밍, 보간, seq 처리 (fake timers) |
-| `transport/` | Vitest + MSW | 401 재시도, 에러 매핑, SSE 재연결·Last-Event-ID |
+| `transport/` | Vitest + MSW | 401 재시도(동시 401은 refresh 1회), 에러 매핑, SSE 재연결·`lastEventId` 쿼리 |
 | `features/` | RTL | 사용자 시나리오 단위. 구현 세부(상태 값) 검증 금지 |
 | E2E | Playwright | 로그인 → 입장 → 이동 → 근접 대화 → DM → 그룹, 최소 1시나리오 |
 
@@ -143,3 +146,9 @@ Refs: #이슈번호
 
 - 문서는 코드와 같은 PR에서 수정. 문서 버전 상단 표기 갱신
 - 결정 사항은 각 문서의 "결정 이력" 표에 날짜와 함께 추가
+
+## 12. 결정 이력
+
+| 날짜 | 결정 |
+|---|---|
+| 2026-09-29 | 1.2: 스택을 ROADMAP 1단계 표(React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, MSW 3, ESLint 10, Node 24)에 맞춤. `domain/`은 같은 폴더 상대 import만 허용. `exactOptionalPropertyTypes` 미사용 |

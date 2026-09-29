@@ -1,8 +1,8 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.1 (2026-09-29, 교차 검토 반영)
+> 문서 버전: 1.2 (2026-09-29, position batcher 위치·isOccupied 시그니처·refresh 동시성 정정)
 > 상태: 확정
-> 전제: PRD.md 1.0
+> 전제: PRD.md 1.1
 
 ---
 
@@ -23,7 +23,8 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 │ Game Engine (Canvas) │ Transport                    │
 │  render loop         │  REST client (fetch)         │
 │  input → 이동 예측   │  SSE client (EventSource)    │
-│  tilemap · camera    │  position batcher            │
+│  tilemap · camera    │  api/*.ts (엔드포인트별)     │
+│  sync: batcher·보간  │                              │
 └──────────────────────┴──────────────────────────────┘
 ```
 
@@ -31,6 +32,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - UI 레이어는 Canvas를 직접 건드리지 않는다. 스토어를 통해서만 상태를 읽는다.
 - Game Engine은 React 컴포넌트를 import하지 않는다. 순수 TS 모듈.
 - Transport는 스토어에 쓰기만 하고, 도메인 판단(예: "범위 안인가")은 하지 않는다. 판단은 `domain/` 순수 함수가 담당.
+- 위치 배칭(`game/sync/positionBatcher.ts`)과 보간은 Game Engine 소속이다. 배처는 타이밍·seq만 관리하고 전송은 `transport/api/me.ts`에 위임한다
 
 ## 2. 렌더링 (Canvas)
 
@@ -86,7 +88,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 
 ### 3.2.1 캐릭터 간 충돌 규칙
 - **한 타일에 캐릭터 1명.** 다른 캐릭터가 점유한 타일은 벽과 동일한 차단 타일로 취급
-- 점유 정보는 `worldStore`의 `Map<userId, Position>`에서 매 틱 조회 (`domain/occupancy.ts`: `isOccupied(tile, excludeUserId)`)
+- 점유 정보는 `worldStore`의 `Map<userId, Position>`에서 매 틱 읽어 `domain/occupancy.ts`의 순수 함수 `isOccupied(tile, presences, excludeUserId?)`에 넘긴다 (domain은 스토어를 읽지 않는다)
 - **목적지가 점유됨** (클릭/터치 이동): 경로를 목적지까지 계산한 뒤, 마지막 타일을 제외하고 **바로 앞 타일까지만** 이동. 도착 후 목적지 방향으로 `dir` 설정
 - **이동 중 경로가 막힘** (다른 캐릭터가 경로 위로 들어옴): 멈추지 않고 현재 타일에서 **A\* 재계산**. 재계산해도 도달 불가면 도달 가능한 가장 가까운 타일로 목적지 변경. 재계산 주기 최소 100ms(스로틀)
 - **키 입력 이동**: 다음 타일이 점유되어 있으면 이동하지 않고 `dir`만 바꿈 (벽에 부딪힌 것과 동일)
@@ -94,7 +96,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - **입장 시**: 스폰 타일이 점유되어 있으면 서버가 가장 가까운 빈 타일에 배치. 내 초기 위치는 항상 `world.snapshot`의 본인 Presence에서 읽는다 (클라이언트가 스폰 좌표를 가정하지 않음)
 
 ### 3.3 서버로 전송 (배칭)
-- 위치를 **200ms 주기**로 모아 REST 전송 (확정값). 위치가 바뀌지 않았으면 전송 안 함
+- 위치를 **200ms 주기**로 모아 REST 전송 (확정값, `game/sync/positionBatcher.ts`). 위치가 바뀌지 않았으면 전송 안 함
 - 페이로드는 최종 위치 + 방향만 (중간 경로는 보내지 않음)
 - `PUT /me/position { mapId, x, y, dir, seq }` — `seq`는 단조 증가, 서버는 오래된 seq 무시
 - 이동 중 페이지 이탈 시(`pagehide`) `fetch(url, { method: 'PUT', keepalive: true, headers: { Authorization } })`로 마지막 위치 전송. `navigator.sendBeacon`은 POST 전용이고 커스텀 헤더를 못 붙여 사용 불가 (정확도 높음, 표준 제약)
@@ -150,6 +152,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 ## 5. REST 클라이언트
 
 - `fetch` 래퍼 1개 (`transport/http.ts`): base URL, JSON 직렬화, Access 토큰 첨부, 401 시 Refresh 후 1회 재시도
+- Refresh는 **단일 진행**: 동시에 여러 요청이 401을 받아도 `POST /auth/refresh`는 1회만 호출하고 나머지는 같은 promise를 기다린다. 쿠키가 회전되므로 두 번째 refresh는 실패한다
 - 에러 응답은 계약된 형식 `{ code, message, details? }`로 통일, `ApiError` 클래스로 throw
 - 서버 상태 캐싱/재조회는 **TanStack Query** (DM 대화 목록, 그룹 목록, 메시지 히스토리, 사용자 프로필)
 - 실시간 이벤트 수신 시 해당 Query 캐시를 직접 갱신 (`setQueryData`), 재요청하지 않음
@@ -193,7 +196,7 @@ src/
 │   ├── render/     # tilemap, sprite, layers
 │   └── sync/       # positionBatcher, interpolation
 ├── domain/         # 순수 함수·타입 (proximity, message, user)
-├── transport/      # http.ts, sse.ts, api/*.ts (엔드포인트별)
+├── transport/      # http.ts, api/*.ts (엔드포인트별), sse/(client, registry, handlers/<type>.ts), schemas/ (zod)
 ├── store/          # zustand 스토어
 ├── mocks/          # MSW 핸들러 + SSE mock 서버
 ├── assets/         # 스프라이트, 맵 JSON
@@ -224,3 +227,4 @@ src/
 | 2026-09-29 | 캐릭터 간 충돌: 타일당 1명, 목적지 점유 시 직전 타일까지, 이동 중 막히면 경로 재계산, 경쟁은 서버 선착순 |
 | 2026-09-29 | 교차 검토: SSE 재연결은 수동 + `lastEventId` 쿼리, 이탈 시 `fetch keepalive`, 자리비움 5분, 서버 목록은 Query 캐시 단일 저장 |
 | 2026-09-29 | 예측/서버 불일치는 "즉시 보정 + 경로 재계산"으로 처리 (한 칸 튕김 허용, 부드러운 되감기 안 함) |
+| 2026-09-29 | 1.2: position batcher는 `game/sync/` 소속(1장 그림 정정), `isOccupied`는 presences를 인자로 받는 순수 함수, refresh 단일 진행, `transport/` 하위 구조를 CONVENTIONS와 일치 |
