@@ -6,3 +6,6 @@ pnpm-workspace.yaml
 # 문서는 사람이 쓴 원문 형식을 유지한다
 *.md
 reports
+# 생성 파일
+public/mockServiceWorker.js
+src/mocks/maps/*.json

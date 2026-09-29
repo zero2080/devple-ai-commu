@@ -7,7 +7,9 @@
     "skipLibCheck": true,
 
     /* Bundler mode */
-    "module": "nodenext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -21,5 +23,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "src/mocks/sse-server.ts",
+    "src/mocks/server",
+    "src/mocks/data",
+    "src/mocks/maps"
+  ]
 }

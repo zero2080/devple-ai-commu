@@ -6,6 +6,7 @@
     "module": "esnext",
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -27,5 +28,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/mocks/sse-server.ts", "src/mocks/server"]
 }
