@@ -1,0 +1,79 @@
+// 캐릭터 플레이스홀더 (ROADMAP 5단계): 16×32 색 사각형 + 머리 위 닉네임.
+// 닉네임은 말풍선이 아니므로 Canvas fillText 허용. 최종 방식은 12단계 전에 ARCHITECTURE 2장에 확정.
+import { CHARACTER_HEIGHT_TILES, TILE_SIZE } from '../constants';
+import type { Camera } from '../engine/camera';
+
+export interface DrawableCharacter {
+  userId: string;
+  nickname: string;
+  avatarId: string;
+  state: 'online' | 'away';
+  /** 발 위치 기준 타일의 왼쪽 위 월드 px */
+  pixelX: number;
+  pixelY: number;
+  isMe: boolean;
+}
+
+const AVATAR_COLORS = [
+  '#e05d5d',
+  '#e0a35d',
+  '#d6d65d',
+  '#5dd67a',
+  '#5dc9e0',
+  '#5d7ae0',
+  '#a95de0',
+  '#e05db8',
+];
+export const ME_OUTLINE_COLOR = '#ffffff';
+export const AWAY_ALPHA = 0.5;
+export const NICKNAME_FONT = '8px monospace';
+
+export function avatarColor(avatarId: string): string {
+  let hash = 0;
+  for (const ch of avatarId) {
+    hash = (hash * 31 + (ch.codePointAt(0) ?? 0)) >>> 0;
+  }
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? '#ffffff';
+}
+
+const sortBuffer: DrawableCharacter[] = [];
+
+/** y 정렬 후 그린다. ctx는 zoom·카메라 변환이 적용된 상태 */
+export function renderCharacters(
+  ctx: CanvasRenderingContext2D,
+  characters: Iterable<DrawableCharacter>,
+  camera: Camera,
+): void {
+  sortBuffer.length = 0;
+  for (const c of characters) {
+    sortBuffer.push(c);
+  }
+  sortBuffer.sort((a, b) => a.pixelY - b.pixelY);
+
+  const height = TILE_SIZE * CHARACTER_HEIGHT_TILES;
+  const viewLeft = camera.originX - TILE_SIZE;
+  const viewTop = camera.originY - height;
+  ctx.font = NICKNAME_FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  for (const c of sortBuffer) {
+    if (c.pixelX < viewLeft || c.pixelY < viewTop) {
+      continue;
+    }
+    const drawX = c.pixelX - camera.originX;
+    const drawY = c.pixelY - camera.originY - (height - TILE_SIZE); // 발이 타일 바닥에 오도록
+    ctx.globalAlpha = c.state === 'away' ? AWAY_ALPHA : 1;
+    ctx.fillStyle = avatarColor(c.avatarId);
+    ctx.fillRect(drawX + 2, drawY, TILE_SIZE - 4, height);
+    if (c.isMe) {
+      ctx.strokeStyle = ME_OUTLINE_COLOR;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(drawX + 2.5, drawY + 0.5, TILE_SIZE - 5, height - 1);
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000000';
+    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2 + 1, drawY - 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2, drawY - 2);
+  }
+}

@@ -8,4 +8,4 @@ pnpm-workspace.yaml
 reports
 # 생성 파일
 public/mockServiceWorker.js
-src/mocks/maps/*.json
+src/assets/maps/*.json

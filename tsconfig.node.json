@@ -28,6 +28,6 @@
     "src/mocks/sse-server.ts",
     "src/mocks/server",
     "src/mocks/data",
-    "src/mocks/maps"
+    "src/assets/maps"
   ]
 }
