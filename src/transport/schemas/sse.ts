@@ -96,7 +96,7 @@ export const groupUpdatedPayloadSchema = groupUpdatedEventSchema;
 
 export const groupRemovedPayloadSchema = z.object({
   groupId: z.string(),
-  reason: z.enum(['kicked', 'dissolved']),
+  reason: z.enum(['kicked', 'dissolved', 'left']), // left: 나간 본인의 다른 탭 동기화 (API_CONTRACT 1.5)
 });
 
 export const systemNoticePayloadSchema = noticeSchema;

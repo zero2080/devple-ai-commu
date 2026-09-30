@@ -58,8 +58,14 @@ export const adminHandlers = [
     if (signup.status !== 'pending') {
       return apiError(409, 'SIGNUP_ALREADY_REVIEWED', 'already reviewed');
     }
+    const reason = str(await readJson(request), 'reason') ?? '';
+    const reasonLength = Array.from(reason.trim()).length;
+    if (reasonLength < 1 || reasonLength > 200) {
+      // API_CONTRACT 1.5: reason 필수 1~200자
+      return apiError(400, 'VALIDATION_FAILED', 'invalid fields', { fields: { reason: 'length' } });
+    }
     signup.status = 'rejected';
-    signup.rejectReason = str(await readJson(request), 'reason') ?? '';
+    signup.rejectReason = reason;
     signup.reviewedAt = Date.now();
     signup.reviewedBy = state.me.id;
     return noContent();
@@ -78,6 +84,9 @@ export const adminHandlers = [
   http.post(url(ENDPOINTS.suspendUser), ({ request, params }) => {
     const denied = requireAdmin(request);
     if (denied !== null) return denied;
+    if (param(params, 'id') === state.me.id) {
+      return apiError(403, 'FORBIDDEN', 'cannot suspend yourself'); // API_CONTRACT 1.5
+    }
     const user = findUser(param(params, 'id'));
     if (user === undefined) {
       return apiError(404, 'NOT_FOUND', 'user not found', { resource: 'user' });

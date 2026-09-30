@@ -32,6 +32,7 @@ import type {
 
 import {
   authSessionSchema,
+  groupRemovedPayloadSchema,
   chatDmEventSchema,
   chatGroupEventSchema,
   chatPublicEventSchema,
@@ -134,5 +135,16 @@ describe('런타임 검증', () => {
       positions: [{ userId: 'u1', x: 1, y: 2, dir: 'left' }],
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('group.removed (API_CONTRACT 1.5)', () => {
+  it('reason에 left를 받는다 (나간 본인의 다른 탭 동기화)', () => {
+    for (const reason of ['kicked', 'dissolved', 'left']) {
+      expect(groupRemovedPayloadSchema.safeParse({ groupId: 'g_01', reason }).success).toBe(true);
+    }
+    expect(groupRemovedPayloadSchema.safeParse({ groupId: 'g_01', reason: 'banned' }).success).toBe(
+      false,
+    );
   });
 });

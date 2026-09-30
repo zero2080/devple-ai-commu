@@ -67,7 +67,7 @@ export const groupsHandlers = [
     const length = Array.from(name).length;
     if (length < 2 || length > 20) {
       return apiError(400, 'VALIDATION_FAILED', 'invalid fields', {
-        fields: { name: 'length 2~20' },
+        fields: { name: 'length' },
       });
     }
     const now = Date.now();
@@ -112,7 +112,7 @@ export const groupsHandlers = [
     const length = Array.from(name).length;
     if (length < 2 || length > 20) {
       return apiError(400, 'VALIDATION_FAILED', 'invalid fields', {
-        fields: { name: 'length 2~20' },
+        fields: { name: 'length' },
       });
     }
     group.name = name;

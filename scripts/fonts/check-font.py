@@ -21,8 +21,11 @@ if hangul != 11172:
     problems.append(f'hangul syllables {hangul} != 11172')
 if ascii_ != 95:
     problems.append(f'ascii {ascii_} != 95')
-if jamo < 90:
-    problems.append(f'compat jamo {jamo} < 90')
+if jamo != 94:
+    problems.append(f'compat jamo {jamo} != 94 (U+3131–U+318E, GRAPHICS 5.1)')
+missing_punct = [ch for ch in '…·「」～！？₩' if ord(ch) not in cps]
+if missing_punct:
+    problems.append(f'punctuation missing: {missing_punct}')
 for nid in (1, 3, 4, 6, 16):
     value = names.get(nid, '')
     if reserved.lower() in value.lower():
