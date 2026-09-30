@@ -101,7 +101,17 @@
   cursor: pointer;
 }
 
+/* 헤더는 한 줄: 버튼은 줄바꿈 없이, 제목만 줄어들며 말줄임 (390px에서 "← 목록"이 두 줄로 꺾이던 문제) */
+.threadHeader > * {
+  flex: none;
+  white-space: nowrap;
+}
+
 .threadTitle {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #2ce8f5;
 }
 
