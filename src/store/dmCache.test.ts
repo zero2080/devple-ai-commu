@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { DmConversation, DmMessage, User } from '@/domain';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import {
   applyDmRead,
@@ -20,7 +21,7 @@ const ME = 'me';
 const user = (id: string): User => ({
   id,
   nickname: `n-${id}`,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member',
   status: 'active',
   createdAt: 1,

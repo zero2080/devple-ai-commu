@@ -1,7 +1,7 @@
 // 월드 상태: 접속자 Presence·위치 (ARCHITECTURE 7장). 60Hz로 읽히므로 React 구독 대상이 아니다 — Game Engine이 getState()로 읽는다.
 import { create } from 'zustand';
 
-import type { Position, Presence, PresenceState } from '@/domain';
+import type { Appearance, Position, Presence, PresenceState } from '@/domain';
 import type { SseConnectionState } from '@/transport/sse/client';
 
 export interface WorldSnapshotInput {
@@ -43,7 +43,7 @@ export interface WorldState {
     userId: string;
     state?: PresenceState;
     nickname?: string;
-    avatarId?: string;
+    appearance?: Appearance;
   }) => void;
   setSseState: (state: SseConnectionState) => void;
   setServerTime: (serverTime: number) => void;
@@ -149,7 +149,7 @@ export const useWorldStore = create<WorldState>()((set, get) => ({
       ...presence,
       ...(patch.state === undefined ? {} : { state: patch.state }),
       ...(patch.nickname === undefined ? {} : { nickname: patch.nickname }),
-      ...(patch.avatarId === undefined ? {} : { avatarId: patch.avatarId }),
+      ...(patch.appearance === undefined ? {} : { appearance: patch.appearance }),
     });
     set((s) => ({ presences: next, revision: s.revision + 1 }));
   },

@@ -1,4 +1,5 @@
 // 고정 시드 사용자 21명 (본인 + 20). MSW와 Express mock이 공유한다.
+import { ME_APPEARANCE, seedAppearance } from './avatar.ts';
 import type { Me, User } from '../../domain/types.ts';
 
 export const SEED_TIME = 1_727_600_000_000; // 2024-09-29T10:13:20Z
@@ -6,7 +7,7 @@ export const SEED_TIME = 1_727_600_000_000; // 2024-09-29T10:13:20Z
 export const ME: Me = {
   id: 'u_me',
   nickname: '데모',
-  avatarId: 'char_01',
+  appearance: ME_APPEARANCE,
   statusMessage: 'Mock 모드로 접속 중',
   role: 'admin',
   status: 'active',
@@ -41,7 +42,7 @@ const FAKE_NICKNAMES = [
 export const FAKE_USERS: User[] = FAKE_NICKNAMES.map((nickname, i) => ({
   id: `u_${String(i + 1).padStart(2, '0')}`,
   nickname,
-  avatarId: `char_${String((i % 8) + 1).padStart(2, '0')}`,
+  appearance: seedAppearance(i + 1),
   ...(i % 3 === 0 ? { statusMessage: `${nickname}입니다` } : {}),
   role: 'member',
   status: i === 19 ? 'suspended' : 'active',
@@ -52,7 +53,7 @@ export function meAsUser(): User {
   return {
     id: ME.id,
     nickname: ME.nickname,
-    avatarId: ME.avatarId,
+    appearance: ME.appearance,
     ...(ME.statusMessage === undefined ? {} : { statusMessage: ME.statusMessage }),
     role: ME.role,
     status: ME.status,

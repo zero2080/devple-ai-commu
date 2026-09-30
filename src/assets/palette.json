@@ -1,0 +1,227 @@
+{
+  "name": "devple-32",
+  "colors": [
+    "#be4a2f",
+    "#d77643",
+    "#ead4aa",
+    "#e4a672",
+    "#b86f50",
+    "#733e39",
+    "#3e2731",
+    "#a22633",
+    "#e43b44",
+    "#f77622",
+    "#feae34",
+    "#fee761",
+    "#63c74d",
+    "#3e8948",
+    "#265c42",
+    "#193c3e",
+    "#124e89",
+    "#0099db",
+    "#2ce8f5",
+    "#ffffff",
+    "#c0cbdc",
+    "#8b9bb4",
+    "#5a6988",
+    "#3a4466",
+    "#262b44",
+    "#181425",
+    "#ff0044",
+    "#68386c",
+    "#b55088",
+    "#f6757a",
+    "#e8b796",
+    "#c28569"
+  ],
+  "ramps": {
+    "skin_1": {
+      "hi": "#ead4aa",
+      "base": "#e8b796",
+      "shadow": "#c28569"
+    },
+    "skin_2": {
+      "hi": "#e8b796",
+      "base": "#e4a672",
+      "shadow": "#b86f50"
+    },
+    "skin_3": {
+      "hi": "#e4a672",
+      "base": "#c28569",
+      "shadow": "#b86f50"
+    },
+    "skin_4": {
+      "hi": "#c28569",
+      "base": "#b86f50",
+      "shadow": "#733e39"
+    },
+    "skin_5": {
+      "hi": "#b86f50",
+      "base": "#733e39",
+      "shadow": "#3e2731"
+    },
+    "hair_black": {
+      "hi": "#5a6988",
+      "base": "#3a4466",
+      "shadow": "#181425"
+    },
+    "hair_brown": {
+      "hi": "#b86f50",
+      "base": "#733e39",
+      "shadow": "#3e2731"
+    },
+    "hair_blonde": {
+      "hi": "#fee761",
+      "base": "#feae34",
+      "shadow": "#d77643"
+    },
+    "hair_ginger": {
+      "hi": "#f77622",
+      "base": "#be4a2f",
+      "shadow": "#733e39"
+    },
+    "hair_red": {
+      "hi": "#e43b44",
+      "base": "#a22633",
+      "shadow": "#3e2731"
+    },
+    "hair_pink": {
+      "hi": "#f6757a",
+      "base": "#b55088",
+      "shadow": "#68386c"
+    },
+    "hair_blue": {
+      "hi": "#2ce8f5",
+      "base": "#0099db",
+      "shadow": "#124e89"
+    },
+    "hair_green": {
+      "hi": "#63c74d",
+      "base": "#3e8948",
+      "shadow": "#265c42"
+    },
+    "hair_gray": {
+      "hi": "#c0cbdc",
+      "base": "#8b9bb4",
+      "shadow": "#5a6988"
+    },
+    "hair_white": {
+      "hi": "#ffffff",
+      "base": "#c0cbdc",
+      "shadow": "#8b9bb4"
+    },
+    "item_red": {
+      "hi": "#f6757a",
+      "base": "#e43b44",
+      "shadow": "#a22633"
+    },
+    "item_orange": {
+      "hi": "#feae34",
+      "base": "#f77622",
+      "shadow": "#be4a2f"
+    },
+    "item_yellow": {
+      "hi": "#fee761",
+      "base": "#feae34",
+      "shadow": "#d77643"
+    },
+    "item_green": {
+      "hi": "#63c74d",
+      "base": "#3e8948",
+      "shadow": "#265c42"
+    },
+    "item_forest": {
+      "hi": "#3e8948",
+      "base": "#265c42",
+      "shadow": "#193c3e"
+    },
+    "item_cyan": {
+      "hi": "#2ce8f5",
+      "base": "#0099db",
+      "shadow": "#124e89"
+    },
+    "item_navy": {
+      "hi": "#0099db",
+      "base": "#124e89",
+      "shadow": "#193c3e"
+    },
+    "item_purple": {
+      "hi": "#b55088",
+      "base": "#68386c",
+      "shadow": "#3e2731"
+    },
+    "item_pink": {
+      "hi": "#f6757a",
+      "base": "#b55088",
+      "shadow": "#68386c"
+    },
+    "item_brown": {
+      "hi": "#b86f50",
+      "base": "#733e39",
+      "shadow": "#3e2731"
+    },
+    "item_tan": {
+      "hi": "#e4a672",
+      "base": "#c28569",
+      "shadow": "#b86f50"
+    },
+    "item_beige": {
+      "hi": "#ead4aa",
+      "base": "#e4a672",
+      "shadow": "#c28569"
+    },
+    "item_white": {
+      "hi": "#ffffff",
+      "base": "#c0cbdc",
+      "shadow": "#8b9bb4"
+    },
+    "item_gray": {
+      "hi": "#8b9bb4",
+      "base": "#5a6988",
+      "shadow": "#3a4466"
+    },
+    "item_charcoal": {
+      "hi": "#5a6988",
+      "base": "#3a4466",
+      "shadow": "#262b44"
+    },
+    "item_black": {
+      "hi": "#3a4466",
+      "base": "#262b44",
+      "shadow": "#181425"
+    }
+  },
+  "rampGroups": {
+    "skin": ["skin_1", "skin_2", "skin_3", "skin_4", "skin_5"],
+    "hair": [
+      "hair_black",
+      "hair_brown",
+      "hair_blonde",
+      "hair_ginger",
+      "hair_red",
+      "hair_pink",
+      "hair_blue",
+      "hair_green",
+      "hair_gray",
+      "hair_white"
+    ],
+    "item": [
+      "item_red",
+      "item_orange",
+      "item_yellow",
+      "item_green",
+      "item_forest",
+      "item_cyan",
+      "item_navy",
+      "item_purple",
+      "item_pink",
+      "item_brown",
+      "item_tan",
+      "item_beige",
+      "item_white",
+      "item_gray",
+      "item_charcoal",
+      "item_black"
+    ]
+  }
+}

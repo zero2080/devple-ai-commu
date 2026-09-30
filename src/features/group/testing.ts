@@ -7,11 +7,12 @@ import type {
   User,
   UserProfile,
 } from '@/domain';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 export const user = (id: string, nickname: string): User => ({
   id,
   nickname,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member',
   status: 'active',
   createdAt: 1,

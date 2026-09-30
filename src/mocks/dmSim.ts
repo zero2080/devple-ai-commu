@@ -19,7 +19,7 @@ export function meAsSender(): User {
   return {
     id: me.id,
     nickname: me.nickname,
-    avatarId: me.avatarId,
+    appearance: me.appearance,
     ...(me.statusMessage === undefined ? {} : { statusMessage: me.statusMessage }),
     role: me.role,
     status: me.status,

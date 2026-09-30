@@ -1,6 +1,7 @@
 // DOMAIN 3.5·3.6, API_CONTRACT 2.1 인증 응답 스키마
 import { z } from 'zod';
 
+import { avatarOptionsSchema } from './appearance';
 import { meSchema, signupStatusSchema } from './user';
 
 export const serverConfigSchema = z.object({
@@ -10,7 +11,7 @@ export const serverConfigSchema = z.object({
   maxMessageLength: z.number().int().positive(),
   defaultMapId: z.string(),
   maxGroupMembers: z.number().int().positive(),
-  avatarIds: z.array(z.string()).min(1),
+  avatarOptions: avatarOptionsSchema,
 });
 
 export const authSessionSchema = z.object({

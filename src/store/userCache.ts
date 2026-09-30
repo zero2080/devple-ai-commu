@@ -8,3 +8,20 @@ import { queryKeys } from './queryKeys';
 export function rememberUser(qc: QueryClient, user: User): void {
   qc.setQueryData(queryKeys.user(user.id), user);
 }
+
+/** presence.updated의 닉네임·외형을 캐시에 있는 사용자에게 반영 (없으면 그대로 — 다음 조회 때 받는다) */
+export function patchUser(
+  qc: QueryClient,
+  userId: string,
+  patch: Partial<Pick<User, 'nickname' | 'appearance'>>,
+): void {
+  qc.setQueryData<User>(queryKeys.user(userId), (old) =>
+    old === undefined
+      ? old
+      : {
+          ...old,
+          ...(patch.nickname === undefined ? {} : { nickname: patch.nickname }),
+          ...(patch.appearance === undefined ? {} : { appearance: patch.appearance }),
+        },
+  );
+}

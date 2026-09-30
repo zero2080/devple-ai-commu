@@ -1,5 +1,5 @@
 // API_CONTRACT 2.2 본인
-import type { Me, Position, PresenceState, ServerConfig } from '@/domain';
+import type { Appearance, Me, Position, PresenceState, ServerConfig } from '@/domain';
 
 import { request } from '../http';
 import { meResponseSchema, meSchema } from '../schemas';
@@ -13,7 +13,8 @@ export interface MeResponse {
 export interface UpdateMeBody {
   nickname?: string;
   statusMessage?: string;
-  avatarId?: string;
+  /** 전체 교체 (DOMAIN 3.7) */
+  appearance?: Appearance;
 }
 
 /** PUT /me/position 요청. seq는 Date.now() 밀리초 정수 (API_CONTRACT 2.2) */

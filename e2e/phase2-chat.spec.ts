@@ -70,7 +70,8 @@ test('Enter → 입력 → 전송: 로그·내 말풍선(머리 위), 입력 중
   if (canvasBox === null || bubbleBox === null) throw new Error('boxes missing');
   const anchorX = canvasBox.x + (20 * TILE + TILE / 2 - cam.originX) * cam.zoom;
   // GRAPHICS 5.2: 꼬리 끝 = 프레임 상단 − (닉네임 간격 2 + 닉네임 줄 높이 8 + 1) = 상단 − 11
-  const anchorY = canvasBox.y + (15 * TILE + TILE - 2 * TILE - 11 - cam.originY) * cam.zoom;
+  // 프레임 24×40 상단 = 앵커(타일 바닥) − 40, 꼬리 끝 = 그 위 11 (GRAPHICS 5.2)
+  const anchorY = canvasBox.y + (15 * TILE + TILE - 40 - 11 - cam.originY) * cam.zoom;
   expect(anchorX).toBeGreaterThanOrEqual(bubbleBox.x);
   expect(anchorX).toBeLessThanOrEqual(bubbleBox.x + bubbleBox.width);
   expect(Math.abs(bubbleBox.y + bubbleBox.height + 3 * cam.zoom - anchorY)).toBeLessThanOrEqual(1);

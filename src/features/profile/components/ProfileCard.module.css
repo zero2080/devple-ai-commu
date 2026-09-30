@@ -24,12 +24,6 @@
 }
 
 /* 아바타 미리보기: 12단계 전까지 플레이스홀더 색 사각형 (idle down/0 프레임 자리, GRAPHICS 2.3) */
-.avatar {
-  flex: none;
-  width: calc(12px * var(--zoom));
-  height: calc(32px * var(--zoom));
-}
-
 .info {
   display: grid;
   gap: calc(2px * var(--zoom));

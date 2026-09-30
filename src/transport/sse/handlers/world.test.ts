@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { queryClient } from '@/store/queryClient';
+import { queryKeys } from '@/store/queryKeys';
 import { useWorldStore } from '@/store/worldStore';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import { SseRegistry } from '../registry';
 import { ALL_SSE_HANDLERS } from './index';
@@ -11,7 +14,7 @@ registry.registerAll(ALL_SSE_HANDLERS);
 const presence = (userId: string, x: number, y: number) => ({
   userId,
   nickname: userId,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   position: { mapId: 'main', x, y, dir: 'down' },
   state: 'online',
   updatedAt: 1,
@@ -64,6 +67,43 @@ describe('world.* / presence.* 핸들러', () => {
       registry.dispatch({ id: '4', type: 'presence.left', ts: 4, payload: { userId: 'b' } }),
     ).toBe('handled');
     expect(useWorldStore.getState().presences.has('b')).toBe(false);
+  });
+
+  it('presence.updated → 상태·닉네임·외형 전체를 월드와 사용자 캐시에 반영 (API_CONTRACT 3.3)', () => {
+    const world = useWorldStore.getState();
+    world.addPresence(presence('u_1', 3, 3) as Parameters<typeof world.addPresence>[0]);
+    queryClient.setQueryData(queryKeys.user('u_1'), {
+      id: 'u_1',
+      nickname: 'u_1',
+      appearance: TEST_APPEARANCE,
+      role: 'member',
+      status: 'active',
+      createdAt: 1,
+    });
+    const look = { ...TEST_APPEARANCE, hat: { itemId: 'hat_cap' }, hair: null };
+    registry.dispatch({
+      id: '9',
+      type: 'presence.updated',
+      ts: 1,
+      payload: { userId: 'u_1', state: 'away', nickname: '새닉', appearance: look },
+    });
+    expect(useWorldStore.getState().presences.get('u_1')).toMatchObject({
+      state: 'away',
+      nickname: '새닉',
+      appearance: look,
+    });
+    expect(queryClient.getQueryData(queryKeys.user('u_1'))).toMatchObject({
+      nickname: '새닉',
+      appearance: look,
+    });
+    // 외형이 부분 객체면 스키마에서 거른다 (모든 키 필수, DOMAIN 3.7)
+    registry.dispatch({
+      id: '10',
+      type: 'presence.updated',
+      ts: 1,
+      payload: { userId: 'u_1', appearance: { skin: 'skin_1' } },
+    });
+    expect(useWorldStore.getState().presences.get('u_1')?.appearance).toEqual(look);
   });
 
   it('좌표가 정수가 아니면 무시한다 (zod)', () => {

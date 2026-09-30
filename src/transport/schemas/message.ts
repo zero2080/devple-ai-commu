@@ -94,7 +94,7 @@ export const groupDetailSchema = z.object({
 });
 
 export const chatPublicEventSchema = publicMessageSchema.extend({
-  sender: userSchema.pick({ nickname: true, avatarId: true }),
+  sender: userSchema.pick({ nickname: true }),
 });
 
 export const chatDmEventSchema = dmMessageSchema.extend({

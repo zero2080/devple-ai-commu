@@ -2,12 +2,18 @@
 // 스토어는 직접 import하지 않고 WorldSource로 읽는다 (테스트 용이, 60Hz 읽기는 getState() 경로).
 import type { Direction, MapData, Position, Presence } from '@/domain';
 
-import { BUBBLE_NICKNAME_CLEARANCE_PX, CHARACTER_HEIGHT_TILES, TILE_SIZE } from '../constants';
+import {
+  AVATAR_BODY_BOX,
+  AVATAR_FRAME_WIDTH,
+  BUBBLE_NICKNAME_CLEARANCE_PX,
+  TILE_SIZE,
+} from '../constants';
 import { LocalPlayer } from './localPlayer';
 import { computeCamera, screenToWorld, type Camera } from '../engine/camera';
 import { GameLoop, type LoopOptions } from '../engine/loop';
+import { placeholderColors } from '../render/avatarPlaceholder';
 import { backingStoreSize } from '../render/backingStore';
-import { renderCharacters, type DrawableCharacter } from '../render/characters';
+import { frameOrigin, renderCharacters, type DrawableCharacter } from '../render/characters';
 import { createTilemapCache, renderTilemap, type TilemapCache } from '../render/tilemap';
 import { RemoteInterpolator, tileToPixel } from '../sync/interpolation';
 
@@ -172,14 +178,15 @@ export class WorldGame {
     let hit: string | null = null;
     let hitY = Number.NEGATIVE_INFINITY;
     for (const drawable of this.drawables.values()) {
-      const left = Math.round(drawable.pixelX);
-      const bottom = Math.round(drawable.pixelY) + TILE_SIZE;
-      const top = bottom - TILE_SIZE * CHARACTER_HEIGHT_TILES;
+      // 몸 박스로 판정 (GRAPHICS 2.1 — 옆 사람 소품·모자를 눌러 엉뚱한 프로필이 열리지 않도록)
+      const frame = frameOrigin(Math.round(drawable.pixelX), Math.round(drawable.pixelY));
+      const left = frame.x + AVATAR_BODY_BOX.x;
+      const top = frame.y + AVATAR_BODY_BOX.y;
       if (
         world.x >= left &&
-        world.x < left + TILE_SIZE &&
+        world.x < left + AVATAR_BODY_BOX.width &&
         world.y >= top &&
-        world.y < bottom &&
+        world.y < top + AVATAR_BODY_BOX.height &&
         drawable.pixelY > hitY
       ) {
         hit = drawable.userId;
@@ -257,15 +264,15 @@ export class WorldGame {
     }
   }
 
-  /** 말풍선 꼬리 끝 (ARCHITECTURE 2.3): 캐릭터 프레임 상단에서 닉네임 블록만큼 위, 가로 중앙. 캔버스 기준 CSS px */
+  /** 말풍선 꼬리 끝 (ARCHITECTURE 2.3): 캐릭터 프레임(24×40) 상단에서 닉네임 블록만큼 위, 가로 중앙. 캔버스 기준 CSS px */
   private anchorOf(userId: string, out: { x: number; y: number }): boolean {
     const drawable = this.drawables.get(userId);
     if (drawable === undefined) {
       return false;
     }
-    const worldX = Math.round(drawable.pixelX) + TILE_SIZE / 2;
-    const frameTop = Math.round(drawable.pixelY) + TILE_SIZE - TILE_SIZE * CHARACTER_HEIGHT_TILES;
-    const worldY = frameTop - BUBBLE_NICKNAME_CLEARANCE_PX;
+    const frame = frameOrigin(Math.round(drawable.pixelX), Math.round(drawable.pixelY));
+    const worldX = frame.x + AVATAR_FRAME_WIDTH / 2;
+    const worldY = frame.y - BUBBLE_NICKNAME_CLEARANCE_PX; // 프레임 상단 = 앵커 − 40 (GRAPHICS 5.2)
     out.x = (worldX - this.camera.originX) * this.camera.zoom;
     out.y = (worldY - this.camera.originY) * this.camera.zoom;
     return true;
@@ -292,7 +299,8 @@ export class WorldGame {
         this.drawables.set(userId, {
           userId,
           nickname: presence.nickname,
-          avatarId: presence.avatarId,
+          appearance: presence.appearance,
+          colors: placeholderColors(presence.appearance),
           state: presence.state,
           pixelX: pixel.x,
           pixelY: pixel.y,
@@ -300,7 +308,10 @@ export class WorldGame {
         });
       } else {
         existing.nickname = presence.nickname;
-        existing.avatarId = presence.avatarId;
+        if (existing.appearance !== presence.appearance) {
+          existing.appearance = presence.appearance;
+          existing.colors = placeholderColors(presence.appearance);
+        }
         existing.state = presence.state;
         existing.pixelX = pixel.x;
         existing.pixelY = pixel.y;

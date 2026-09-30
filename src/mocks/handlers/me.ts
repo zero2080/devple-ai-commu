@@ -1,6 +1,7 @@
 // API_CONTRACT 2.2 본인
 import { http, HttpResponse } from 'msw';
 
+import { normalizeAppearance, validateAppearance, type Appearance } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { emitViaExpress } from '../bridge.ts';
@@ -21,7 +22,7 @@ export const meHandlers = [
     const body = await readJson(request);
     const nickname = str(body, 'nickname');
     const statusMessage = str(body, 'statusMessage');
-    const avatarId = str(body, 'avatarId');
+    const hasAppearance = body.appearance !== undefined;
 
     // API_CONTRACT 2.2 검증 표: 틀린 필드를 전부 details.fields에 담아 400, 그 다음 닉네임 중복 409
     const fields: Record<string, string> = {};
@@ -32,8 +33,9 @@ export const meHandlers = [
     if (statusMessage !== undefined && Array.from(statusMessage).length > 40) {
       fields.statusMessage = 'length';
     }
-    if (avatarId !== undefined && !SERVER_CONFIG.avatarIds.includes(avatarId)) {
-      fields.avatarId = 'unknown';
+    if (hasAppearance) {
+      // 전체 교체 검증 (API_CONTRACT 2.2): required · unknown · slot_mismatch, 필드 경로 appearance.<경로>
+      Object.assign(fields, validateAppearance(body.appearance, SERVER_CONFIG.avatarOptions));
     }
     if (Object.keys(fields).length > 0) {
       return apiError(400, 'VALIDATION_FAILED', 'invalid fields', { fields });
@@ -42,7 +44,7 @@ export const meHandlers = [
       return apiError(409, 'NICKNAME_TAKEN', 'nickname already in use');
     }
 
-    const changed: { nickname?: string; avatarId?: string } = {};
+    const changed: { nickname?: string; appearance?: Appearance } = {};
     if (nickname !== undefined && nickname !== state.me.nickname) {
       state.me.nickname = nickname;
       changed.nickname = nickname;
@@ -50,12 +52,16 @@ export const meHandlers = [
     if (statusMessage !== undefined) {
       state.me.statusMessage = statusMessage;
     }
-    if (avatarId !== undefined && avatarId !== state.me.avatarId) {
-      state.me.avatarId = avatarId;
-      changed.avatarId = avatarId;
+    if (hasAppearance) {
+      // 검증을 통과했으므로 Appearance다. 정규화해 저장 (hair.primary 등은 버린다, DOMAIN 3.7)
+      const next = normalizeAppearance(body.appearance as Appearance);
+      if (JSON.stringify(next) !== JSON.stringify(normalizeAppearance(state.me.appearance))) {
+        state.me.appearance = next;
+        changed.appearance = next;
+      }
     }
     if (Object.keys(changed).length > 0) {
-      // 같은 맵 접속자에게 presence.updated (변경된 nickname·avatarId만). 방송은 Express가 하므로 브리지로 위임
+      // 같은 맵 접속자에게 presence.updated (변경된 nickname·appearance 전체만). 방송은 Express가 하므로 브리지로 위임
       void emitViaExpress('presence.updated', { userId: state.me.id, ...changed });
     }
     return HttpResponse.json(state.me);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MapData, Presence } from '@/domain';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import { BUBBLE_NICKNAME_CLEARANCE_PX } from '../constants';
 import { WorldGame, type WorldFrame } from './worldGame';
@@ -21,7 +22,7 @@ function presence(userId: string, x: number, y: number): Presence {
   return {
     userId,
     nickname: userId,
-    avatarId: 'char_01',
+    appearance: TEST_APPEARANCE,
     position: { mapId: 'main', x, y, dir: 'down' },
     state: 'online',
     updatedAt: 1,
@@ -91,9 +92,9 @@ describe('WorldGame 프레임 콜백과 말풍선 앵커', () => {
     const { camera, anchor, missing } = frames[0] ?? { camera: null, anchor: null, missing: false };
     expect(missing).toBe(true);
     expect(camera).not.toBeNull();
-    // a는 타일 (22,15): 월드 x = 22*16 + 8, 프레임 상단 = 15*16 + 16 - 32, 꼬리 끝 = 그 위 12px
+    // a는 타일 (22,15): 월드 x = 22*16 + 8, 프레임(24×40) 상단 = 15*16 + 16 - 40, 꼬리 끝 = 그 위 11px
     const worldX = 22 * 16 + 8;
-    const worldY = 15 * 16 + 16 - 32 - BUBBLE_NICKNAME_CLEARANCE_PX;
+    const worldY = 15 * 16 + 16 - 40 - BUBBLE_NICKNAME_CLEARANCE_PX;
     expect(anchor).toEqual({
       x: (worldX - (camera?.originX ?? 0)) * 2,
       y: (worldY - (camera?.originY ?? 0)) * 2,

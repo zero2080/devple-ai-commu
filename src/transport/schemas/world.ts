@@ -1,6 +1,7 @@
 // DOMAIN 4장 공간·위치 스키마
 import { z } from 'zod';
 
+import { appearanceSchema } from './appearance';
 import { epochMs } from './common';
 
 export const directionSchema = z.enum(['up', 'down', 'left', 'right']);
@@ -20,7 +21,7 @@ export const presenceStateSchema = z.enum(['online', 'away']);
 export const presenceSchema = z.object({
   userId: z.string(),
   nickname: z.string(),
-  avatarId: z.string(),
+  appearance: appearanceSchema,
   position: positionSchema,
   state: presenceStateSchema,
   updatedAt: epochMs,

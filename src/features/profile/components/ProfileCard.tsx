@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 
-import { avatarColor } from '@/game/render/characters';
 import { messageFor } from '@/shared/errorMessages';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
 
+import { AvatarPreview } from './AvatarPreview';
 import styles from './ProfileCard.module.css';
 import { useUserProfile } from '../hooks/useUserProfile';
 
@@ -66,11 +66,7 @@ export function ProfileCard() {
       ) : null}
       {user !== undefined ? (
         <div className={styles.body}>
-          <span
-            className={styles.avatar}
-            style={{ background: avatarColor(user.avatarId) }}
-            aria-hidden="true"
-          />
+          <AvatarPreview appearance={user.appearance} />
           <div className={styles.info}>
             <h2 className={styles.nickname}>{user.nickname}</h2>
             <p className={profile.data?.online === true ? styles.online : styles.muted}>

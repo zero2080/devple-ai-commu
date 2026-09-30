@@ -6,6 +6,7 @@ import { SseHub, type SseSink } from './sse.ts';
 import { TicketStore } from './tickets.ts';
 import { WorldSim, type PositionDelta } from './world.ts';
 import type { Direction, Presence, PublicMessage } from '../../domain/types.ts';
+import { appearanceSchema } from '../../transport/schemas/appearance.ts';
 import { CHATTER_LINES } from '../data/chatter.ts';
 import { SERVER_CONFIG } from '../data/config.ts';
 import { isBlocked, MAIN_MAP } from '../data/map.ts';
@@ -108,7 +109,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     };
     const { recipients } = hub.broadcastWhere(
       'chat.public',
-      { ...message, sender: { nickname: sender.nickname, avatarId: sender.avatarId } },
+      { ...message, sender: { nickname: sender.nickname } },
       (userId) => {
         const listener = world.find(userId);
         return listener !== undefined && withinRadius(message.position, listener.position);
@@ -343,10 +344,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       const target = typeof userId === 'string' ? world.find(userId) : undefined;
       if (target !== undefined) {
         const nickname = field(payload, 'nickname');
-        const avatarId = field(payload, 'avatarId');
+        const appearance = appearanceSchema.safeParse(field(payload, 'appearance'));
         const state = field(payload, 'state');
         if (typeof nickname === 'string') target.nickname = nickname;
-        if (typeof avatarId === 'string') target.avatarId = avatarId;
+        if (appearance.success) target.appearance = appearance.data;
         if (state === 'online' || state === 'away') target.state = state;
         target.updatedAt = now();
       }

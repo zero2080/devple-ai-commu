@@ -17,7 +17,7 @@ const payload = {
   links: ['https://example.com'],
   createdAt: 1,
   position: { mapId: 'main', x: 20, y: 15, dir: 'down' },
-  sender: { nickname: '도트', avatarId: 'char_01' },
+  sender: { nickname: '도트' },
 };
 
 beforeEach(() => {

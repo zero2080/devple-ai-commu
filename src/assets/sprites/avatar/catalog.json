@@ -1,0 +1,532 @@
+{
+  "body": {
+    "front": "body/body_base.png"
+  },
+  "items": [
+    {
+      "id": "hair_bob",
+      "slot": "hair",
+      "name": "단발",
+      "sheets": {
+        "front": "hair/hair_bob.png"
+      },
+      "channels": [],
+      "defaultColors": {}
+    },
+    {
+      "id": "hair_long",
+      "slot": "hair",
+      "name": "장발",
+      "sheets": {
+        "front": "hair/hair_long.png",
+        "back": "hair/hair_long.back.png"
+      },
+      "channels": [],
+      "defaultColors": {}
+    },
+    {
+      "id": "hair_ponytail",
+      "slot": "hair",
+      "name": "포니테일",
+      "sheets": {
+        "front": "hair/hair_ponytail.png",
+        "back": "hair/hair_ponytail.back.png"
+      },
+      "channels": ["secondary"],
+      "defaultColors": {
+        "secondary": "item_red"
+      }
+    },
+    {
+      "id": "hair_curly",
+      "slot": "hair",
+      "name": "곱슬",
+      "sheets": {
+        "front": "hair/hair_curly.png"
+      },
+      "channels": [],
+      "defaultColors": {}
+    },
+    {
+      "id": "hair_short",
+      "slot": "hair",
+      "name": "짧은 머리",
+      "sheets": {
+        "front": "hair/hair_short.png"
+      },
+      "channels": [],
+      "defaultColors": {}
+    },
+    {
+      "id": "hair_pigtails",
+      "slot": "hair",
+      "name": "양갈래",
+      "sheets": {
+        "front": "hair/hair_pigtails.png",
+        "back": "hair/hair_pigtails.back.png"
+      },
+      "channels": ["secondary"],
+      "defaultColors": {
+        "secondary": "item_red"
+      }
+    },
+    {
+      "id": "hair_bun",
+      "slot": "hair",
+      "name": "올림머리",
+      "sheets": {
+        "front": "hair/hair_bun.png"
+      },
+      "channels": ["secondary"],
+      "defaultColors": {
+        "secondary": "item_red"
+      }
+    },
+    {
+      "id": "hair_buzz",
+      "slot": "hair",
+      "name": "삭발",
+      "sheets": {
+        "front": "hair/hair_buzz.png"
+      },
+      "channels": [],
+      "defaultColors": {}
+    },
+    {
+      "id": "hat_beanie",
+      "slot": "hat",
+      "name": "비니",
+      "sheets": {
+        "front": "hat/hat_beanie.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_navy",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "hat_cap",
+      "slot": "hat",
+      "name": "야구모자",
+      "sheets": {
+        "front": "hat/hat_cap.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_red",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "hat_straw",
+      "slot": "hat",
+      "name": "밀짚모자",
+      "sheets": {
+        "front": "hat/hat_straw.png",
+        "back": "hat/hat_straw.back.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_yellow",
+        "secondary": "item_red"
+      }
+    },
+    {
+      "id": "hat_wizard",
+      "slot": "hat",
+      "name": "마법사 모자",
+      "sheets": {
+        "front": "hat/hat_wizard.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_purple",
+        "secondary": "item_yellow"
+      }
+    },
+    {
+      "id": "hat_headband",
+      "slot": "hat",
+      "name": "머리띠",
+      "sheets": {
+        "front": "hat/hat_headband.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_pink"
+      }
+    },
+    {
+      "id": "hat_helmet",
+      "slot": "hat",
+      "name": "헬멧",
+      "sheets": {
+        "front": "hat/hat_helmet.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_gray",
+        "secondary": "item_charcoal"
+      }
+    },
+    {
+      "id": "face_round_glasses",
+      "slot": "face",
+      "name": "둥근 안경",
+      "sheets": {
+        "front": "face/face_round_glasses.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_black"
+      }
+    },
+    {
+      "id": "face_sunglasses",
+      "slot": "face",
+      "name": "선글라스",
+      "sheets": {
+        "front": "face/face_sunglasses.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_black",
+        "secondary": "item_charcoal"
+      }
+    },
+    {
+      "id": "face_mask",
+      "slot": "face",
+      "name": "마스크",
+      "sheets": {
+        "front": "face/face_mask.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_white"
+      }
+    },
+    {
+      "id": "face_beard",
+      "slot": "face",
+      "name": "수염",
+      "sheets": {
+        "front": "face/face_beard.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_brown"
+      }
+    },
+    {
+      "id": "top_tshirt",
+      "slot": "top",
+      "name": "티셔츠",
+      "sheets": {
+        "front": "top/top_tshirt.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_white"
+      }
+    },
+    {
+      "id": "top_hoodie",
+      "slot": "top",
+      "name": "후드",
+      "sheets": {
+        "front": "top/top_hoodie.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_gray",
+        "secondary": "item_charcoal"
+      }
+    },
+    {
+      "id": "top_shirt",
+      "slot": "top",
+      "name": "셔츠",
+      "sheets": {
+        "front": "top/top_shirt.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_cyan",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "top_knit",
+      "slot": "top",
+      "name": "니트",
+      "sheets": {
+        "front": "top/top_knit.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_beige"
+      }
+    },
+    {
+      "id": "top_jacket",
+      "slot": "top",
+      "name": "재킷",
+      "sheets": {
+        "front": "top/top_jacket.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_navy",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "top_suspenders",
+      "slot": "top",
+      "name": "멜빵",
+      "sheets": {
+        "front": "top/top_suspenders.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_white",
+        "secondary": "item_brown"
+      }
+    },
+    {
+      "id": "top_dress",
+      "slot": "top",
+      "name": "원피스",
+      "sheets": {
+        "front": "top/top_dress.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_pink",
+        "secondary": "item_white"
+      },
+      "coversBottom": true
+    },
+    {
+      "id": "top_robe",
+      "slot": "top",
+      "name": "로브",
+      "sheets": {
+        "front": "top/top_robe.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_purple",
+        "secondary": "item_yellow"
+      },
+      "coversBottom": true
+    },
+    {
+      "id": "bottom_jeans",
+      "slot": "bottom",
+      "name": "청바지",
+      "sheets": {
+        "front": "bottom/bottom_jeans.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_navy"
+      }
+    },
+    {
+      "id": "bottom_shorts",
+      "slot": "bottom",
+      "name": "반바지",
+      "sheets": {
+        "front": "bottom/bottom_shorts.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_tan"
+      }
+    },
+    {
+      "id": "bottom_skirt",
+      "slot": "bottom",
+      "name": "치마",
+      "sheets": {
+        "front": "bottom/bottom_skirt.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_red"
+      }
+    },
+    {
+      "id": "bottom_slacks",
+      "slot": "bottom",
+      "name": "정장 바지",
+      "sheets": {
+        "front": "bottom/bottom_slacks.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_charcoal"
+      }
+    },
+    {
+      "id": "bottom_track",
+      "slot": "bottom",
+      "name": "트레이닝",
+      "sheets": {
+        "front": "bottom/bottom_track.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_green",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "bottom_overalls",
+      "slot": "bottom",
+      "name": "멜빵바지",
+      "sheets": {
+        "front": "bottom/bottom_overalls.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_navy",
+        "secondary": "item_yellow"
+      }
+    },
+    {
+      "id": "shoes_sneakers",
+      "slot": "shoes",
+      "name": "운동화",
+      "sheets": {
+        "front": "shoes/shoes_sneakers.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_white",
+        "secondary": "item_red"
+      }
+    },
+    {
+      "id": "shoes_boots",
+      "slot": "shoes",
+      "name": "부츠",
+      "sheets": {
+        "front": "shoes/shoes_boots.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_brown"
+      }
+    },
+    {
+      "id": "shoes_loafers",
+      "slot": "shoes",
+      "name": "구두",
+      "sheets": {
+        "front": "shoes/shoes_loafers.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_black"
+      }
+    },
+    {
+      "id": "shoes_sandals",
+      "slot": "shoes",
+      "name": "샌들",
+      "sheets": {
+        "front": "shoes/shoes_sandals.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_tan"
+      }
+    },
+    {
+      "id": "hand_flower",
+      "slot": "hand",
+      "name": "꽃",
+      "sheets": {
+        "front": "hand/hand_flower.png",
+        "back": "hand/hand_flower.back.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_pink",
+        "secondary": "item_green"
+      }
+    },
+    {
+      "id": "hand_balloon",
+      "slot": "hand",
+      "name": "풍선",
+      "sheets": {
+        "front": "hand/hand_balloon.png",
+        "back": "hand/hand_balloon.back.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_red"
+      }
+    },
+    {
+      "id": "hand_book",
+      "slot": "hand",
+      "name": "책",
+      "sheets": {
+        "front": "hand/hand_book.png",
+        "back": "hand/hand_book.back.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_navy",
+        "secondary": "item_white"
+      }
+    },
+    {
+      "id": "hand_cup",
+      "slot": "hand",
+      "name": "컵",
+      "sheets": {
+        "front": "hand/hand_cup.png",
+        "back": "hand/hand_cup.back.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_white",
+        "secondary": "item_brown"
+      }
+    },
+    {
+      "id": "hand_umbrella",
+      "slot": "hand",
+      "name": "우산",
+      "sheets": {
+        "front": "hand/hand_umbrella.png",
+        "back": "hand/hand_umbrella.back.png"
+      },
+      "channels": ["primary", "secondary"],
+      "defaultColors": {
+        "primary": "item_yellow",
+        "secondary": "item_charcoal"
+      }
+    },
+    {
+      "id": "hand_mic",
+      "slot": "hand",
+      "name": "마이크",
+      "sheets": {
+        "front": "hand/hand_mic.png",
+        "back": "hand/hand_mic.back.png"
+      },
+      "channels": ["primary"],
+      "defaultColors": {
+        "primary": "item_charcoal"
+      }
+    }
+  ]
+}

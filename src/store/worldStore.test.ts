@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Presence } from '@/domain';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import { useWorldStore } from './worldStore';
 
@@ -8,7 +9,7 @@ function presence(userId: string, x: number, y: number): Presence {
   return {
     userId,
     nickname: userId,
-    avatarId: 'char_01',
+    appearance: TEST_APPEARANCE,
     position: { mapId: 'main', x, y, dir: 'down' },
     state: 'online',
     updatedAt: 1,

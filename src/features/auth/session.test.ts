@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthSession } from '@/domain';
 import { useAuthStore } from '@/store/authStore';
 import { useWorldStore } from '@/store/worldStore';
+import { TEST_APPEARANCE, TEST_AVATAR_OPTIONS } from '@/test/fixtures';
 
 import { loginWithAccessKey, logoutSession, restoreSession } from './session';
 
@@ -31,7 +32,7 @@ const session: AuthSession = {
   me: {
     id: 'me',
     nickname: '나',
-    avatarId: 'char_01',
+    appearance: TEST_APPEARANCE,
     role: 'member',
     status: 'active',
     createdAt: 1,
@@ -45,7 +46,7 @@ const session: AuthSession = {
     maxMessageLength: 200,
     defaultMapId: 'main',
     maxGroupMembers: 10,
-    avatarIds: ['char_01'],
+    avatarOptions: TEST_AVATAR_OPTIONS,
   },
 };
 

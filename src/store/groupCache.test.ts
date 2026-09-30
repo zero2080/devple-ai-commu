@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Group, GroupListItem, GroupMemberWithUser, GroupMessage, User } from '@/domain';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import {
   addCreatedGroup,
@@ -25,7 +26,7 @@ let qc = createQueryClient();
 const user = (id: string): User => ({
   id,
   nickname: `n-${id}`,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member',
   status: 'active',
   createdAt: 1,

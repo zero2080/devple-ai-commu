@@ -30,7 +30,7 @@ describe('PublicLog', () => {
         links: ['https://example.com/x', 'https://example.com/x'],
         createdAt: 1,
         position: { mapId: 'main', x: 1, y: 1, dir: 'down' },
-        sender: { nickname: '도트', avatarId: 'char_01' },
+        sender: { nickname: '도트' },
       },
       'u_me',
       1,

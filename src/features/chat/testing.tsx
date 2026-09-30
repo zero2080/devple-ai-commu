@@ -5,6 +5,7 @@ import type { AuthSession } from '@/domain';
 import { useWorldContext, WorldProvider } from '@/features/world';
 import type { WorldFrame } from '@/game/world/worldGame';
 import { useAuthStore } from '@/store/authStore';
+import { TEST_APPEARANCE, TEST_AVATAR_OPTIONS } from '@/test/fixtures';
 
 export interface WorldHarness {
   emit: (frame: WorldFrame) => void;
@@ -51,7 +52,7 @@ export const TEST_SESSION: AuthSession = {
   me: {
     id: 'u_me',
     nickname: '데모',
-    avatarId: 'char_01',
+    appearance: TEST_APPEARANCE,
     role: 'member',
     status: 'active',
     createdAt: 1,
@@ -65,7 +66,7 @@ export const TEST_SESSION: AuthSession = {
     maxMessageLength: 10,
     defaultMapId: 'main',
     maxGroupMembers: 10,
-    avatarIds: ['char_01'],
+    avatarOptions: TEST_AVATAR_OPTIONS,
   },
 };
 

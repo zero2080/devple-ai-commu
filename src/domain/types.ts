@@ -10,7 +10,7 @@ export type UserStatus = 'active' | 'suspended';
 export interface User {
   id: string;
   nickname: string; // 2~12자, 유니크
-  avatarId: string; // 기본 제공 아바타 ID, 형식 'char_NN' (GRAPHICS 2.3)
+  appearance: Appearance; // 외형 (3.7)
   statusMessage?: string; // 최대 40자
   role: UserRole;
   status: UserStatus;
@@ -65,7 +65,37 @@ export interface ServerConfig {
   maxMessageLength: number; // 기본 200
   defaultMapId: string;
   maxGroupMembers: number; // 기본 10
-  avatarIds: string[]; // 선택 가능한 아바타 목록의 원천 (GRAPHICS 2.3). 순서 있음, 비어 있지 않음
+  avatarOptions: AvatarOptions; // 외형 선택지의 원천 (GRAPHICS 2.7·2.8)
+}
+
+/** 3.6 ServerConfig.avatarOptions. 목록마다 순서 있음(선택 UI 순서), 비어 있지 않음, 누구나 처음부터 고를 수 있다 */
+export interface AvatarOptions {
+  itemIds: string[]; // ID 접두사로 슬롯을 판별 ('hat_beanie' → hat)
+  skinRampIds: string[];
+  hairRampIds: string[];
+  itemRampIds: string[]; // primary·secondary 공통
+}
+
+// 3.7 Appearance (캐릭터 외형)
+export type SlotId = 'hair' | 'hat' | 'face' | 'top' | 'bottom' | 'shoes' | 'hand';
+
+export interface EquippedItem {
+  itemId: string; // '<slot>_<name>' (GRAPHICS 2.8). 접두사 = 들어간 슬롯 키
+  primary?: string; // itemRampId. 생략 시 아이템 기본색
+  secondary?: string; // itemRampId. 생략 시 아이템 기본색
+}
+
+/** 모든 키가 항상 존재한다. 선택 슬롯이 비면 null. PATCH /me는 전체 교체 */
+export interface Appearance {
+  skin: string; // skinRampId
+  hairColor: string; // hairRampId
+  hair: EquippedItem | null; // null = 민머리. hair.primary는 쓰지 않는다 (머리색은 hairColor)
+  hat: EquippedItem | null;
+  face: EquippedItem | null;
+  top: EquippedItem; // 필수
+  bottom: EquippedItem; // 필수
+  shoes: EquippedItem; // 필수
+  hand: EquippedItem | null;
 }
 
 /* ---------- 4. 공간 · 위치 ---------- */
@@ -86,7 +116,7 @@ export type PresenceState = 'online' | 'away';
 export interface Presence {
   userId: string;
   nickname: string; // 스냅샷에 포함해 User 조회 없이 렌더
-  avatarId: string;
+  appearance: Appearance; // 3.7
   position: Position;
   state: PresenceState;
   updatedAt: number;
@@ -205,7 +235,7 @@ export interface GroupDetail {
 
 // SSE chat.public
 export interface ChatPublicEvent extends PublicMessage {
-  sender: Pick<User, 'nickname' | 'avatarId'>;
+  sender: Pick<User, 'nickname'>; // 발화자는 같은 맵 접속자라 외형은 Presence에 이미 있다
 }
 
 // SSE chat.dm

@@ -7,6 +7,7 @@ import type { ConversationsData, ThreadData } from '@/store/dmCache';
 import { queryClient } from '@/store/queryClient';
 import { queryKeys } from '@/store/queryKeys';
 import { useWorldStore } from '@/store/worldStore';
+import { TEST_APPEARANCE, TEST_AVATAR_OPTIONS } from '@/test/fixtures';
 
 import { SseRegistry } from '../registry';
 import { ALL_SSE_HANDLERS } from './index';
@@ -18,7 +19,7 @@ const pos = (x: number, y: number): Position => ({ mapId: 'main', x, y, dir: 'do
 const sender = (id: string) => ({
   id,
   nickname: `n-${id}`,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member',
   status: 'active',
   createdAt: 1,
@@ -46,7 +47,7 @@ function placeWorld(near: Position, far: Position): void {
       {
         userId: 'u_me',
         nickname: 'me',
-        avatarId: 'char_01',
+        appearance: TEST_APPEARANCE,
         position: pos(20, 15),
         state: 'online',
         updatedAt: 1,
@@ -54,7 +55,7 @@ function placeWorld(near: Position, far: Position): void {
       {
         userId: 'near',
         nickname: 'near',
-        avatarId: 'char_01',
+        appearance: TEST_APPEARANCE,
         position: near,
         state: 'online',
         updatedAt: 1,
@@ -62,7 +63,7 @@ function placeWorld(near: Position, far: Position): void {
       {
         userId: 'far',
         nickname: 'far',
-        avatarId: 'char_01',
+        appearance: TEST_APPEARANCE,
         position: far,
         state: 'online',
         updatedAt: 1,
@@ -91,7 +92,7 @@ beforeEach(() => {
       maxMessageLength: 200,
       defaultMapId: 'main',
       maxGroupMembers: 10,
-      avatarIds: ['char_01'],
+      avatarOptions: TEST_AVATAR_OPTIONS,
     },
   });
   placeWorld(pos(22, 15), pos(35, 15));

@@ -18,7 +18,7 @@ function say(id: string, userId: string, content: string, links: string[] = []):
       links,
       createdAt: NOW,
       position: { mapId: 'main', x: 1, y: 1, dir: 'down' },
-      sender: { nickname: userId, avatarId: 'char_01' },
+      sender: { nickname: userId },
     },
     'u_me',
     NOW,

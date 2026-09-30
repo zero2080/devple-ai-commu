@@ -1,6 +1,7 @@
 // API_CONTRACT 3.2 이벤트 봉투와 3.3 payload 스키마 (이벤트 16종)
 import { z } from 'zod';
 
+import { appearanceSchema } from './appearance';
 import { epochMs } from './common';
 import {
   chatDmEventSchema,
@@ -72,7 +73,7 @@ export const presenceUpdatedPayloadSchema = z.object({
   userId: z.string(),
   state: presenceStateSchema.optional(),
   nickname: z.string().optional(),
-  avatarId: z.string().optional(),
+  appearance: appearanceSchema.optional(), // 바뀔 때 전체 (API_CONTRACT 3.3)
 });
 
 export const chatPublicPayloadSchema = chatPublicEventSchema;

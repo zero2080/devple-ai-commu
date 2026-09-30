@@ -4,8 +4,11 @@ import type { Server } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createMockServer, type MockServer } from './app.ts';
+import { seedAppearance } from '../data/avatar.ts';
 import { MAIN_MAP } from '../data/map.ts';
 import { ME } from '../data/users.ts';
+
+const NEW_LOOK = seedAppearance(9);
 
 let clock = 1_700_000_000_000;
 let server: MockServer;
@@ -215,11 +218,11 @@ describe('/__mock/emit 브리지', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'presence.updated',
-        payload: { userId: ME.id, nickname: '새이름', avatarId: 'char_03' },
+        payload: { userId: ME.id, nickname: '새이름', appearance: NEW_LOOK },
       }),
     });
     expect(res.status).toBe(202);
-    expect(server.world.find(ME.id)).toMatchObject({ nickname: '새이름', avatarId: 'char_03' });
+    expect(server.world.find(ME.id)).toMatchObject({ nickname: '새이름', appearance: NEW_LOOK });
     expect(chunks.some((c) => c.includes('presence.updated') && c.includes('새이름'))).toBe(true);
   });
 });

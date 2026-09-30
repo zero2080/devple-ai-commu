@@ -7,6 +7,7 @@ import type { DmConversationWithPeer, UserProfile } from '@/domain';
 import { signIn } from '@/features/chat/testing';
 import { queryClient } from '@/store/queryClient';
 import { useUiStore } from '@/store/uiStore';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import { DmHome } from './DmHome';
 
@@ -26,7 +27,7 @@ vi.mock('@/transport/api/users', () => usersApi);
 const peer = (id: string, nickname: string) => ({
   id,
   nickname,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member' as const,
   status: 'active' as const,
   createdAt: 1,

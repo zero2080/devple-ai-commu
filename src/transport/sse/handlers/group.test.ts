@@ -7,6 +7,7 @@ import { queryClient } from '@/store/queryClient';
 import { queryKeys } from '@/store/queryKeys';
 import { useUiStore } from '@/store/uiStore';
 import { useWorldStore } from '@/store/worldStore';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 
 import { SseRegistry } from '../registry';
 import { ALL_SSE_HANDLERS } from './index';
@@ -18,7 +19,7 @@ const ME = 'u_me';
 const user = (id: string) => ({
   id,
   nickname: `n-${id}`,
-  avatarId: 'char_01',
+  appearance: TEST_APPEARANCE,
   role: 'member',
   status: 'active',
   createdAt: 1,

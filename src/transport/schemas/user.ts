@@ -1,6 +1,7 @@
 // DOMAIN 3장 사용자 스키마
 import { z } from 'zod';
 
+import { appearanceSchema } from './appearance';
 import { epochMs } from './common';
 import { positionSchema } from './world';
 
@@ -10,7 +11,7 @@ export const userStatusSchema = z.enum(['active', 'suspended']);
 export const userSchema = z.object({
   id: z.string(),
   nickname: z.string(),
-  avatarId: z.string(),
+  appearance: appearanceSchema,
   statusMessage: z.string().optional(),
   role: userRoleSchema,
   status: userStatusSchema,

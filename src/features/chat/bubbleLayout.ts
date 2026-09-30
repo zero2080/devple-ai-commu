@@ -1,13 +1,12 @@
 // 말풍선 배치 계산 (ARCHITECTURE 2.3). 순수 함수 — 레이어가 프레임마다 부른다
 import {
+  AVATAR_FRAME_HEIGHT,
   BUBBLE_NICKNAME_CLEARANCE_PX,
   BUBBLE_TAIL_PX,
-  CHARACTER_HEIGHT_TILES,
-  TILE_SIZE,
 } from '@/game/constants';
 
-/** 꼬리 끝(anchor)에서 발화자 프레임 하단까지 (월드 px): 닉네임 블록 + 스프라이트 높이 */
-const ANCHOR_TO_FRAME_BOTTOM_PX = BUBBLE_NICKNAME_CLEARANCE_PX + TILE_SIZE * CHARACTER_HEIGHT_TILES;
+/** 꼬리 끝(anchor)에서 발화자 프레임 하단까지 (월드 px): 닉네임 블록 + 프레임 높이 40 */
+const ANCHOR_TO_FRAME_BOTTOM_PX = BUBBLE_NICKNAME_CLEARANCE_PX + AVATAR_FRAME_HEIGHT;
 
 export interface BubblePlacement {
   /** 말풍선 몸통 왼쪽 위 (캔버스 기준 CSS px, 정수) */

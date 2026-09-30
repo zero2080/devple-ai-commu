@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import type { Notice, User } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
+import { defaultAppearance } from '../data/avatar.ts';
 import { SERVER_CONFIG } from '../data/config.ts';
 import { contentError } from '../data/messages.ts';
 import { nextId, state, userAsMe } from '../state.ts';
@@ -36,7 +37,7 @@ export const adminHandlers = [
     const user: User = {
       id: nextId('u'),
       nickname: signup.nickname,
-      avatarId: 'char_01',
+      appearance: defaultAppearance(),
       role: 'member',
       status: 'active',
       createdAt: now,

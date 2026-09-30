@@ -9,6 +9,7 @@ import { useChatStore } from '@/store/chatStore';
 import { queryClient } from '@/store/queryClient';
 import { queryKeys } from '@/store/queryKeys';
 import { useWorldStore } from '@/store/worldStore';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 import { ApiError } from '@/transport/http';
 
 import { DmThread } from './DmThread';
@@ -66,7 +67,7 @@ beforeEach(() => {
   queryClient.setQueryData(queryKeys.user('u_01'), {
     id: 'u_01',
     nickname: '도트',
-    avatarId: 'char_01',
+    appearance: TEST_APPEARANCE,
     role: 'member',
     status: 'active',
     createdAt: 1,

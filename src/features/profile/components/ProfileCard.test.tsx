@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UserProfile } from '@/domain';
 import { signIn } from '@/features/chat/testing';
 import { useUiStore } from '@/store/uiStore';
+import { TEST_APPEARANCE } from '@/test/fixtures';
 import { ApiError } from '@/transport/http';
 
 import { ProfileCard } from './ProfileCard';
@@ -17,7 +18,7 @@ const profile = (id: string, online: boolean, statusMessage?: string): UserProfi
   user: {
     id,
     nickname: `닉-${id}`,
-    avatarId: 'char_02',
+    appearance: TEST_APPEARANCE,
     ...(statusMessage === undefined ? {} : { statusMessage }),
     role: 'member',
     status: 'active',

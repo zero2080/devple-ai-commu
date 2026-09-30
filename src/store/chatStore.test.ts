@@ -31,7 +31,7 @@ function event(
 ): ChatPublicEvent {
   return {
     ...message(id, senderId, content, links),
-    sender: { nickname: `nick-${senderId}`, avatarId: 'char_01' },
+    sender: { nickname: `nick-${senderId}` },
   };
 }
 

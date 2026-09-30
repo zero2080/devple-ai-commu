@@ -37,8 +37,8 @@ describe('placeBubble', () => {
       y: 0,
       visible: true,
     });
-    // 꼬리 끝이 캔버스 위라도 발화자 프레임 하단(꼬리 끝 + (11 + 32) × 줌)이 보이면 띄운다
-    expect(placeBubble({ x: 400, y: -85 }, 100, 40, 2, 800, 600)).toMatchObject({
+    // 꼬리 끝이 캔버스 위라도 발화자 프레임 하단(꼬리 끝 + (11 + 40) × 줌)이 보이면 띄운다
+    expect(placeBubble({ x: 400, y: -101 }, 100, 40, 2, 800, 600)).toMatchObject({
       y: 0,
       visible: true,
     });
@@ -47,8 +47,8 @@ describe('placeBubble', () => {
   it('발화자 프레임이 화면 밖이면 숨긴다', () => {
     expect(placeBubble({ x: -200, y: 300 }, 100, 40, 2, 800, 600).visible).toBe(false);
     expect(placeBubble({ x: 1000, y: 300 }, 100, 40, 2, 800, 600).visible).toBe(false);
-    // 프레임 하단 = -86 + 86 = 0 → 한 줄도 안 보임
-    expect(placeBubble({ x: 400, y: -86 }, 100, 40, 2, 800, 600).visible).toBe(false);
+    // 프레임 하단 = -102 + 102 = 0 → 한 줄도 안 보임
+    expect(placeBubble({ x: 400, y: -102 }, 100, 40, 2, 800, 600).visible).toBe(false);
     expect(placeBubble({ x: 400, y: 700 }, 100, 40, 2, 800, 600).visible).toBe(false);
   });
 });

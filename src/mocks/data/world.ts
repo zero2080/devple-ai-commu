@@ -28,7 +28,7 @@ export function createInitialPresences(
     {
       userId: ME.id,
       nickname: ME.nickname,
-      avatarId: ME.avatarId,
+      appearance: ME.appearance,
       position: { mapId: map.id, x: map.spawn.x, y: map.spawn.y, dir: 'down' },
       state: 'online',
       updatedAt: SEED_TIME,
@@ -43,7 +43,7 @@ export function createInitialPresences(
     presences.push({
       userId: user.id,
       nickname: user.nickname,
-      avatarId: user.avatarId,
+      appearance: user.appearance,
       position: { mapId: map.id, x, y, dir: 'down' },
       state: rng() < 0.15 ? 'away' : 'online',
       updatedAt: SEED_TIME,

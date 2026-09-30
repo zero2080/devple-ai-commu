@@ -1,4 +1,5 @@
 // ServerConfig mock 값 (DOMAIN 3.6 기본값)
+import { AVATAR_OPTIONS } from './avatar.ts';
 import type { ServerConfig } from '../../domain/types.ts';
 
 export const SERVER_CONFIG: ServerConfig = {
@@ -8,16 +9,7 @@ export const SERVER_CONFIG: ServerConfig = {
   maxMessageLength: 200,
   defaultMapId: 'main',
   maxGroupMembers: 10,
-  avatarIds: [
-    'char_01',
-    'char_02',
-    'char_03',
-    'char_04',
-    'char_05',
-    'char_06',
-    'char_07',
-    'char_08',
-  ],
+  avatarOptions: AVATAR_OPTIONS,
 };
 
 export const DEMO_ACCESS_KEY = 'DEMO-0000-0000';
