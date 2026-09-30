@@ -2,7 +2,9 @@
   /* 1 월드 px (정수 줌) */
   --px: calc(1px * var(--zoom));
   /* 탭 줄 + 입력 줄 (말풍선·패널 글자는 모두 em × 줌) */
-  --chat-min-h: calc(2 * var(--pixel-font-em) * var(--zoom) + 8px + 8px * var(--zoom) + 2 * var(--px));
+  --chat-min-h: calc(
+    2 * var(--pixel-font-em) * var(--zoom) + 8px + 8px * var(--zoom) + 2 * var(--px)
+  );
 
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
