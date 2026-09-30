@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UserProfile } from '@/domain';
 import { signIn } from '@/features/chat/testing';
 import { useUiStore } from '@/store/uiStore';
+import { useWorldStore } from '@/store/worldStore';
 import { TEST_APPEARANCE } from '@/test/fixtures';
 import { ApiError } from '@/transport/http';
 
@@ -63,6 +64,26 @@ describe('ProfileCard', () => {
       dmPeerId: 'u_01',
       profileUserId: null,
     });
+  });
+
+  it('접속 중이어도 월드에서 자리비움이면 "자리비움" (presence.updated, ARCHITECTURE 3.5)', async () => {
+    const world = useWorldStore.getState();
+    world.reset();
+    world.addPresence({
+      userId: 'u_02',
+      nickname: '닉-u_02',
+      appearance: TEST_APPEARANCE,
+      position: { mapId: 'main', x: 1, y: 1, dir: 'down' },
+      state: 'away',
+      updatedAt: 1,
+    });
+    api.getUserProfile.mockResolvedValue(profile('u_02', true));
+    useUiStore.getState().openProfile('u_02');
+    renderCard();
+    const card = await screen.findByRole('dialog', { name: '프로필: 닉-u_02' });
+    expect(card).toHaveTextContent('자리비움');
+    expect(card).not.toHaveTextContent('접속 중');
+    world.reset();
   });
 
   it('본인 프로필에는 DM 버튼이 없고, 상태 메시지가 없으면 안내 문구', async () => {

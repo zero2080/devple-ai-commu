@@ -7,6 +7,8 @@ export interface DevpleDebug {
   worldStore: typeof useWorldStore;
   authStore: typeof useAuthStore;
   game?: WorldGame;
+  /** 자리비움 만료 시간 변경 (E2E, features/realtime/presence.ts가 세션 시작 시 등록) */
+  setAwayTimeoutMs?: (ms: number) => void;
 }
 
 declare global {

@@ -5,13 +5,19 @@ import { createSseTicket } from '@/transport/api/auth';
 import { SseClient } from '@/transport/sse/client';
 import { ALL_SSE_HANDLERS } from '@/transport/sse/handlers';
 import { SseRegistry } from '@/transport/sse/registry';
+import { resyncAll } from '@/transport/sse/resync';
 
 const registry = new SseRegistry();
 registry.registerAll(ALL_SSE_HANDLERS);
 
 let client: SseClient | null = null;
 
-export function connectSse(): SseClient {
+export interface SseHooks {
+  /** system.suspended 수신 즉시 (세션 종료는 features/auth, 재연결하지 않는다) */
+  onSuspended?: () => void;
+}
+
+export function connectSse(hooks: SseHooks = {}): SseClient {
   if (client !== null) {
     return client;
   }
@@ -19,9 +25,16 @@ export function connectSse(): SseClient {
     requestTicket: async () => (await createSseTicket()).ticket,
     onEnvelope: (envelope) => {
       registry.dispatch(envelope);
+      if (envelope.type === 'system.suspended') {
+        hooks.onSuspended?.();
+      }
     },
     onStateChange: (state) => {
       useWorldStore.getState().setSseState(state);
+    },
+    // 60초 넘게 끊겼다가 다시 열림: 서버 재전송 버퍼 밖이라 REST로 다시 맞춘다 (API_CONTRACT 3.5)
+    onResync: () => {
+      void resyncAll();
     },
   });
   void client.connect();

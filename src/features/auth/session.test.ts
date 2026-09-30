@@ -5,15 +5,17 @@ import { useAuthStore } from '@/store/authStore';
 import { useWorldStore } from '@/store/worldStore';
 import { TEST_APPEARANCE, TEST_AVATAR_OPTIONS } from '@/test/fixtures';
 
-import { loginWithAccessKey, logoutSession, restoreSession } from './session';
+import { endSession, loginWithAccessKey, logoutSession, restoreSession } from './session';
 
 const mocks = vi.hoisted(() => ({
   login: vi.fn<(body: { accessKey: string }) => Promise<AuthSession>>(),
   logout: vi.fn<() => Promise<void>>(),
   getMe: vi.fn<() => Promise<{ me: AuthSession['me']; config: AuthSession['config'] }>>(),
   refreshAccessToken: vi.fn<() => Promise<string>>(),
-  connectSse: vi.fn(),
+  connectSse: vi.fn<(hooks?: { onSuspended?: () => void }) => void>(),
   disconnectSse: vi.fn(),
+  startPresenceTracking: vi.fn(),
+  stopPresenceTracking: vi.fn(),
 }));
 
 vi.mock('@/transport/api/auth', () => ({ login: mocks.login, logout: mocks.logout }));
@@ -22,9 +24,20 @@ vi.mock('@/transport/http', () => ({ refreshAccessToken: mocks.refreshAccessToke
 vi.mock('@/features/realtime', () => ({
   connectSse: mocks.connectSse,
   disconnectSse: mocks.disconnectSse,
+  startPresenceTracking: mocks.startPresenceTracking,
+  stopPresenceTracking: mocks.stopPresenceTracking,
 }));
 
-const { login, logout, getMe, refreshAccessToken, connectSse, disconnectSse } = mocks;
+const {
+  login,
+  logout,
+  getMe,
+  refreshAccessToken,
+  connectSse,
+  disconnectSse,
+  startPresenceTracking,
+  stopPresenceTracking,
+} = mocks;
 
 const session: AuthSession = {
   accessToken: 'tok',
@@ -63,6 +76,7 @@ describe('세션 수명과 SSE', () => {
     expect(useAuthStore.getState().status).toBe('authenticated');
     expect(useWorldStore.getState().myUserId).toBe('me');
     expect(connectSse).toHaveBeenCalledOnce();
+    expect(startPresenceTracking).toHaveBeenCalledOnce();
   });
 
   it('세션 복구에 성공하면 SSE를 연결하고, 실패하면 anonymous로 두고 연결하지 않는다', async () => {
@@ -85,7 +99,29 @@ describe('세션 수명과 SSE', () => {
     logout.mockRejectedValue(new Error('offline'));
     await logoutSession();
     expect(disconnectSse).toHaveBeenCalledOnce();
+    expect(stopPresenceTracking).toHaveBeenCalledOnce();
     expect(useAuthStore.getState().status).toBe('anonymous');
     expect(useWorldStore.getState().myUserId).toBeNull();
+  });
+
+  it('SSE system.suspended 훅 → 세션 종료: 재연결 없이 끊고 추적 중지, 스토어 비우고 정지 안내 (logout 요청 없음)', async () => {
+    login.mockResolvedValue(session);
+    await loginWithAccessKey('DEMO-0000-0000');
+    const hooks = connectSse.mock.calls[0]?.[0];
+    expect(hooks?.onSuspended).toBeTypeOf('function');
+    hooks?.onSuspended?.();
+    expect(disconnectSse).toHaveBeenCalledOnce();
+    expect(stopPresenceTracking).toHaveBeenCalledOnce();
+    expect(logout).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({ status: 'anonymous', notice: 'suspended' });
+    expect(useWorldStore.getState().myUserId).toBeNull();
+
+    // REST 403과 SSE가 겹쳐 두 번 불려도 한 번만
+    endSession('suspended');
+    expect(disconnectSse).toHaveBeenCalledOnce();
+
+    // 다시 로그인하면 안내는 지워진다
+    await loginWithAccessKey('DEMO-0000-0000');
+    expect(useAuthStore.getState().notice).toBeNull();
   });
 });

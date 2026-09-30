@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from '@/app';
-import { restoreSession } from '@/features/auth';
+import { endSession, restoreSession } from '@/features/auth';
 import { exposeDebugHooks } from '@/shared/debug';
 import { authTokenProvider } from '@/store/authStore';
 import { configureHttp } from '@/transport/http';
@@ -14,7 +14,12 @@ async function bootstrap(): Promise<void> {
     const { startMockWorker } = await import('@/mocks/browser');
     await startMockWorker();
   }
-  configureHttp({ tokens: authTokenProvider });
+  configureHttp({
+    tokens: authTokenProvider,
+    onSuspended: () => {
+      endSession('suspended');
+    },
+  });
   exposeDebugHooks();
   await restoreSession();
 

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { messageFor } from '@/shared/errorMessages';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
+import { useWorldStore } from '@/store/worldStore';
 
 import { AvatarPreview } from './AvatarPreview';
 import styles from './ProfileCard.module.css';
@@ -16,6 +17,8 @@ export function ProfileCard() {
   const userId = useUiStore((s) => s.profileUserId);
   const myUserId = useAuthStore((s) => s.me?.id ?? null);
   const profile = useUserProfile(userId);
+  // 자리비움은 월드 접속자 상태에서 (presence.updated, ARCHITECTURE 3.5)
+  const away = useWorldStore((s) => userId !== null && s.presences.get(userId)?.state === 'away');
   const primaryRef = useRef<HTMLButtonElement | null>(null);
   const isMe = userId !== null && userId === myUserId;
 
@@ -70,7 +73,7 @@ export function ProfileCard() {
           <div className={styles.info}>
             <h2 className={styles.nickname}>{user.nickname}</h2>
             <p className={profile.data?.online === true ? styles.online : styles.muted}>
-              {profile.data?.online === true ? '접속 중' : '오프라인'}
+              {profile.data?.online === true ? (away ? '자리비움' : '접속 중') : '오프라인'}
             </p>
             <p className={styles.status}>{user.statusMessage ?? '상태 메시지 없음'}</p>
           </div>

@@ -1,5 +1,16 @@
 .page {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   height: 100%;
+}
+
+/* 세션이 강제로 끝난 이유 (정지 등). 폼 위에 한 줄 */
+.notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: rgb(228 59 68 / 15%);
+  color: #e43b44;
+  font-size: 14px;
 }

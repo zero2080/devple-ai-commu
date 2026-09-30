@@ -13,14 +13,18 @@ const LABELS = {
 export function ConnectionBadge() {
   const sseState = useWorldStore((s) => s.sseState);
   const count = useWorldStore((s) => s.presences.size);
+  const away = useWorldStore(
+    (s) => s.myUserId !== null && s.presences.get(s.myUserId)?.state === 'away',
+  );
   return (
     <div
       className={`${styles.badge ?? ''} ${styles[sseState] ?? ''}`}
       data-testid="sse-state"
       data-state={sseState}
+      data-away={away}
     >
       <span className={styles.dot} aria-hidden="true" />
-      {LABELS[sseState]} · 접속자 {count}명
+      {LABELS[sseState]} · 접속자 {count}명{away ? ' · 자리비움' : ''}
     </div>
   );
 }
