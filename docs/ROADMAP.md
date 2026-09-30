@@ -185,7 +185,7 @@
 - [x] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
 - [x] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
 
-### 7단계: 근접 대화 + 말풍선 + 링크 버튼 `[ ]`
+### 7단계: 근접 대화 + 말풍선 + 링크 버튼 `[x]`
 
 PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍선(보라 계열)·프로필 카드는 8단계.
 
@@ -202,10 +202,10 @@ PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍�
 - 말풍선·로그·입력 CSS: GRAPHICS 5.1~5.2 — `PixelKo` em(12px) × 줌, 최대 폭 12타일, `box-shadow` 1px × 줌 외곽선(모서리 깎음), 픽셀 꼬리. 색은 Endesga 32 임시값(팔레트 확정은 12단계)
 - Mock(Express): `POST /api/v1/chat/public` 이관(인증, DOMAIN 5.1 content 검증·NFC·링크 추출, 서버 위치 기준 반경 판정 후 `chat.public` 방송), 가짜 접속자 발화(`MOCK_CHATTER_MS`, 기본 7000, E2E는 0), 개발용 `POST /__mock/say { userId, content, at? }`(반경 밖이면 미전달)
 
-**완료 조건**
-- [ ] 단위: chatStore(중복 제거·pending 해소 양방향·말풍선 교체·로그 상한), link, 말풍선 앵커 계산, ChatPanel 키보드(Enter 전송·IME 조합 중 미전송·Esc), 말풍선 만료·호버 유지, Express `chat.public`(검증·NFC·링크·반경 판정·방송)
-- [ ] E2E: Enter → 입력 → 전송 → 로그와 내 말풍선에 본문·`↗ example.com` 버튼, 입력 중 방향키 무시 → Esc 후 이동, 링크 버튼 → 새 창(`opener` 없음), 반경 안 발화 수신·반경 밖 미수신, 링크 없는 말풍선 만료
-- [ ] E2E 뷰포트: 390×844에서 내 주변 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800에서 20×15 타일 이상 표시 (`domain/viewport.ts`)
+**완료 조건** — 검증 자산: `e2e/phase2-chat.spec.ts`, 단위 테스트(`src/store/chatStore.test.ts`, `src/features/chat/**/*.test.tsx`, `src/mocks/server/app.test.ts`)
+- [x] 단위: chatStore(중복 제거·pending 해소 양방향·말풍선 교체·로그 상한), link, 말풍선 앵커 계산, ChatPanel 키보드(Enter 전송·IME 조합 중 미전송·Esc), 말풍선 만료·호버 유지, Express `chat.public`(검증·NFC·링크·반경 판정·방송)
+- [x] E2E: Enter → 입력 → 전송 → 로그와 내 말풍선에 본문·`↗ example.com` 버튼, 입력 중 방향키 무시 → Esc 후 이동, 링크 버튼 → 새 창(`opener` 없음), 반경 안 발화 수신·반경 밖 미수신, 링크 없는 말풍선 만료
+- [x] E2E 뷰포트: 390×844에서 내 주변 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800에서 20×15 타일 이상 표시 (`domain/viewport.ts`)
 
 ### 8~12단계 (각 단계 착수 전에 3~7단계 형식으로 상세화)
 
@@ -237,6 +237,7 @@ PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍�
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.8: 7단계 완료 — 단위 209건·E2E 9건 통과. 스크린샷 검토로 모바일 가로 넘침·말풍선 가장자리 잘림 발견·수정 |
 | 2026-09-30 | 1.8: 7단계 상세화 — 말풍선·로그·입력·링크 버튼, chat.public Express 이관, 뷰포트 보장 레이아웃 |
 | 2026-09-30 | 1.7: 폰트 추천안(Galmuri11 부분집합 → PixelKo) 사용자 채택, 자산·빌드 스크립트·LICENSES 동봉 |
 | 2026-09-30 | 1.6: 결정 리포트 3 반영 — 5단계 완료 조건 "콘솔 에러 0건"을 앱 에러 기준으로 정정 |
