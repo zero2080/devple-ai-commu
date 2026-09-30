@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.10 (2026-09-30, 9단계 상세화)
+> 문서 버전: 1.11 (2026-09-30, 9단계 완료)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -229,7 +229,7 @@ PRD 5.5·5.7·5.8, ARCHITECTURE 2.3·3.1·5·7·9, DOMAIN 5.3·9, API_CONTRACT 2
 - [x] 단위: dmCache(목록 갱신·안 읽음·중복 제거·회수·읽음·분해), chatStore `pendingDm`, DM 말풍선 판정, `characterAt`, ProfileCard, DM 스레드(회수 버튼 조건·읽음 표시·409 안내), 탭 안 읽음 합계, MSW DM 페이지네이션
 - [x] E2E: 캐릭터 클릭 → 프로필 카드 → DM 보내기 → 전송·반경 안이면 DM 말풍선, 반경 밖 상대의 DM은 말풍선 없이 탭 안 읽음 → 열면 읽음 처리, 미열람 회수 → 양쪽 목록에서 사라짐·읽힌 뒤엔 회수 불가, 닉네임 검색 → 스레드, 60개 시드 → 50개 → 위로 스크롤 시 10개 추가
 
-### 9단계: 그룹 채팅 패널 `[ ]`
+### 9단계: 그룹 채팅 패널 `[x]`
 
 PRD 5.6·5.8, ARCHITECTURE 5·7·9, DOMAIN 5.4·9, API_CONTRACT 2.7·3.3.
 
@@ -240,12 +240,12 @@ PRD 5.6·5.8, ARCHITECTURE 5·7·9, DOMAIN 5.4·9, API_CONTRACT 2.7·3.3.
 - SSE 핸들러 `chat.group`·`group.joined`·`group.updated`·`group.removed` → groupCache·chatStore·uiStore. 그룹 메시지는 말풍선을 띄우지 않는다 (DOMAIN 5.4). 열어 둔 그룹에서 강퇴·해산되면 스레드를 닫고 안내
 - `src/features/group/` — 목록(안 읽음·마지막 메시지·인원) + 만들기 → 스레드(`ThreadView` 재사용, 50개씩 무한 스크롤, 전송·재시도, 보이는 동안 읽음 처리) → 멤버 화면(owner·나 표시). owner: 닉네임 검색으로 초대(가득 차면 비활성, `409 GROUP_FULL` 안내), 강퇴, 이름 변경, 해산(한 번 더 확인). 모두: 나가기(한 번 더 확인, owner면 승계는 서버)
 - `src/features/chat/ChatPanel` — 탭 `근접` / `DM` / `그룹`(안 읽음 합계는 목록 캐시에서 파생)
-- Mock: 그룹 메시지 커서 페이지네이션(DM과 같은 헬퍼), emit 브리지로 `chat.group`(전송), `group.updated`(이름 변경·초대·강퇴·나가기), `group.removed`(해산 `dissolved`, 나가기 `left`). 전송하면 내 `lastReadMessageId`를 그 메시지로 올림(내 메시지는 안 읽음에 세지 않음 — to-chat 결정 요청). DEV 트리거 `groupFrom(groupId, userId, content)`, `inviteMe(name)`(가짜 사용자가 만든 그룹에 나를 초대 → `group.joined`), `kickMe(groupId)`(→ `group.removed kicked`), `seedGroup(groupId, count)`. 봇: 내 그룹 메시지에 다른 멤버가 짧게 답함. 봇 지연 변수 `VITE_MOCK_DM_BOT_MS` → `VITE_MOCK_BOT_MS`(DM·그룹 공통, 기본 5000, E2E 0)
+- Mock: 그룹 메시지 커서 페이지네이션(DM과 같은 헬퍼), emit 브리지로 `chat.group`(전송), `group.updated`(이름 변경·초대·강퇴·나가기), `group.removed`(해산 `dissolved`, 나가기 `left`). 전송하면 내 `lastReadMessageId`를 그 메시지로 올림(내 메시지는 안 읽음에 세지 않음, API_CONTRACT 1.6). DEV 트리거 `groupFrom(groupId, userId, content)`, `inviteMe(name)`(가짜 사용자가 만든 그룹에 나를 초대 → `group.joined`), `kickMe(groupId)`(→ `group.removed kicked`), `seedGroup(groupId, count)`. 봇: 내 그룹 메시지에 다른 멤버가 짧게 답함. 봇 지연 변수 `VITE_MOCK_DM_BOT_MS` → `VITE_MOCK_BOT_MS`(DM·그룹 공통, 기본 5000, E2E 0)
 - 선행 리팩터(동작 변화 없음): 전송 중 상태 `pendingDm` → `pendingThread`, 스레드 화면 `ThreadView`, 목록·스레드 CSS `shared/ui/panel.module.css`, `useUserSearch` → `features/profile`
 
 **완료 조건** — 검증 자산: `e2e/phase2-group.spec.ts`, 단위(`src/domain/group.test.ts`, `src/store/groupCache.test.ts`, `src/transport/sse/handlers/group.test.ts`, `src/features/group/**/*.test.tsx`, `src/mocks/handlers/groups.test.ts`)
-- [ ] 단위: groupCache(새 메시지·안 읽음·중복 제거·만든 그룹·updated·removed·joined·분해), 그룹 정렬·owner·이름 검증, 핸들러 4종(말풍선 없음, 에코로 pending 해소, 열린 그룹에서 빠지면 닫고 안내), 목록·만들기, 스레드 읽음 처리 조건, 멤버 화면(owner·멤버별 버튼, GROUP_FULL 안내), 탭 안 읽음 합계, MSW 그룹 페이지네이션·emit
-- [ ] E2E: 그룹 만들기 → 스레드 전송(말풍선 없음), 다른 탭에 있을 때 멤버 메시지 → 그룹 탭 안 읽음 → 열면 0, owner 초대(검색) → 인원 +1 → 강퇴 → 인원 −1 → 이름 변경 → 해산 → 목록에서 사라짐, 멤버로 속한 그룹 나가기, 열어 둔 그룹에서 강퇴되면 스레드가 닫히고 안내, 초대받으면(`group.joined`) 목록에 나타남, 60개 시드 → 50개 → 위로 스크롤 시 이전 메시지 추가
+- [x] 단위: groupCache(새 메시지·안 읽음·중복 제거·만든 그룹·updated·removed·joined·분해), 그룹 정렬·owner·이름 검증, 핸들러 4종(말풍선 없음, 에코로 pending 해소, 열린 그룹에서 빠지면 닫고 안내), 목록·만들기, 스레드 읽음 처리 조건, 멤버 화면(owner·멤버별 버튼, GROUP_FULL 안내), 탭 안 읽음 합계, MSW 그룹 페이지네이션·emit
+- [x] E2E: 그룹 만들기 → 스레드 전송(말풍선 없음), 다른 탭에 있을 때 멤버 메시지 → 그룹 탭 안 읽음 → 열면 0, owner 초대(검색) → 인원 +1 → 강퇴 → 인원 −1 → 이름 변경 → 해산 → 목록에서 사라짐, 멤버로 속한 그룹 나가기, 열어 둔 그룹에서 강퇴되면 스레드가 닫히고 안내, 초대받으면(`group.joined`) 목록에 나타남, 60개 시드 → 50개 → 위로 스크롤 시 이전 메시지 추가
 
 ### 10~12단계 (각 단계 착수 전에 3~9단계 형식으로 상세화)
 
@@ -275,6 +275,7 @@ PRD 5.6·5.8, ARCHITECTURE 5·7·9, DOMAIN 5.4·9, API_CONTRACT 2.7·3.3.
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.11: 9단계 완료 — 단위 306건·domain 100%·E2E 20건(2회 연속). 인박스(API_CONTRACT 1.6·DOMAIN 1.5) 반영: Mock DM 안 읽음을 메시지에서 계산, `GET /groups` 정렬. 화면 확인으로 멤버 화면 배치·시드 안 읽음·모바일 스레드 헤더 줄바꿈 수정 |
 | 2026-09-30 | 1.10: 9단계 상세화 — 그룹 캐시(목록·상세·스레드), 탭·멤버 화면, 핸들러 4종, Mock emit·DEV 트리거·봇, 선행 리팩터(pendingThread·ThreadView). 내 메시지 안 읽음 제외·목록 정렬은 to-chat 결정 요청 |
 | 2026-09-30 | 1.9: 8단계 완료 — 단위 256건·E2E 13건(2회 연속). 배치 후 가짜 접속자가 걸어가 클릭이 빗나가던 E2E 불안정성을 /__mock/place freeze로 막음 |
 | 2026-09-30 | 1.9: 8단계 상세화 — 프로필 카드, DM 패널(목록·검색·스레드·무한 스크롤·회수·읽음), DM 말풍선 판정, 캐시 분해, Mock 트리거 |
