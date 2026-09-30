@@ -4,6 +4,7 @@ export * from './view';
 export * from './proximity';
 export * from './occupancy';
 export * from './dm';
+export * from './group';
 export * from './message';
 export * from './map';
 export * from './movement';
