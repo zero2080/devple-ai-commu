@@ -6,6 +6,7 @@ import { EXPRESS_MOCK_PATH_PREFIXES } from './data/config.ts';
 import { readMyMessagesBy, receiveDmFrom, seedDm } from './dmSim.ts';
 import { inviteMe, kickMe, receiveGroupMessage, seedGroup } from './groupSim.ts';
 import { handlers } from './handlers/index.ts';
+import { suspendMe } from './sessionSim.ts';
 
 export const worker = setupWorker(...handlers);
 
@@ -46,6 +47,8 @@ export interface DevpleMockControls {
   /** 가짜 owner가 나를 강퇴 (group.removed kicked) */
   kickMe: (groupId: string) => boolean;
   seedGroup: (groupId: string, count: number) => number;
+  /** 운영자가 나를 정지 (system.suspended → 연결 종료, 이후 REST 403) */
+  suspendMe: () => Promise<void>;
 }
 
 declare global {
@@ -65,6 +68,7 @@ export async function startMockWorker(): Promise<void> {
       inviteMe: (name) => inviteMe(name),
       kickMe: (groupId) => kickMe(groupId),
       seedGroup: (groupId, count) => seedGroup(groupId, count),
+      suspendMe,
     };
   }
   await worker.start({

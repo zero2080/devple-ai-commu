@@ -59,6 +59,9 @@ export const authHandlers = [
     if (str(body, 'accessKey') !== DEMO_ACCESS_KEY) {
       return apiError(401, 'AUTH_INVALID_KEY', 'access key mismatch');
     }
+    if (state.me.status === 'suspended') {
+      return apiError(403, 'USER_SUSPENDED', 'account suspended');
+    }
     const accessToken = issueAccessToken();
     return HttpResponse.json(
       { accessToken, expiresIn: ACCESS_TOKEN_TTL_SEC, me: state.me, config: SERVER_CONFIG },
@@ -77,6 +80,9 @@ export const authHandlers = [
     // 새로고침 후에도 세션이 복구되도록 쿠키가 있으면 인정한다 (MSW 상태는 페이지마다 초기화되므로)
     if (typeof cookies[REFRESH_COOKIE] !== 'string' || cookies[REFRESH_COOKIE] === '') {
       return apiError(401, 'AUTH_REQUIRED', 'refresh token missing');
+    }
+    if (state.me.status === 'suspended') {
+      return apiError(401, 'AUTH_REQUIRED', 'refresh token revoked (suspended)'); // 정지 시 refresh 전부 무효
     }
     const accessToken = issueAccessToken();
     return HttpResponse.json(

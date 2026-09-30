@@ -10,6 +10,7 @@ interface DevpleWorldState {
 interface DevpleDebugGlobal {
   worldStore: { getState: () => DevpleWorldState };
   game?: { currentCamera: { originX: number; originY: number; zoom: number } };
+  setAwayTimeoutMs?: (ms: number) => void;
 }
 
 interface DevpleMockControls {
@@ -20,6 +21,7 @@ interface DevpleMockControls {
   inviteMe: (name: string) => string;
   kickMe: (groupId: string) => boolean;
   seedGroup: (groupId: string, count: number) => number;
+  suspendMe: () => Promise<void>;
 }
 
 interface Window {
