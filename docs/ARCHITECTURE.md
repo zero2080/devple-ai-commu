@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.15 (2026-09-30, 10단계 설계 — 자리비움·재동기화·정지)
+> 문서 버전: 1.16 (2026-09-30, 11단계 설계 — 운영자 콘솔·공지 배너)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -213,10 +213,12 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - 내 공개 메시지 확정: `POST /chat/public` 201과 SSE `chat.public` 중 **먼저 온 쪽이 확정**한다. 로그는 메시지 id로 중복을 제거하고, SSE가 먼저 오면 NFC 정규화한 본문이 같은 가장 오래된 `sending` 항목을 해소한다
 - **DM 캐시** (8단계): 대화 목록 `dm.conversations`(무한 쿼리, 최근순)와 스레드 `dm.messages(peerId)`(무한 쿼리, 페이지는 최신순, 화면은 뒤집어 오래된 것 → 최신)에 **기본 엔티티만** 둔다. 응답의 `peer`와 이벤트의 `sender`는 `users.byId(id)` 캐시로 분해해 넣는다 (DOMAIN 9 이중 저장 금지). `chat.dm` 수신 시 목록 맨 위로 올리고 `lastMessage`·`updatedAt` 갱신, 상대가 보낸 것이면 `unreadCount + 1`(그 스레드가 열려 있고 읽음 처리하면 0). 목록에 없는 대화면 목록을 무효화해 다시 받는다. 회수는 모든 스레드 캐시에서 해당 id 제거 + 목록 무효화, 읽음은 내 메시지 중 `lastMessageId`까지 `readAt` 채움
 - 전송 중 DM·그룹 메시지는 `chatStore.pendingThread`(스레드별 키 `dmThreadKey(peerId)` = `dm:<peerId>`, `groupThreadKey(groupId)` = `group:<groupId>`). 확정 규칙은 공개 대화와 같다 (201과 `chat.dm`·`chat.group` 에코 중 먼저 온 쪽, id 중복 제거, 에코가 먼저면 같은 스레드·NFC 본문 일치로 해소). 스레드 화면은 DM·그룹 공통 `features/chat` `ThreadView`, 목록·스레드 CSS는 `shared/ui/panel.module.css`, 커서 페이지 캐시 헬퍼는 `store/threadCache.ts`, 사용자 캐시는 `store/userCache.ts`
-- `uiStore`: 하단 패널 탭(`public`·`dm`·`group`), 열린 DM 상대(`dmPeerId`), 열린 그룹(`groupId`), 열린 프로필(`profileUserId`). 프로필 카드는 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (보장 영역 규칙의 예외, 닫기·Esc)
+- `uiStore`: 하단 패널 탭(`public`·`dm`·`group`), 열린 DM 상대(`dmPeerId`), 열린 그룹(`groupId`), 열린 프로필(`profileUserId`), 공지(`notice`, 11단계). 프로필 카드는 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (보장 영역 규칙의 예외, 닫기·Esc)
 - **그룹 캐시** (9단계): 목록 `groups.list`(`GroupListItem[]` 그대로 — 사용자 객체가 없어 분해할 것이 없다. 서버 정렬은 최근 활동 먼저(API_CONTRACT 2.7). 만들기·초대·새 메시지로 캐시에 직접 넣은 항목 때문에 화면에서도 같은 규칙으로 다시 정렬, `domain/group.ts`), 상세 `groups.detail(groupId)`(`{ group, members: GroupMember[] }` — 응답의 `members[].user`는 `users.byId`로 분해), 스레드 `groups.threads(groupId)`(무한 쿼리, DM과 같은 커서 페이지). `chat.group`은 스레드 첫 페이지 앞에 추가(id 중복 제거), 목록 `lastMessage` 갱신, 남이 보낸 것이면 `unreadCount + 1`(목록에 없는 그룹이면 목록 무효화). `group.updated`는 목록 항목의 이름·owner·인원과 상세를 교체, `group.removed`는 목록에서 빼고 상세·스레드 쿼리를 지운다. `group.joined`는 안 읽음 수를 알 수 없어 목록을 다시 받는다. 만든 그룹(201)은 목록에 직접 넣는다(이벤트 없음). 읽음은 스레드가 보이는 동안 목록의 안 읽음이 1 이상이면 최신 메시지 id로 `POST /groups/{id}/read` 후 0으로. 그룹 메시지는 말풍선을 띄우지 않는다 (DOMAIN 5.4)
 - `uiStore` 그룹: 탭 `group`, 열린 그룹 `groupId`, `groupNotice`(`{ name, reason: 'kicked' | 'dissolved' }`). 열어 둔 그룹에서 강퇴·해산되면 핸들러가 스레드를 닫고 안내를 남긴다. `left`(내가 나감, 다중 탭)와 내가 먼저 지운 그룹은 안내하지 않는다
 - `presence.updated`: 월드 접속자(상태·닉네임·외형)와 사용자 캐시(`userCache.patchUser`)에 함께 반영한다. 외형은 바뀔 때 **전체**가 온다(부분 객체는 스키마에서 거른다, DOMAIN 3.7)
+- **운영자 콘솔** (11단계): 라우트 `/admin`, `RequireAuth role="admin"`(비운영자는 월드로). 목록은 Query 무한 쿼리 `admin.signups(status)`·`admin.users(status)`(커서 "더 보기"), 변경 후에는 영향받는 목록을 무효화한다(승인 → 신청·회원, 정지·해제 → 회원). 되돌리기 어려운 동작(거절·정지·키 재발급)은 한 번 더 확인하고, 거절 사유는 `domain/admin.ts`로 사전 검증(권위는 서버)
+- **공지 배너** (11단계): `system.notice` → `uiStore.notice`(세션 한정, 최신 1건 — 새 공지가 이전 공지를 대체). 월드·콘솔 상단에 plain text로 표시하고 닫을 수 있다. `Notice`에는 `links[]`가 없어 링크 버튼을 만들지 않는다. 캔버스 위 오버레이지만 사용자가 닫는 일시적 요소라 보장 영역 규칙의 예외(프로필 카드와 같음)
 - **옷장** (외형 편집, 12a단계): 내 프로필 카드와 툴바 버튼에서 여는 모달 (handoff 2026-09-30-avatar-v2의 추천 A 채택 — 별도 라우트 없음). 선택지는 `ServerConfig.avatarOptions` ∩ `palette.json`·`catalog.json`, 색은 프리셋 램프만(자유 색상 입력 없음). 저장은 `PATCH /me { appearance }` 전체 교체, 오류는 `details.fields['appearance.<경로>']`를 해당 선택지 옆에 표시. 사전 검증은 서버와 같은 `domain/appearance.ts` `validateAppearance`
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 
@@ -280,3 +282,4 @@ src/
 | 2026-09-30 | 1.13: 계약 반영(API_CONTRACT 1.6·DOMAIN 1.5, handoff 2026-09-30-unread-order-edge-color) — `GET /groups` 최근 활동 먼저, 그룹 전송 시 발신자 읽음 포인터 갱신, DM 안 읽음 = 상대 메시지 중 `readAt` 없음. Mock DM 안 읽음은 메시지에서 계산 |
 | 2026-09-30 | 1.14: 아바타 v2 반영(DOMAIN 2.0·API_CONTRACT 2.0·GRAPHICS 2.0, handoff 2026-09-30-avatar-v2) — 프레임 24×40·말풍선 `top` = 앵커 − 40, 클릭 판정 = 몸 박스, 레이어 합성 1회·캐시(12a단계), 그 전까지 외형 색 플레이스홀더, 자산 JSON은 `game/assets/avatarAssets.ts`만, `presence.updated` 반영, 옷장 = 프로필 카드·툴바 모달(A) |
 | 2026-09-30 | 1.15: 10단계 설계 — 자리비움은 마지막 입력 시각 + 타이머 1개(입력마다 재설정 금지)·실패 시 재시도, 재동기화(`sync.required`·60초 초과 재연결, 월드는 스냅샷 경로, 스레드는 최신 페이지만, single-flight), 정지(`endSession('suspended')`, 훅 주입, logout 호출 없음) |
+| 2026-09-30 | 1.16: 11단계 설계 — `/admin` 운영자 가드, 운영자 목록 무한 쿼리·변경 후 무효화, 위험 동작 재확인, 공지 배너(`uiStore.notice`, 최신 1건, 링크 버튼 없음, 보장 영역 예외) |

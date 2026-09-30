@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.14 (2026-09-30, 10단계 완료)
+> 문서 버전: 1.15 (2026-09-30, 11단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -263,9 +263,27 @@ PRD 5.2·5.9, ARCHITECTURE 3.5·4.1·4.2·6, API_CONTRACT 2.2(`PUT /me/presence`
 - [x] 단위: 자리비움 추적(만료 → away 1회, 입력 → online 1회, 입력마다 타이머를 다시 걸지 않음, 실패 후 재시도, 중지 후 무반응), SseClient 60초 초과 재연결만 `onResync`, resync(월드 교체·목록 무효화·스레드 reset·single-flight), `sync.required`·`system.suspended`·`403 USER_SUSPENDED` → 세션 종료, 배지·프로필 카드 자리비움 표시
 - [x] E2E: 입력 없이 두면 away(Express Presence·배지) → 키 입력으로 online, `sync.required` → 조용히 바뀐 DM 목록·월드를 다시 받음, `suspendMe` → 로그인 화면 + 안내 + 재연결 없음(열린 EventSource 0)·다시 로그인해도 정지 안내
 
-### 11~12b단계 (각 단계 착수 전에 3~10단계 형식으로 상세화)
+### 11단계: 운영자 콘솔 + 공지 배너 `[ ]`
 
-- 11단계: 운영자 콘솔
+PRD 5.9·5.1(6), DOMAIN 3.4·6·7, API_CONTRACT 2.8·3.3(`system.notice`).
+
+**만들 것**
+- 라우트 `/admin` (`pages/AdminPage`) — 로그인 + `role: 'admin'`만. 아니면 월드로 돌려보낸다(`RequireAuth role="admin"`). 월드 화면에 운영자에게만 "운영자 콘솔" 링크, 콘솔에는 "← 월드로". SSE·자리비움은 세션 수명이라 페이지를 옮겨도 유지
+- `src/features/admin/` — 탭 `가입 신청` / `회원` / `공지`
+    - 가입 신청: 상태 필터(대기 기본·승인·거절), 커서 "더 보기". 대기 건은 승인 / 거절(사유 1~200자 필수, 인라인 입력 → 확정). `409 SIGNUP_ALREADY_REVIEWED`면 안내 후 목록 다시 받기. 승인하면 회원 목록도 다시 받기
+    - 회원: 상태 필터(전체·활성·정지), 닉네임·이메일·연락처·역할·상태. 정지(한 번 더 확인, 본인은 버튼 없음) / 해제, 접근 키 재발급(한 번 더 확인 — "기존 키와 세션이 즉시 무효")
+    - 공지: 본문(메시지와 같은 규칙, `composeState`) → `POST /admin/notices` 201 `Notice`
+- `src/domain/admin.ts` — 거절 사유 검증(앞뒤 공백 뺀 1~200 코드 포인트)
+- 공지 배너: `system.notice` 핸들러 → `uiStore.notice`(세션 한정, 최신 1건) → 월드·콘솔 상단 배너(plain text, 닫기). 공지에는 `links[]`가 없으므로 링크 버튼을 만들지 않는다 (CLAUDE.md 제약 4)
+- 에러 문구 `SIGNUP_ALREADY_REVIEWED`
+- Mock: 공지 → emit 브리지로 `system.notice`, 정지 → `presence.left`(Express가 월드에서 제거 — 정지된 사용자는 SSE가 끊기므로), 시드 가입 신청 추가(대기 2·승인 1·거절 1)
+
+**완료 조건** — 검증 자산: `e2e/phase2-admin.spec.ts`, 단위(`src/domain/admin.test.ts`, `src/features/admin/**/*.test.tsx`, `src/app/RequireAuth.test.tsx`, `src/mocks/handlers/admin.test.ts`)
+- [ ] 단위: 거절 사유 검증, 운영자 가드(비운영자 → 월드), 가입 신청(승인·거절 사유 필수·409 안내), 회원(본인 정지 버튼 없음·확인 후 정지·해제·재발급), 공지(빈 본문·길이 초과 막기, 201 반영), `system.notice` → 배너·닫기, Mock 공지 방송·정지 시 presence.left
+- [ ] E2E: 월드 → 운영자 콘솔 → 대기 신청 승인(회원 목록에 나타남)·거절(사유 없으면 막힘, 거절 필터에 사유), 회원 정지 → 월드에서 사라짐 → 해제, 키 재발급 확인, 공지 발송 → 콘솔·월드에 배너 → 닫기
+
+### 12a~12b단계 (각 단계 착수 전에 3~11단계 형식으로 상세화)
+
 - 12a단계: 아바타 파이프라인 + 옷장 — 실제 그림 없이 코드가 만든 자리표시 레이어로 끝까지 동작 (GRAPHICS 2장·7.2·8장)
     - 선행 완료(아바타 v2 마이그레이션, 2026-09-30): `Appearance` 타입·검증(`domain/appearance.ts`), zod, Mock `avatarOptions`·시드 외형·`PATCH /me` 검증, 프레임 24×40·몸 박스 판정, 외형 색 플레이스홀더, `palette.json`·`catalog.json` 골격
     - `game/assets/loader.ts`: 카탈로그 시트 로더(front/back), `loadTileset`
@@ -296,6 +314,7 @@ PRD 5.2·5.9, ARCHITECTURE 3.5·4.1·4.2·6, API_CONTRACT 2.2(`PUT /me/presence`
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.15: 11단계 상세화 — `/admin` 운영자 가드, 가입 신청·회원·공지 탭, 거절 사유 검증, 공지 배너(`system.notice`), Mock 공지 방송·정지 시 presence.left. **가입 신청 화면(PRD 5.1)은 어느 단계에도 없어 결정 요청**(리포트) |
 | 2026-09-30 | 1.14: 10단계 완료 — 단위 341건·domain 100%·E2E 23건(2회 연속). 재로그인 시 정지 안내와 폼 오류가 겹치던 것을 안내 지우기로 정리 |
 | 2026-09-30 | 1.13: 10단계 상세화 — 자리비움 추적(마지막 입력 시각 방식), 재동기화(single-flight, 스레드는 최신 페이지만), 60초 초과 재연결 감지, 정지 처리(`endSession('suspended')`, 훅 주입), Mock 정지·DEV 훅 |
 | 2026-09-30 | 1.12: 아바타 v2 반영(handoff 2026-09-30-avatar-v2) — 12단계를 12a(아바타 파이프라인 + 옷장, 자리표시 레이어)·12b(실제 그림·타일셋)로 분리. 옛 12단계의 atlas·`mirror`·64×128 항목 삭제. 계약 마이그레이션(`avatarId` → `appearance`)은 10단계 전에 완료 |
