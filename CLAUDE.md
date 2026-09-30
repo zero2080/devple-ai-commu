@@ -17,6 +17,8 @@
 | 네이밍, 디렉토리, 테스트, 커밋 규칙은? | `docs/CONVENTIONS.md` |
 | 지금 무엇을 만들 차례인가? 완료 조건은? | `docs/ROADMAP.md` |
 | 스프라이트·타일셋·팔레트·말풍선 CSS 규격은? | `docs/GRAPHICS.md` |
+| chat(Claude.ai)과 주고받는 요청 형식은? | `docs/handoff/README.md` (에이전트 간 프로토콜) |
+| 사용자에게 보여줄 결정·결과 리포트는 어디에? | `docs/report/` (한국어 HTML) |
 
 문서와 코드가 다르면 **문서가 기준**이다. 문서가 틀렸다고 판단되면 코드를 고치지 말고 먼저 알린다.
 
@@ -36,7 +38,8 @@
 ## 작업 방식
 
 ### 시작 전
-- `docs/handoff/to-code/`에 파일이 있으면 먼저 처리한다 (규칙은 `docs/handoff/README.md`). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
+- `docs/handoff/to-code/`에 파일이 있으면 먼저 처리하고 `done/`을 비운다 (규칙·메시지 형식은 `docs/handoff/README.md`: YAML frontmatter + `done/do/decide/info`, 간결한 영어). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
+- 사용자가 결정하거나 검토해야 할 것이 생기면 `docs/report/YYYY-MM-DD-<slug>.html`(한국어, 자체 완결 HTML, 인라인 CSS)을 쓰고 터미널 답변에 경로를 적는다. 관련 handoff 메시지에는 `needs-user: true`. 리포트는 커밋한다 (결정 기록).
 - 요청을 PRD 기능 번호(예: 5.4 근접 대화)와 ROADMAP 단계에 매핑한다. 매핑이 안 되면 범위 밖일 가능성이 있으니 확인한다.
 - 현재 단계보다 앞선 단계의 기능을 구현하지 않는다 (예: 5단계 중에 말풍선 만들지 않기).
 - 관련 문서 섹션을 읽고, 영향받는 레이어(`game` / `transport` / `store` / `features` / `domain`)를 먼저 나열한다.
@@ -87,4 +90,4 @@
 ## 현재 상태
 
 - 진행 상태·완료 조건은 `docs/ROADMAP.md`의 체크박스가 기준이다 (여기에 이중 관리하지 않는다). 문서 버전은 각 문서 상단 표기를 본다.
-- 결정 대기 항목과 작업 결과 리포트는 `reports/`, 도구 간 요청은 `docs/handoff/`.
+- 결정 대기 항목과 작업 결과 리포트는 `docs/report/`, 도구 간 요청은 `docs/handoff/`.

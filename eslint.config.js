@@ -24,7 +24,7 @@ const restrictedImports = (...patterns) => [
 ];
 
 export default defineConfig(
-  { ignores: ['dist', 'coverage', 'node_modules', 'reports', 'public/mockServiceWorker.js'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'docs/report', 'public/mockServiceWorker.js'] },
   js.configs.recommended,
   ...tsConfigs.strictTypeChecked,
   ...tsConfigs.stylisticTypeChecked,
