@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.8 (2026-09-30, 7단계 상세화)
+> 문서 버전: 1.9 (2026-09-30, 8단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -207,9 +207,30 @@ PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍�
 - [x] E2E: Enter → 입력 → 전송 → 로그와 내 말풍선에 본문·`↗ example.com` 버튼, 입력 중 방향키 무시 → Esc 후 이동, 링크 버튼 → 새 창(`opener` 없음), 반경 안 발화 수신·반경 밖 미수신, 링크 없는 말풍선 만료
 - [x] E2E 뷰포트: 390×844에서 내 주변 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800에서 20×15 타일 이상 표시 (`domain/viewport.ts`)
 
-### 8~12단계 (각 단계 착수 전에 3~7단계 형식으로 상세화)
+### 8단계: 프로필 카드 + DM 패널 + 회수 `[ ]`
 
-- 8단계: 프로필 카드, DM 패널, 회수
+PRD 5.5·5.7·5.8, ARCHITECTURE 2.3·3.1·5·7·9, DOMAIN 5.3·9, API_CONTRACT 2.3·2.6·3.3.
+
+**만들 것**
+- `src/store/queryClient.ts`·`queryKeys.ts` — 앱과 SSE 핸들러가 같은 QueryClient를 쓴다. 키는 한 파일에 모은다 (CONVENTIONS 7)
+- `src/store/dmCache.ts` — DM 캐시 갱신: 새 메시지(목록 맨 위로·안 읽음·첫 페이지 앞에 추가·id 중복 제거), 회수, 읽음, 내가 읽음 처리. 합성 타입의 `peer`·`sender`는 사용자 캐시(`users.byId`)로 분해 (DOMAIN 9)
+- `src/store/chatStore.ts` — `pendingDm`(낙관적 전송), DM 말풍선(`variant: 'dm'`)
+- `src/store/uiStore.ts` — 하단 패널 탭(`public`·`dm`), 열린 DM 상대, 열린 프로필
+- SSE 핸들러 `chat.dm`·`chat.dm.recalled`·`chat.dm.read` → dmCache·chatStore
+- `src/domain/dm.ts` — DM 말풍선 판정: 받은 DM은 발신자가 내 근접 반경 안이면 발신자 머리 위, 내가 보낸 DM은 상대가 반경 안일 때만 내 머리 위. 밖이면 패널에만 (PRD 5.5, DOMAIN 5.3)
+- `src/game/` — `WorldGame.characterAt(screenX, screenY)`(캐릭터 16×32 스프라이트 사각형 판정, 겹치면 아래쪽 캐릭터 우선), 클릭 라우팅: 캐릭터 → 프로필 카드, 빈 곳 → 이동 (ARCHITECTURE 3.1)
+- `src/features/profile/` — `ProfileCard`: `GET /users/{id}`로 닉네임·아바타·상태 메시지·접속 여부, "DM 보내기"(본인이면 없음), 닫기·Esc
+- `src/features/dm/` — 대화 목록(안 읽음 표시) + 닉네임 검색(`GET /users?nickname=`) → 스레드. 스레드는 50개씩 무한 스크롤(위로 스크롤 또는 "이전 메시지" 버튼), 입력·전송, 내 메시지 "읽음" 표시, 미열람이면 "회수"(409면 안내), 스레드가 보이는 동안 받은 메시지 읽음 처리
+- `src/features/chat/ChatPanel` — 탭 `근접` / `DM`(안 읽음 합계는 대화 목록 캐시에서 파생)
+- DM 말풍선 CSS: 공개와 다른 배경(Endesga 32 임시값, 12단계 확정)
+- Mock: MSW DM 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id), 전송·회수 시 emit 브리지로 `chat.dm`·`chat.dm.recalled`. DEV 트리거 `window.__devpleMock`(`dmFrom`·`readBy`·`seedDm`), 가짜 상대 봇(`VITE_MOCK_DM_BOT_MS`, 기본 5000, E2E 0 — 내 DM을 읽고 짧게 답함), Express `POST /__mock/place { userId, x, y }`
+
+**완료 조건**
+- [ ] 단위: dmCache(목록 갱신·안 읽음·중복 제거·회수·읽음·분해), chatStore `pendingDm`, DM 말풍선 판정, `characterAt`, ProfileCard, DM 스레드(회수 버튼 조건·읽음 표시·409 안내), 탭 안 읽음 합계, MSW DM 페이지네이션
+- [ ] E2E: 캐릭터 클릭 → 프로필 카드 → DM 보내기 → 전송·반경 안이면 DM 말풍선, 반경 밖 상대의 DM은 말풍선 없이 탭 안 읽음 → 열면 읽음 처리, 미열람 회수 → 양쪽 목록에서 사라짐·읽힌 뒤엔 회수 불가, 닉네임 검색 → 스레드, 60개 시드 → 50개 → 위로 스크롤 시 10개 추가
+
+### 9~12단계 (각 단계 착수 전에 3~8단계 형식으로 상세화)
+
 - 9단계: 그룹 채팅 패널
 - 10단계: 자리비움, 재동기화(`sync.required`), 정지 처리
 - 11단계: 운영자 콘솔
@@ -237,6 +258,7 @@ PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍�
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.9: 8단계 상세화 — 프로필 카드, DM 패널(목록·검색·스레드·무한 스크롤·회수·읽음), DM 말풍선 판정, 캐시 분해, Mock 트리거 |
 | 2026-09-30 | 1.8: 7단계 완료 — 단위 209건·E2E 9건 통과. 스크린샷 검토로 모바일 가로 넘침·말풍선 가장자리 잘림 발견·수정 |
 | 2026-09-30 | 1.8: 7단계 상세화 — 말풍선·로그·입력·링크 버튼, chat.public Express 이관, 뷰포트 보장 레이아웃 |
 | 2026-09-30 | 1.7: 폰트 추천안(Galmuri11 부분집합 → PixelKo) 사용자 채택, 자산·빌드 스크립트·LICENSES 동봉 |

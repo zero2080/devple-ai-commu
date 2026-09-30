@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.9 (2026-09-30, GRAPHICS 1.2 반영 — 말풍선·닉네임 수직 배치 공식, line-height 1)
+> 문서 버전: 1.10 (2026-09-30, 8단계 설계 — 캐릭터 클릭 판정·DM 말풍선·DM 캐시·프로필 카드·Mock DM)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -57,6 +57,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - **위치** (GRAPHICS 5.2 수직 배치, 확정): 월드 px 기준 × 줌, `top` = 캐릭터 프레임 상단. 닉네임 블록 하단 = `top − 2`, 꼬리 끝 = 닉네임 블록 상단 − 1, 몸통 하단 = 꼬리 끝 − 3. 즉 꼬리 끝 = `top − (2 + 닉네임 line-height + 1)` — 12단계 전 Canvas 플레이스홀더(8px)는 `top − 11`, PixelKo(12px) 전환 후 `top − 15`. 상수 `game/constants.ts`의 `NICKNAME_GAP_PX`·`NICKNAME_LINE_HEIGHT_PX`·`BUBBLE_TAIL_GAP_PX`로 계산한다. 닉네임은 말풍선이 떠 있어도 항상 보인다
 - 겹침 순서: 말풍선끼리는 최근 메시지가 위(`bubbles` 배열 끝 = DOM 뒤), 닉네임끼리는 캐릭터 그리기 순서와 같이 y가 큰 캐릭터가 위
 - 픽셀 폰트 텍스트(말풍선·로그·입력)는 `line-height: 1` (GRAPHICS 5.1)
+- **DM 말풍선** (8단계): 받은 DM은 발신자가 내 근접 반경 안(`max(|dx|,|dy|) ≤ proximityRadius`, 내 예측 위치 기준)이면 발신자 머리 위에 `variant: 'dm'` 말풍선, 밖이면 DM 패널에만. 내가 보낸 DM(다중 탭 에코 포함)은 상대가 반경 안일 때만 내 머리 위에 띄운다 — 상대 화면과 같은 판단을 보여주기 위해서. 판정은 `domain/dm.ts`. 사용자당 1개 규칙은 공개·DM 공통이라 DM이 공개 말풍선을 대체할 수 있다 (GRAPHICS 5.2)
 - 만료: `expiresAt = Date.now() + bubbleDurationMs(content, hasLinks)`. 레이어가 프레임마다 확인해 지나면 `chatStore.removeBubble`. 포인터가 올라가 있는 말풍선은 지우지 않고, 벗어난 뒤 이미 지났으면 다음 프레임에 지운다
 - 발신자 Presence가 없거나 발화자가 화면 밖이면 말풍선을 숨긴다 (로그에는 남음). 발화자는 보이는데 말풍선이 캔버스 좌우로 넘치면 **몸통만 캔버스 안으로 밀고 꼬리는 발화자를 가리킨다** (`features/chat/bubbleLayout.ts`)
 - 공개 말풍선과 DM 말풍선은 CSS 클래스로 배경색 구분
@@ -85,9 +86,10 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 | 환경 | 입력 | 동작 |
 |---|---|---|
 | 데스크톱 | 방향키 / WASD | 누르는 동안 1타일씩 연속 이동 |
-| 데스크톱 | 마우스 클릭 | 캐릭터 위 클릭 → 프로필 카드 / 빈 타일 클릭 → 경로 탐색 후 자동 이동 |
+| 데스크톱 | 마우스 클릭 | 캐릭터 위 클릭 → 프로필 카드 / 빈 타일 클릭 → 경로 탐색 후 자동 이동 (클릭 판정은 아래) |
 | 모바일 | 터치(탭) | 캐릭터 탭 → 프로필 카드 / 빈 타일 탭 → 경로 탐색 후 자동 이동 (가상 D-pad 없음) |
 
+- 캐릭터 클릭 판정 (8단계): 화면 좌표 → 월드 px로 바꾼 뒤 각 캐릭터의 16×32 스프라이트 사각형(발 타일 기준 위로 2타일)과 비교한다. 여러 명이 겹치면 y가 큰(앞에 그려진) 캐릭터를 고른다. 캐릭터면 프로필 카드를 열고, 아니면 프로필 카드를 닫고 이동한다 (`WorldGame.characterAt`)
 - 경로 탐색: **A\*** (4방향, 맨해튼 휴리스틱), `domain/pathfinding.ts` (순수 함수)
 - 목적지가 충돌 타일이면 가장 가까운 통행 가능 타일로 대체
 - 이동 중 키 입력이 들어오면 자동 이동 취소
@@ -173,6 +175,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 에러 응답은 계약된 형식 `{ code, message, details? }`로 통일, `ApiError` 클래스로 throw
 - 서버 상태 캐싱/재조회는 **TanStack Query** (DM 대화 목록, 그룹 목록, 메시지 히스토리, 사용자 프로필)
 - 실시간 이벤트 수신 시 해당 Query 캐시를 직접 갱신 (`setQueryData`), 재요청하지 않음
+- QueryClient는 `store/queryClient.ts`의 단일 인스턴스를 앱(Provider)과 SSE 핸들러가 함께 쓴다. 쿼리 키는 `store/queryKeys.ts`에 모은다. 캐시 갱신 로직은 `store/dmCache.ts`(transport 핸들러와 features 액션이 공유)
 
 ## 6. 인증 흐름
 
@@ -202,6 +205,9 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - **서버 원본 목록**(DM 대화 목록, 그룹 목록, 메시지 히스토리, 프로필)은 스토어가 아니라 **TanStack Query 캐시**에만 둔다. SSE 수신 시 `setQueryData`로 캐시를 갱신하고, `chatStore`는 캐시에 없는 휘발성·UI 상태만 가진다 (이중 저장 금지)
 - 근접 대화 로그 항목(`PublicLogEntry`, `domain/view.ts`)은 발화 시점 닉네임을 함께 저장한다. 공개 대화는 히스토리 API가 없고 발신자가 맵을 떠날 수 있어 사용자 캐시로 되찾을 수 없기 때문이다 (DOMAIN 9 "sender는 사용자 캐시로"의 예외, 휘발성 로그 한정)
 - 내 공개 메시지 확정: `POST /chat/public` 201과 SSE `chat.public` 중 **먼저 온 쪽이 확정**한다. 로그는 메시지 id로 중복을 제거하고, SSE가 먼저 오면 NFC 정규화한 본문이 같은 가장 오래된 `sending` 항목을 해소한다
+- **DM 캐시** (8단계): 대화 목록 `dm.conversations`(무한 쿼리, 최근순)와 스레드 `dm.messages(peerId)`(무한 쿼리, 페이지는 최신순, 화면은 뒤집어 오래된 것 → 최신)에 **기본 엔티티만** 둔다. 응답의 `peer`와 이벤트의 `sender`는 `users.byId(id)` 캐시로 분해해 넣는다 (DOMAIN 9 이중 저장 금지). `chat.dm` 수신 시 목록 맨 위로 올리고 `lastMessage`·`updatedAt` 갱신, 상대가 보낸 것이면 `unreadCount + 1`(그 스레드가 열려 있고 읽음 처리하면 0). 목록에 없는 대화면 목록을 무효화해 다시 받는다. 회수는 모든 스레드 캐시에서 해당 id 제거 + 목록 무효화, 읽음은 내 메시지 중 `lastMessageId`까지 `readAt` 채움
+- 전송 중 DM은 `chatStore.pendingDm`(상대별). 확정 규칙은 공개 대화와 같다 (201과 `chat.dm` 에코 중 먼저 온 쪽, id 중복 제거, 에코가 먼저면 NFC 본문 일치로 해소)
+- `uiStore`: 하단 패널 탭(`public`·`dm`), 열린 DM 상대(`dmPeerId`), 열린 프로필(`profileUserId`). 프로필 카드는 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (보장 영역 규칙의 예외, 닫기·Esc)
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 
 ## 8. 디렉토리 구조
@@ -227,6 +233,7 @@ src/
 
 - REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 위치·근접 판정이 필요한 `POST /chat/public`도 Express가 담당한다(7단계, MSW 32 + Express 5). Express는 서버가 인정한 발신자 위치 기준으로 반경 판정 후 `chat.public`을 방송하고, 가짜 접속자 발화(`MOCK_CHATTER_MS`)와 개발용 `POST /__mock/say`도 같은 판정을 거친다
 - **emit 브리지**: 상태는 MSW에 있지만 SSE 방송이 필요한 엔드포인트(`PATCH /me` → `presence.updated`, 이후 DM·그룹 메시지·공지)는 MSW 핸들러가 Express의 `POST /__mock/emit`으로 방송을 위임한다 (`src/mocks/bridge.ts`, `/__mock` 접두도 proxy·통과 목록에 포함). Express는 `presence.updated` 페이로드를 자기 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다. 따라서 **`PATCH /me`는 MSW에 남긴다** (2026-09-30 판단, 8단계 프로필 카드에서도 유지)
+- **Mock DM** (8단계): 상태는 MSW. 전송 → `chat.dm`(발신자 에코, `peerId` = 상대), 회수 → `chat.dm.recalled`를 emit 브리지로 방송한다. 상대가 가짜 사용자라 `chat.dm.read`는 상대가 내 메시지를 읽을 때만 생긴다. DEV 전용 `window.__devpleMock`: `dmFrom(userId, content)`(가짜 상대가 나에게 DM), `readBy(userId)`(가짜 상대가 내 DM을 읽음), `seedDm(userId, count)`(무한 스크롤 확인용). 가짜 상대 봇은 `VITE_MOCK_DM_BOT_MS`(기본 5000, 0이면 끔 — E2E) 뒤 내 DM을 읽고 짧게 답한다. 스레드 히스토리는 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id). 위치 배치용 Express `POST /__mock/place { userId, x, y }`
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -256,3 +263,4 @@ src/
 | 2026-09-30 | 1.7 (결정 리포트 3·4·5 사용자 승인): 부팅 refresh 401은 허용(힌트 쿠키 없음), SSE 연결 수명은 세션(로그인·복구 → 로그아웃), 캔버스 백킹 스토어는 CSS px × DPR |
 | 2026-09-30 | 1.8: 7단계 설계 — 말풍선은 사용자당 1개·닉네임 위에 쌓음(GRAPHICS 확인 요청)·렌더 후 콜백으로 위치 갱신, 캐릭터 좌표 정수 스냅, 채팅 패널 분할 배치, Enter/IME/Esc 포커스 규칙, chatStore 구조와 내 메시지 확정 규칙, `chat.public` Express 이관. 3.1 경로 탐색 파일 위치 정정 |
 | 2026-09-30 | 1.9: GRAPHICS 1.2 반영 — 말풍선 꼬리 끝 = 프레임 상단 − (2 + 닉네임 line-height + 1)(플레이스홀더 11, PixelKo 15), 겹침 순서, 픽셀 폰트 line-height 1 |
+| 2026-09-30 | 1.10: 8단계 설계 — 캐릭터 클릭 판정(스프라이트 사각형, 아래쪽 우선), DM 말풍선 판정(받은 DM은 발신자, 보낸 DM은 상대 기준), 공유 QueryClient·queryKeys·dmCache, DM 캐시 분해(peer·sender → users.byId), pendingDm, uiStore 탭·DM 상대·프로필, 프로필 카드 오버레이 예외, Mock DM 브리지·DEV 트리거·봇 |
