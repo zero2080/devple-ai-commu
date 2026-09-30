@@ -1,0 +1,45 @@
+/* 운영자 공지 배너 (DOMAIN 6.1, ARCHITECTURE 7장). 사용자가 닫는 일시적 요소 */
+.banner {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #feae34;
+  background: #262b44;
+  color: #f0f0f0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.overlay {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  z-index: 3;
+  width: min(560px, calc(100% - 24px));
+  transform: translateX(-50%);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 40%);
+}
+
+.label {
+  flex: none;
+  color: #feae34;
+  font-weight: 700;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.close {
+  flex: none;
+  padding: 2px 8px;
+  border: 0;
+  background: #3a4466;
+  color: #f0f0f0;
+  font: inherit;
+  cursor: pointer;
+}

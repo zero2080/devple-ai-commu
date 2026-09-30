@@ -17,3 +17,17 @@
   position: relative;
   min-height: 0;
 }
+
+/* 운영자에게만: 캔버스 왼쪽 아래 작은 링크 (11단계) */
+.adminLink {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 55%);
+  color: #f0f0f0;
+  font-size: 12px;
+  text-decoration: none;
+}

@@ -1,0 +1,25 @@
+.page {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  max-width: 1080px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.back {
+  color: var(--panel-fg);
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+}

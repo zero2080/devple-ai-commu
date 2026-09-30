@@ -1,8 +1,10 @@
 import type { CSSProperties } from 'react';
+import { Link } from 'react-router';
 
 import { ChatPanel, SpeechBubbleLayer } from '@/features/chat';
 import { DmPane, useDmUnreadTotal } from '@/features/dm';
 import { GroupPane, useGroupUnreadTotal } from '@/features/group';
+import { NoticeBanner } from '@/features/notice';
 import { ProfileCard } from '@/features/profile';
 import {
   ConnectionBadge,
@@ -24,6 +26,7 @@ type CssVars = CSSProperties & Record<`--${string}`, string>;
 export function WorldPage() {
   const mapId = useAuthStore((s) => s.config?.defaultMapId ?? 'main');
   const zoom = useUiStore((s) => s.zoom);
+  const isAdmin = useAuthStore((s) => s.me?.role === 'admin');
   const guaranteedHeight = useGuaranteedCanvasHeight();
   const dmUnread = useDmUnreadTotal();
   const groupUnread = useGroupUnreadTotal();
@@ -39,7 +42,13 @@ export function WorldPage() {
             <SpeechBubbleLayer />
           </WorldCanvas>
           <ConnectionBadge />
+          <NoticeBanner placement="overlay" />
           <ProfileCard />
+          {isAdmin ? (
+            <Link to="/admin" className={styles.adminLink}>
+              운영자 콘솔
+            </Link>
+          ) : null}
         </div>
         <ChatPanel
           dmPane={<DmPane />}

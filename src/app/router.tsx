@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 
-import { LoginPage, WorldPage } from '@/pages';
+import { AdminPage, LoginPage, WorldPage } from '@/pages';
 
 import { RequireAuth } from './RequireAuth';
 
@@ -11,6 +11,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <WorldPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: '/admin',
+    element: (
+      <RequireAuth role="admin">
+        <AdminPage />
       </RequireAuth>
     ),
   },
