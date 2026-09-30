@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.6 (2026-09-30, 목록 정렬·그룹 전송 시 발신자 읽음 갱신)
+> 문서 버전: 2.0 (2026-09-30, avatarId → appearance)
 > 상태: 확정
-> 기준: DOMAIN.md 1.5, ARCHITECTURE.md 1.12
+> 기준: DOMAIN.md 2.0, ARCHITECTURE.md 1.13
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -103,17 +103,21 @@
 
 **GET /me** → `200 { "me": Me, "config": ServerConfig }`
 
-**PATCH /me** — body: `{ nickname?, statusMessage?, avatarId? }` → `200 Me`
+**PATCH /me** — body: `{ nickname?, statusMessage?, appearance? }` → `200 Me`
+- `appearance`는 **전체 교체** (DOMAIN 3.7). 일부 키만 보내는 부분 갱신은 없다
 - 검증 실패 응답 (여러 필드가 동시에 틀리면 `details.fields`에 모두 담는다):
 
 | 조건 | 응답 |
 |---|---|
 | `nickname` 2~12자 위반 | `400 VALIDATION_FAILED`, `details.fields.nickname: 'length'` |
 | `statusMessage` 40자 초과 | `400 VALIDATION_FAILED`, `details.fields.statusMessage: 'length'` |
-| `avatarId`가 `ServerConfig.avatarIds`에 없음 | `400 VALIDATION_FAILED`, `details.fields.avatarId: 'unknown'` |
+| `appearance`의 키 누락, 또는 필수 슬롯(`top`·`bottom`·`shoes`)이 `null` | `400 VALIDATION_FAILED`, `details.fields['appearance.<키>']: 'required'` |
+| 아이템이 `avatarOptions.itemIds`에 없음 | `400 VALIDATION_FAILED`, `details.fields['appearance.<슬롯>']: 'unknown'` |
+| `itemId` 접두사가 슬롯 키와 다름 | `400 VALIDATION_FAILED`, `details.fields['appearance.<슬롯>']: 'slot_mismatch'` |
+| 램프 ID가 해당 목록(`skin`→`skinRampIds`, `hairColor`→`hairRampIds`, `primary`·`secondary`→`itemRampIds`)에 없음 | `400 VALIDATION_FAILED`, `details.fields['appearance.<경로>']: 'unknown'` (예: `appearance.top.primary`, `appearance.skin`) |
 | `nickname`이 다른 회원·대기 중 가입 신청과 중복 | `409 NICKNAME_TAKEN` |
 
-- 길이는 코드 포인트 기준 (DOMAIN 5.1과 동일). 성공 시 같은 맵 접속자에게 `presence.updated`(변경된 `nickname`·`avatarId`만) 전송
+- 길이는 코드 포인트 기준 (DOMAIN 5.1과 동일). 성공 시 같은 맵 접속자에게 `presence.updated`(변경된 `nickname`·`appearance`만) 전송
 
 **PUT /me/position**
 ```jsonc
@@ -281,7 +285,7 @@ data: {"id":"1234","type":"chat.public","ts":1727600000000,"payload":{...}}
 | `world.positions` | 같은 맵 전원 | `{ mapId, positions: { userId, x, y, dir }[] }` — 200ms 틱, 변경분만. **본인 포함**. 클라이언트는 본인 항목을 무시하고 내 위치 보정은 `PUT /me/position` 응답으로만 한다 |
 | `presence.joined` | 같은 맵 전원 | `Presence` |
 | `presence.left` | 같은 맵 전원 | `{ userId }` |
-| `presence.updated` | 같은 맵 전원 | `{ userId, state?: 'online'\|'away', nickname?, avatarId? }` — 렌더에 필요한 필드만. statusMessage는 프로필 카드 REST로 조회 |
+| `presence.updated` | 같은 맵 전원 | `{ userId, state?: 'online'\|'away', nickname?, appearance? }` — 렌더에 필요한 필드만. `appearance`는 바뀔 때 전체를 보낸다. statusMessage는 프로필 카드 REST로 조회 |
 | `chat.public` | 반경 내 접속자 | `ChatPublicEvent` (DOMAIN 9장) |
 | `chat.dm` | 대화 양측 | `ChatDmEvent` = `DmMessage & { sender: User, peerId }`. `peerId`는 **수신자 관점의 상대** (발신자 자기 사본에는 수신자 ID). 첫 DM은 수신자에게 대화 캐시가 없으므로 필수 |
 | `chat.dm.recalled` | 대화 양측 | `{ conversationId, messageId }` |
@@ -351,6 +355,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-30 | 1.4: `PATCH /me` 검증 실패 응답 명시(`details.fields.avatarId: 'unknown'` 등), 성공 시 `presence.updated` 발송 명시. `ServerConfig.avatarIds`는 DOMAIN 1.4 (로그인·`GET /me` 응답의 `config`에 포함) |
 | 2026-09-30 | 1.5 (결정 리포트 7번): 응답 미정의 엔드포인트 명시 — `POST /auth/logout` 204, `PATCH /groups/{id}` 200 Group, `DELETE /groups/{id}` 204, `DELETE /groups/{id}/members/{userId}` 204, `reject` 204(reason 필수), `suspend`·`unsuspend` 204(멱등), `POST /admin/notices` 201 Notice. 그룹 이름 검증 응답, 초대 시 기존 멤버 `group.updated`, `group.removed`에 `'left'` 추가(다중 탭) |
 | 2026-09-30 | 1.6 (Claude Code 결정 요청): 그룹 메시지 전송 시 발신자 `lastReadMessageId` 갱신, `GET /groups` 정렬(최근 활동 먼저, 안 A), `GET /dm` 정렬 기준 `updatedAt` 명시 |
+| 2026-09-30 | **2.0 (호환 깨짐, DOMAIN 2.0)**: `avatarId` → `appearance`. `PATCH /me`는 `appearance` 전체 교체 + 검증 실패 4종(`required`·`unknown`·`slot_mismatch`, 필드 경로 `appearance.<경로>`), `presence.updated`는 `appearance` 전체. `User`·`Presence`를 싣는 모든 응답·이벤트(`world.snapshot`, `presence.joined`, `GET /users/*`, DM·그룹의 `User`)가 함께 바뀐다. `chat.public`의 sender는 nickname만 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)

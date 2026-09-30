@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 1.5 (2026-09-30, 안 읽음 수 정의 — 내 메시지 제외)
+> 문서 버전: 2.0 (2026-09-30, avatarId → Appearance — 장착 아이템·색 커스터마이징)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -37,7 +37,7 @@ SignupRequest ──(승인)──▶ User ──1:1──▶ AccessKey
 interface User {
   id: string;
   nickname: string;          // 2~12자, 유니크
-  avatarId: string;          // 기본 제공 아바타 ID, 형식 'char_NN' (GRAPHICS 2.3)
+  appearance: Appearance;    // 외형 (3.7)
   statusMessage?: string;    // 최대 40자
   role: 'member' | 'admin';
   status: 'active' | 'suspended';
@@ -102,11 +102,46 @@ interface ServerConfig {
   maxMessageLength: number;    // 기본 200
   defaultMapId: string;
   maxGroupMembers: number;     // 기본 10
-  avatarIds: string[];         // 선택 가능한 아바타 목록의 원천 (GRAPHICS 2.3). 기본 ['char_01' … 'char_08']
+  avatarOptions: {             // 외형 선택지의 원천 (GRAPHICS 2.7·2.8)
+    itemIds: string[];         // 선택 가능한 아이템. ID 접두사로 슬롯을 판별 ('hat_beanie' → hat)
+    skinRampIds: string[];
+    hairRampIds: string[];
+    itemRampIds: string[];     // primary·secondary 공통
+  };
 }
 ```
 - 프론트는 이 값을 하드코딩하지 않고 항상 서버 값을 사용
-- `avatarIds`는 순서가 있다 (선택 UI 표시 순서). 비어 있지 않다
+- `avatarOptions`의 각 목록은 순서가 있다 (선택 UI 표시 순서). 비어 있지 않으며, 필수 슬롯(`top`·`bottom`·`shoes`)은 각각 1개 이상의 아이템을 갖는다
+- 모든 목록 안의 값은 **처음부터 누구나 고를 수 있다** (보유·획득 개념 없음, 사용자 결정 2026-09-30)
+
+### 3.7 Appearance (캐릭터 외형)
+```ts
+type SlotId = 'hair' | 'hat' | 'face' | 'top' | 'bottom' | 'shoes' | 'hand';
+
+interface EquippedItem {
+  itemId: string;            // '<slot>_<name>' (GRAPHICS 2.8). 접두사 = 들어간 슬롯 키
+  primary?: string;          // itemRampId. 생략 시 아이템 기본색
+  secondary?: string;        // itemRampId. 생략 시 아이템 기본색
+}
+
+interface Appearance {
+  skin: string;              // skinRampId
+  hairColor: string;         // hairRampId
+  hair: EquippedItem | null; // null = 민머리
+  hat: EquippedItem | null;
+  face: EquippedItem | null;
+  top: EquippedItem;         // 필수
+  bottom: EquippedItem;      // 필수
+  shoes: EquippedItem;       // 필수
+  hand: EquippedItem | null;
+}
+```
+- **모든 키가 항상 존재**한다. 선택 슬롯이 비어 있으면 `null`로 명시 (부분 객체 없음)
+- 각 슬롯의 `itemId` 접두사는 슬롯 키와 같아야 한다 (`hat` 슬롯에 `top_hoodie` 불가)
+- `hair` 슬롯의 `primary`는 쓰지 않는다 (머리카락 색은 `hairColor`). 보내면 서버는 저장하지 않고 버린다
+- 외형 편집은 `PATCH /me { appearance }`로 **전체 교체**한다. 부분 갱신 없음
+- 가입 승인 시 서버가 유효한 기본 외형을 배정한다 (방식은 백엔드 재량)
+- 렌더링(레이어 순서·색 치환·캐시)은 GRAPHICS 2.6~2.9
 
 ## 4. 공간 · 위치
 
@@ -127,7 +162,7 @@ interface Position {
 interface Presence {
   userId: string;
   nickname: string;          // 스냅샷에 포함해 User 조회 없이 렌더
-  avatarId: string;
+  appearance: Appearance;    // 3.7
   position: Position;
   state: 'online' | 'away';
   updatedAt: number;
@@ -281,7 +316,7 @@ interface RemoteCharacter {
   presence: Presence;
   renderPixel: { x: number; y: number };   // 보간 중인 픽셀 좌표 (월드 기준)
   targetPixel: { x: number; y: number };
-  animFrame: number;                       // GRAPHICS 2.1 프레임 인덱스 (0~3)
+  animFrame: number;                       // GRAPHICS 2.3 프레임 인덱스 (0~3)
 }
 ```
 
@@ -290,7 +325,7 @@ interface RemoteCharacter {
 | 규칙 | 검증 위치 |
 |---|---|
 | 닉네임 유니크, 2~12자 | 가입 신청 시 |
-| `avatarId`는 `ServerConfig.avatarIds` 안의 값. 가입 승인 시 서버가 목록 중 하나를 배정(방식은 백엔드 재량) | 가입 승인 시 배정 · `PATCH /me` 시 검증 |
+| `appearance`: 모든 키 존재, 필수 슬롯 non-null, 슬롯과 `itemId` 접두사 일치, 아이템·램프 ID는 `ServerConfig.avatarOptions` 안의 값. 가입 승인 시 유효한 기본 외형 배정 | 가입 승인 시 배정 · `PATCH /me` 시 검증 |
 | 두 사용자 간 DmConversation 1개 | 첫 전송 시 자동 생성 |
 | DM 대상은 active 상태 회원 | 전송 시 |
 | 이동 목적지는 collision=0 이며 이전 위치에서 도달 가능 | 위치 갱신 시 |
@@ -329,7 +364,7 @@ interface GroupDetail {
 
 // SSE chat.public
 interface ChatPublicEvent extends PublicMessage {
-  sender: Pick<User, 'nickname' | 'avatarId'>;
+  sender: Pick<User, 'nickname'>;      // 발화자는 같은 맵 접속자이므로 외형은 Presence에 이미 있다
 }
 
 // SSE chat.dm
@@ -362,3 +397,4 @@ interface GroupUpdatedEvent extends Group {
 | 2026-09-30 | 1.3: `MapData.tileset` 추가, `avatarId` 형식 `char_NN`·서버 검증 명시, 자산 규격은 GRAPHICS.md 참조 |
 | 2026-09-30 | 1.4: `ServerConfig.avatarIds` 추가 — 아바타 목록 원천은 서버 (Claude Code 결정 요청 B). 승인 시 목록 중 배정 |
 | 2026-09-30 | 1.5: 안 읽음 수 정의 — 그룹은 전송 시 발신자 `lastReadMessageId` 자동 갱신(Claude Code 제안), DM은 상대 메시지 중 `readAt == null`. 두 경우 모두 내 메시지 제외 |
+| 2026-09-30 | **2.0 (호환 깨짐)**: `User.avatarId`·`Presence.avatarId` → `appearance: Appearance`(3.7 신설, 7슬롯 + 피부색·머리색 + 아이템별 primary/secondary). `ServerConfig.avatarIds` → `avatarOptions`(itemIds + 램프 목록 3종). `ChatPublicEvent.sender`에서 avatarId 제거. 사용자 결정: 7슬롯, 프리셋 램프만, 모든 아이템 자유 선택 |
