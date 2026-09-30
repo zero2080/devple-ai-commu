@@ -57,11 +57,14 @@ export function renderCharacters(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
   for (const c of sortBuffer) {
-    if (c.pixelX < viewLeft || c.pixelY < viewTop) {
+    // 보간 중 소수 좌표를 정수 월드 px로 스냅한다 (GRAPHICS 1.2 — 서브픽셀 금지)
+    const pixelX = Math.round(c.pixelX);
+    const pixelY = Math.round(c.pixelY);
+    if (pixelX < viewLeft || pixelY < viewTop) {
       continue;
     }
-    const drawX = c.pixelX - camera.originX;
-    const drawY = c.pixelY - camera.originY - (height - TILE_SIZE); // 발이 타일 바닥에 오도록
+    const drawX = pixelX - camera.originX;
+    const drawY = pixelY - camera.originY - (height - TILE_SIZE); // 발이 타일 바닥에 오도록
     ctx.globalAlpha = c.state === 'away' ? AWAY_ALPHA : 1;
     ctx.fillStyle = avatarColor(c.avatarId);
     ctx.fillRect(drawX + 2, drawY, TILE_SIZE - 4, height);
