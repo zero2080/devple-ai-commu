@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.4 (2026-09-30, PATCH /me 검증 응답·avatarIds)
+> 문서 버전: 1.5 (2026-09-30, 응답 미정의 엔드포인트 명시·그룹 이름 검증·group.removed 'left')
 > 상태: 확정
-> 기준: DOMAIN.md 1.4, ARCHITECTURE.md 1.5
+> 기준: DOMAIN.md 1.4, ARCHITECTURE.md 1.8
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -87,6 +87,8 @@
 ```
 
 **POST /auth/refresh** → `200 { "accessToken", "expiresIn" }` (쿠키 회전: 새 refreshToken 발급)
+
+**POST /auth/logout** → `204` + `Set-Cookie: refreshToken=; Max-Age=0` (같은 `Path`). 서버는 해당 Refresh를 무효화한다. 열린 SSE 연결은 클라이언트가 닫는다
 
 **POST /sse/ticket** → `201 { "ticket": "t_...", "expiresIn": 30 }` — 1회용
 
@@ -187,6 +189,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 - 조건: 본인 메시지 && `readAt == null`. 이미 읽었으면 `409 MESSAGE_ALREADY_READ`
 - 회수된 메시지는 서버에서 **실제 제거**. 히스토리에도 남지 않음
 - 그 외 수정·삭제 API는 없다 — 한번 전송된 메시지는 **불변**
+
 **POST /dm/{userId}/read** — body `{ "lastMessageId" }` → `204` (상대에게 `chat.dm.read`)
 
 ### 2.7 그룹
@@ -206,10 +209,16 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 
 **GET /groups** → `200 { "items": GroupListItem[] }` (DOMAIN 9장)
 **POST /groups** — body `{ "name" }` → `201 Group`
+- `name` 2~20자(코드 포인트) 위반 → `400 VALIDATION_FAILED`, `details.fields.name: 'length'` (PATCH도 동일)
 **GET /groups/{id}** → `200 GroupDetail` = `{ group: Group, members: GroupMemberWithUser[] }`
+**PATCH /groups/{id}** — body `{ "name" }` → `200 Group` (전 멤버에게 `group.updated`). owner가 아니면 `403 FORBIDDEN`
+**DELETE /groups/{id}** → `204`. 멤버 전원(owner 포함)에게 `group.removed { reason: 'dissolved' }`. owner가 아니면 `403 FORBIDDEN`
 **POST /groups/{id}/members** — body `{ "userId" }` → `201 GroupMember` / `409 GROUP_FULL`
-- 초대는 즉시 가입 (수락 절차 없음). 초대된 사용자에게 `group.joined` 이벤트
-- owner 나가기 → 가장 오래된 `joinedAt` 멤버가 owner, `group.updated` 이벤트. 마지막 멤버 나가기 → 그룹 삭제
+- 초대는 즉시 가입 (수락 절차 없음). 초대된 사용자에게 `group.joined`, 기존 멤버에게 `group.updated`
+**DELETE /groups/{id}/members/{userId}** → `204`
+- owner가 타인을 지정: **강퇴**. 대상에게 `group.removed { reason: 'kicked' }`, 남은 멤버에게 `group.updated`
+- 본인을 지정: **나가기**. 본인(모든 탭)에게 `group.removed { reason: 'left' }`, 남은 멤버에게 `group.updated`. owner가 나가면 가장 오래된 `joinedAt` 멤버가 owner를 승계하고 같은 `group.updated`에 반영. 마지막 멤버가 나가면 그룹 삭제 (남은 멤버 없으므로 `group.updated` 없음)
+- owner가 아닌 사람이 타인을 지정 → `403 FORBIDDEN`. 대상이 멤버가 아니면 `404 NOT_FOUND`
 **GET /groups/{id}/messages?cursor=&limit=50** → DM과 동일 구조
 **POST /groups/{id}/read** — body `{ "lastMessageId" }` → `204` (`GroupMember.lastReadMessageId` 갱신, 이벤트 없음)
 **POST /groups/{id}/messages** — body `{ "content" }` → `201 GroupMessage` (전 멤버에게 `chat.group`)
@@ -229,7 +238,11 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 
 **GET /admin/signups** → `200 { "items": SignupRequest[], "nextCursor" }`
 **POST /admin/signups/{id}/approve** → `200 { "userId": string }` / `409 SIGNUP_ALREADY_REVIEWED`
+**POST /admin/signups/{id}/reject** — body `{ "reason" }` (1~200자, 필수) → `204` / `409 SIGNUP_ALREADY_REVIEWED`. 신청자는 `GET /signup/{requestId}`의 `rejectReason`으로 확인
 **GET /admin/users** → `200 { "items": Me[], "nextCursor" }` (email/phone 포함)
+**POST /admin/users/{id}/suspend** → `204`. 대상의 Refresh 전부 무효, 접속 중이면 `system.suspended` 전송 후 SSE 종료. 이미 정지 상태여도 `204` (멱등). 자기 자신은 `403 FORBIDDEN`
+**POST /admin/users/{id}/unsuspend** → `204` (멱등). 대상은 기존 접근 키로 다시 로그인한다
+**POST /admin/notices** — body `{ "content" }` → `201 Notice`, 접속자 전원에게 `system.notice`. `content`는 메시지와 같은 규칙(DOMAIN 5.1) — 위반 시 `400 MESSAGE_INVALID_CONTENT`
 **POST /admin/users/{id}/reissue-key** → `204`. 기존 접근 키 즉시 무효, 해당 사용자의 Refresh 토큰 전부 무효(접속 중이면 다음 refresh에서 재로그인 유도), 새 키 이메일 발송. 사용자 셀프 재발급 API는 없다 (폐쇄형 원칙)
 
 ---
@@ -275,7 +288,7 @@ data: {"id":"1234","type":"chat.public","ts":1727600000000,"payload":{...}}
 | `chat.group` | 그룹 전원 | `ChatGroupEvent` = `GroupMessage & { sender: User }` |
 | `group.joined` | 초대된 사용자 | `Group` |
 | `group.updated` | 그룹 전원 | `GroupUpdatedEvent` = `Group & { members: GroupMemberWithUser[] }` — 이름 변경, owner 승계, 멤버 변동 |
-| `group.removed` | 강퇴/해산 대상 | `{ groupId, reason: 'kicked'\|'dissolved' }` |
+| `group.removed` | 강퇴·해산 대상, 나간 본인 | `{ groupId, reason: 'kicked'\|'dissolved'\|'left' }` — `left`는 나간 사용자의 다른 탭 동기화용 |
 | `system.notice` | 전원 | `Notice` |
 | `system.suspended` | 본인 | `{}` — 직후 서버가 연결 종료 |
 | `system.heartbeat` | 본인 | `{ serverTime }` — 15초 간격. 클라이언트는 30초 무수신 시 재연결 (ARCHITECTURE 4.1) |
@@ -335,6 +348,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-29 | 1.2 (ROADMAP 선행 결정): seq=`Date.now()`, 이동 검증 `max(3, elapsedMs/100)`, positions 본인 포함·클라이언트 무시, `chat.dm.peerId`, 그룹 read body, 합성 타입명 DOMAIN 9장 참조, `presence.*` 버퍼 제외, `POST /admin/users/{id}/reissue-key` 추가 (엔드포인트 37개) |
 | 2026-09-30 | 1.3: 하트비트를 SSE 주석에서 `system.heartbeat` 이벤트(15초, `{ serverTime }`, 버퍼 제외)로 변경 — EventSource가 주석을 관찰할 수 없어 30초 무수신 감시가 동작하지 않았음. 이벤트 17종 |
 | 2026-09-30 | 1.4: `PATCH /me` 검증 실패 응답 명시(`details.fields.avatarId: 'unknown'` 등), 성공 시 `presence.updated` 발송 명시. `ServerConfig.avatarIds`는 DOMAIN 1.4 (로그인·`GET /me` 응답의 `config`에 포함) |
+| 2026-09-30 | 1.5 (결정 리포트 7번): 응답 미정의 엔드포인트 명시 — `POST /auth/logout` 204, `PATCH /groups/{id}` 200 Group, `DELETE /groups/{id}` 204, `DELETE /groups/{id}/members/{userId}` 204, `reject` 204(reason 필수), `suspend`·`unsuspend` 204(멱등), `POST /admin/notices` 201 Notice. 그룹 이름 검증 응답, 초대 시 기존 멤버 `group.updated`, `group.removed`에 `'left'` 추가(다중 탭) |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
