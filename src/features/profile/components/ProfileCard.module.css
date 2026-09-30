@@ -23,7 +23,7 @@
   align-items: flex-start;
 }
 
-/* 아바타 미리보기: 12단계 전까지 플레이스홀더 색 사각형 (idle down/0 프레임 자리, GRAPHICS 2.3) */
+/* 아바타 미리보기는 AvatarPreview (24×40을 3x, GRAPHICS 2.9) */
 .info {
   display: grid;
   gap: calc(2px * var(--zoom));

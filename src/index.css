@@ -11,11 +11,11 @@
 
 :root {
   --pixel-font-em: 12px; /* PixelKo(Galmuri11) em. 말풍선·닉네임 font-size = em × 줌 */
-  /* 말풍선·패널 색: Endesga 32 임시값. palette.json 확정(12단계) 때 교체 (GRAPHICS 1.1) */
+  /* 말풍선·패널 색: Endesga 32 임시값. palette.json 확정(12b단계) 때 교체 (GRAPHICS 1.1) */
   --bubble-bg: #c0cbdc;
   --bubble-fg: #181425;
   --bubble-outline: #181425;
-  --bubble-dm-bg: #2ce8f5; /* DM 말풍선: 연한 파랑 (GRAPHICS 5.2, 12단계 확정) */
+  --bubble-dm-bg: #2ce8f5; /* DM 말풍선: 연한 파랑 (GRAPHICS 5.2, 12b단계 확정) */
   --link-bg: #ead4aa;
   --link-bg-hover: #e4a672;
   --link-fg: #181425;
