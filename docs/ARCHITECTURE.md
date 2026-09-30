@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.13 (2026-09-30, API_CONTRACT 1.6·DOMAIN 1.5 반영 — 목록 정렬·안 읽음 정의)
+> 문서 버전: 1.14 (2026-09-30, 아바타 v2 — 프레임 24×40·몸 박스 판정·합성 캐시·플레이스홀더·옷장 위치)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -37,13 +37,15 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 ## 2. 렌더링 (Canvas)
 
 ### 2.1 픽셀 아트 규칙
-- 기본 타일 크기 **16×16px**, 캐릭터 스프라이트 16×32px (2타일 높이)
+- 기본 타일 크기 **16×16px**, 캐릭터 프레임 **24×40px** — 몸 박스 16×32(가로 1 × 세로 2타일) + 위 8px 모자·좌우 4px 소품 여백, 앵커 = 프레임 하단 중앙 = 서 있는 타일 바닥 중앙 (GRAPHICS 2.1)
 - 줌은 **정수 배율만** 허용 (2x, 3x, 4x). **기본 2x**. 비정수 배율은 픽셀이 뭉개진다
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
-- 스프라이트시트 1장 + JSON atlas. 애니메이션은 프레임 인덱스 배열
+- 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps). 합성기는 12a단계
+- 12a단계 전 플레이스홀더: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드 미리보기도 같은 도형을 3x로 (`AvatarPreview`)
+- 자산 데이터 `src/assets/palette.json`·`sprites/avatar/catalog.json`은 `game/assets/avatarAssets.ts`에서만 읽고 zod로 검증한다. 타일셋은 시트 1장 + JSON
 - 캐릭터·닉네임을 그리는 좌표는 **정수 월드 px로 반올림**한다 (보간 중 소수 좌표 금지, GRAPHICS 1.2). 월드 px가 정수면 화면 px는 줌의 배수가 된다
-- 자산 규격·시트 배치·atlas 스키마는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 16×32 4방향×4프레임 64×128 시트, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
+- 자산 규격·시트 배치는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 레이어 24×40 4방향×4프레임 96×160 시트, 7슬롯·front/back·키 색 4채널, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
 
 ### 2.2 렌더 루프
 - `requestAnimationFrame` 기반 고정 로직 틱(60Hz) + 가변 렌더
@@ -54,7 +56,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - Canvas가 아닌 **DOM 오버레이**로 렌더 (텍스트 렌더 품질, 이모지, 줄바꿈 처리 때문)
 - 매 프레임 캐릭터의 스크린 좌표를 계산해 `transform: translate()`로 위치 갱신. `WorldGame`이 렌더 직후 콜백으로 카메라와 `anchorOf(userId)`를 넘기고, `SpeechBubbleLayer`가 크기를 먼저 모두 읽은 뒤 transform을 쓴다 (레이아웃 스래싱 방지). 좌표는 정수 CSS px
 - **사용자당 말풍선 1개**: 같은 사람이 다시 말하면 이전 말풍선을 대체한다
-- **위치** (GRAPHICS 5.2 수직 배치, 확정): 월드 px 기준 × 줌, `top` = 캐릭터 프레임 상단. 닉네임 블록 하단 = `top − 2`, 꼬리 끝 = 닉네임 블록 상단 − 1, 몸통 하단 = 꼬리 끝 − 3. 즉 꼬리 끝 = `top − (2 + 닉네임 line-height + 1)` — 12단계 전 Canvas 플레이스홀더(8px)는 `top − 11`, PixelKo(12px) 전환 후 `top − 15`. 상수 `game/constants.ts`의 `NICKNAME_GAP_PX`·`NICKNAME_LINE_HEIGHT_PX`·`BUBBLE_TAIL_GAP_PX`로 계산한다. 닉네임은 말풍선이 떠 있어도 항상 보인다
+- **위치** (GRAPHICS 5.2 수직 배치, 확정): 월드 px 기준 × 줌, `top` = 캐릭터 프레임 상단 = 앵커 − 40 (모자 여백 포함 — 모자를 바꿔도 닉네임이 움직이지 않는다). 닉네임 블록 하단 = `top − 2`, 꼬리 끝 = 닉네임 블록 상단 − 1, 몸통 하단 = 꼬리 끝 − 3. 즉 꼬리 끝 = `top − (2 + 닉네임 line-height + 1)` — 12a단계 전 Canvas 플레이스홀더(8px)는 `top − 11`, PixelKo(12px) 전환 후 `top − 15`. 상수 `game/constants.ts`의 `NICKNAME_GAP_PX`·`NICKNAME_LINE_HEIGHT_PX`·`BUBBLE_TAIL_GAP_PX`로 계산한다. 닉네임은 말풍선이 떠 있어도 항상 보인다
 - 겹침 순서: 말풍선끼리는 최근 메시지가 위(`bubbles` 배열 끝 = DOM 뒤), 닉네임끼리는 캐릭터 그리기 순서와 같이 y가 큰 캐릭터가 위
 - 픽셀 폰트 텍스트(말풍선·로그·입력)는 `line-height: 1` (GRAPHICS 5.1)
 - **DM 말풍선** (8단계): 받은 DM은 발신자가 내 근접 반경 안(`max(|dx|,|dy|) ≤ proximityRadius`, 내 예측 위치 기준)이면 발신자 머리 위에 `variant: 'dm'` 말풍선, 밖이면 DM 패널에만. 내가 보낸 DM(다중 탭 에코 포함)은 상대가 반경 안일 때만 내 머리 위에 띄운다 — 상대 화면과 같은 판단을 보여주기 위해서. 판정은 `domain/dm.ts`. 사용자당 1개 규칙은 공개·DM 공통이라 DM이 공개 말풍선을 대체할 수 있다 (GRAPHICS 5.2)
@@ -65,7 +67,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 본문은 **항상 plain text**로 렌더 (`textContent`, HTML 해석 없음)
 - `links`가 있으면 말풍선 하단에 링크 열기 버튼(도메인만 표시, 예: `↗ example.com`). 버튼이 있는 말풍선은 마우스 호버/터치 중 사라지지 않음
 - 폰트·크기·테두리·최대 폭·꼬리 위치는 **GRAPHICS 5.1~5.2** 참조 (픽셀 웹폰트, 폰트 기본 px × 줌 배율만, 최대 폭 12타일, `box-shadow` 픽셀 외곽선)
-- **닉네임**: 5단계 플레이스홀더는 Canvas `fillText`. **12단계에서 DOM 오버레이로 전환**한다 (GRAPHICS 5.3 — 말풍선과 같은 레이어·폰트, 화면 밖 캐릭터의 노드는 만들지 않음). 확정
+- **닉네임**: 5단계 플레이스홀더는 Canvas `fillText`. **12a단계에서 DOM 오버레이로 전환**한다 (GRAPHICS 5.3 — 말풍선과 같은 레이어·폰트, 화면 밖 캐릭터의 노드는 만들지 않음). 확정
 
 ### 2.4 링크 처리 (말풍선 · 채팅 목록 공통)
 - 본문 내 URL 텍스트는 클릭 불가, 서버가 준 `links[]`로만 버튼 생성
@@ -89,7 +91,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 | 데스크톱 | 마우스 클릭 | 캐릭터 위 클릭 → 프로필 카드 / 빈 타일 클릭 → 경로 탐색 후 자동 이동 (클릭 판정은 아래) |
 | 모바일 | 터치(탭) | 캐릭터 탭 → 프로필 카드 / 빈 타일 탭 → 경로 탐색 후 자동 이동 (가상 D-pad 없음) |
 
-- 캐릭터 클릭 판정 (8단계): 화면 좌표 → 월드 px로 바꾼 뒤 각 캐릭터의 16×32 스프라이트 사각형(발 타일 기준 위로 2타일)과 비교한다. 여러 명이 겹치면 y가 큰(앞에 그려진) 캐릭터를 고른다. 캐릭터면 프로필 카드를 열고, 아니면 프로필 카드를 닫고 이동한다 (`WorldGame.characterAt`)
+- 캐릭터 클릭 판정 (8단계): 화면 좌표 → 월드 px로 바꾼 뒤 각 캐릭터의 **몸 박스**(프레임 x 4–19·y 8–39 = 발 타일 기준 위로 2타일, GRAPHICS 2.1)와 비교한다. 모자·소품 여백은 판정에서 뺀다 (옆 사람 소품을 눌러 엉뚱한 프로필이 열리지 않도록). 여러 명이 겹치면 y가 큰(앞에 그려진) 캐릭터를 고른다. 캐릭터면 프로필 카드를 열고, 아니면 프로필 카드를 닫고 이동한다 (`WorldGame.characterAt`)
 - 경로 탐색: **A\*** (4방향, 맨해튼 휴리스틱), `domain/pathfinding.ts` (순수 함수)
 - 목적지가 충돌 타일이면 가장 가까운 통행 가능 타일로 대체
 - 이동 중 키 입력이 들어오면 자동 이동 취소
@@ -210,6 +212,8 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - `uiStore`: 하단 패널 탭(`public`·`dm`·`group`), 열린 DM 상대(`dmPeerId`), 열린 그룹(`groupId`), 열린 프로필(`profileUserId`). 프로필 카드는 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (보장 영역 규칙의 예외, 닫기·Esc)
 - **그룹 캐시** (9단계): 목록 `groups.list`(`GroupListItem[]` 그대로 — 사용자 객체가 없어 분해할 것이 없다. 서버 정렬은 최근 활동 먼저(API_CONTRACT 2.7). 만들기·초대·새 메시지로 캐시에 직접 넣은 항목 때문에 화면에서도 같은 규칙으로 다시 정렬, `domain/group.ts`), 상세 `groups.detail(groupId)`(`{ group, members: GroupMember[] }` — 응답의 `members[].user`는 `users.byId`로 분해), 스레드 `groups.threads(groupId)`(무한 쿼리, DM과 같은 커서 페이지). `chat.group`은 스레드 첫 페이지 앞에 추가(id 중복 제거), 목록 `lastMessage` 갱신, 남이 보낸 것이면 `unreadCount + 1`(목록에 없는 그룹이면 목록 무효화). `group.updated`는 목록 항목의 이름·owner·인원과 상세를 교체, `group.removed`는 목록에서 빼고 상세·스레드 쿼리를 지운다. `group.joined`는 안 읽음 수를 알 수 없어 목록을 다시 받는다. 만든 그룹(201)은 목록에 직접 넣는다(이벤트 없음). 읽음은 스레드가 보이는 동안 목록의 안 읽음이 1 이상이면 최신 메시지 id로 `POST /groups/{id}/read` 후 0으로. 그룹 메시지는 말풍선을 띄우지 않는다 (DOMAIN 5.4)
 - `uiStore` 그룹: 탭 `group`, 열린 그룹 `groupId`, `groupNotice`(`{ name, reason: 'kicked' | 'dissolved' }`). 열어 둔 그룹에서 강퇴·해산되면 핸들러가 스레드를 닫고 안내를 남긴다. `left`(내가 나감, 다중 탭)와 내가 먼저 지운 그룹은 안내하지 않는다
+- `presence.updated`: 월드 접속자(상태·닉네임·외형)와 사용자 캐시(`userCache.patchUser`)에 함께 반영한다. 외형은 바뀔 때 **전체**가 온다(부분 객체는 스키마에서 거른다, DOMAIN 3.7)
+- **옷장** (외형 편집, 12a단계): 내 프로필 카드와 툴바 버튼에서 여는 모달 (handoff 2026-09-30-avatar-v2의 추천 A 채택 — 별도 라우트 없음). 선택지는 `ServerConfig.avatarOptions` ∩ `palette.json`·`catalog.json`, 색은 프리셋 램프만(자유 색상 입력 없음). 저장은 `PATCH /me { appearance }` 전체 교체, 오류는 `details.fields['appearance.<경로>']`를 해당 선택지 옆에 표시. 사전 검증은 서버와 같은 `domain/appearance.ts` `validateAppearance`
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 
 ## 8. 디렉토리 구조
@@ -270,3 +274,4 @@ src/
 | 2026-09-30 | 1.11: 말풍선 위쪽 가장자리 — 위로 넘치면 몸통을 캔버스 상단까지 내림(닉네임을 덮는 예외), 표시 판정은 발화자 프레임 기준 (사용자 결정 B안, handoff 2026-09-30-bubble-top-edge) |
 | 2026-09-30 | 1.12: 9단계 설계 — 그룹 캐시(목록 그대로·상세 멤버 분해·스레드), 그룹 읽음 처리 조건, uiStore 그룹 탭·`groupNotice`, Mock 그룹 emit·DEV 트리거·봇(`VITE_MOCK_BOT_MS`). 스레드 부품 공용화(`pendingThread`·`ThreadView`·`shared/ui/panel.module.css`) |
 | 2026-09-30 | 1.13: 계약 반영(API_CONTRACT 1.6·DOMAIN 1.5, handoff 2026-09-30-unread-order-edge-color) — `GET /groups` 최근 활동 먼저, 그룹 전송 시 발신자 읽음 포인터 갱신, DM 안 읽음 = 상대 메시지 중 `readAt` 없음. Mock DM 안 읽음은 메시지에서 계산 |
+| 2026-09-30 | 1.14: 아바타 v2 반영(DOMAIN 2.0·API_CONTRACT 2.0·GRAPHICS 2.0, handoff 2026-09-30-avatar-v2) — 프레임 24×40·말풍선 `top` = 앵커 − 40, 클릭 판정 = 몸 박스, 레이어 합성 1회·캐시(12a단계), 그 전까지 외형 색 플레이스홀더, 자산 JSON은 `game/assets/avatarAssets.ts`만, `presence.updated` 반영, 옷장 = 프로필 카드·툴바 모달(A) |
