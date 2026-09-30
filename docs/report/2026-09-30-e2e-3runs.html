@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E2E 3회 실행 결과</title>
+<meta name="description" content="현재 커밋에서 Playwright E2E 4건을 3회 연속 실행한 결과와 발견 사항">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+
+<h1>E2E 3회 실행 결과</h1>
+<p class="meta">devple-ai-commu · 2026-09-30 · 작성: Claude Code · 기준 커밋 <code>45de511</code> (origin/main과 동일, 작업 트리 깨끗함)</p>
+<p><strong>결론.</strong> 현재 상태에서 E2E 4건을 3회 연속 실행해 <strong>12/12 전부 통과</strong>했어요. 재시도 0회, flaky 0건, 실패 0건이고 실행당 약 12초예요. 매 실행 후 테스트용 서버(5180·5199)가 모두 정상 종료됐어요. 로그에서 <strong>Vite 설정 경고 1건</strong>이 3회 모두 나왔는데, 지금 동작에는 영향이 없고 한 줄로 고칠 수 있어요.</p>
+
+<div class="grid">
+<div class="stat"><b>12 / 12</b><span>통과 (4건 × 3회)</span></div>
+<div class="stat"><b>0</b><span>재시도 · flaky · 실패</span></div>
+<div class="stat"><b>약 12초</b><span>실행당 소요</span></div>
+<div class="stat"><b>0</b><span>잔존 서버 프로세스</span></div>
+</div>
+
+<h2>1. 실행별 결과</h2>
+<table><tr><th>실행</th><th>통과</th><th>실패</th><th>flaky</th><th>소요</th></tr><tr><td>1회차</td><td class="ok">4</td><td>0</td><td>0</td><td>11.9초</td></tr><tr><td>2회차</td><td class="ok">4</td><td>0</td><td>0</td><td>11.7초</td></tr><tr><td>3회차</td><td class="ok">4</td><td>0</td><td>0</td><td>12.1초</td></tr></table>
+
+<h2>2. 테스트별 소요 시간 (초)</h2>
+<table><tr><th>테스트</th><th>1회</th><th>2회</th><th>3회</th><th>평균</th><th>편차</th></tr><tr><td><code>phase1.spec.ts:47</code><br>로그인 → 월드 진입 → 가짜 접속자 이동 → 강제 끊김 자동 복구 → 새로고침 세션 복구</td><td>3.77</td><td>3.67</td><td>3.58</td><td>3.67</td><td>0.20</td></tr><tr><td><code>phase1.spec.ts:148</code><br>틀린 접근 키는 계약 문구를 보여주고 월드로 가지 않는다</td><td>0.44</td><td>0.44</td><td>0.41</td><td>0.43</td><td>0.03</td></tr><tr><td><code>phase2-move.spec.ts:52</code><br>방향키 이동이 예측되고 서버에 반영되며 벽에서 멈춘다</td><td>1.97</td><td>1.93</td><td>2.45</td><td>2.12</td><td>0.52</td></tr><tr><td><code>phase2-move.spec.ts:107</code><br>클릭한 타일까지 경로를 따라 이동하고 아무도 내 타일에 들어오지 않는다</td><td>4.44</td><td>4.47</td><td>4.43</td><td>4.45</td><td>0.04</td></tr></table>
+<p class="muted">방향키 테스트의 편차가 가장 커요(0.52초). 위로 누르는 구간이 "벽 앞 도착 또는 가짜 접속자에 막힘"까지 기다리는 구조라 랜덤 워크 위치에 따라 시간이 달라져요. 두 경우 모두 통과 조건이라 실패로 이어지지 않아요.</p>
+
+<h2>3. 각 테스트가 확인하는 것</h2>
+<table><tr><th>테스트</th><th>검증 내용</th></tr><tr><td><code>phase1.spec.ts:47</code></td><td>로그인 → 월드 진입 → 접속자 20명·이동·타일 겹침 0 → EventSource 1개 → 강제 끊김 후 새 티켓으로 자동 복구 → 콘솔 앱 에러 0·zod/sse 경고 0 → 픽셀 폰트 로드 → 새로고침 세션 복구</td></tr><tr><td><code>phase1.spec.ts:148</code></td><td>틀린 접근 키 → 계약 문구 표시, /login 유지</td></tr><tr><td><code>phase2-move.spec.ts:52</code></td><td>방향키 → 예측 이동·dir 갱신 → 배칭 뒤 Express에 같은 위치 → 위로 누르면 벽 앞 또는 점유 타일 앞에서 정지 → 서버 위치 일치</td></tr><tr><td><code>phase2-move.spec.ts:107</code></td><td>빈 타일 클릭 → A* 경로로 목적지 도착 → 서버 반영 → 2초 동안 내 타일에 아무도 없고 겹침 0</td></tr></table>
+
+<h2>4. 발견 사항</h2>
+<div class="card">
+<h3><span class="badge mid">중간</span>Vite 설정 경고 (3회 모두)</h3>
+<pre>(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`,
+    which is planned to become the default in a future major version of Vite:
+  - import "./src/mocks/data/config" without a file extension (vite.config.ts:7:44). Add the file extension</pre>
+<p><code>vite.config.ts</code>가 Mock 포트 목록을 확장자 없이 import해요. 지금은 동작하지만 Vite 다음 메이저에서 기본이 될 설정 로더는 이를 지원하지 않아 dev 서버가 뜨지 않을 수 있어요. 수정은 import 경로에 <code>.ts</code>를 붙이는 한 줄이에요.</p>
+</div>
+<div class="card">
+<h3><span class="badge low">낮음</span>검증 범위의 한계</h3>
+<ul>
+<li><strong>브라우저</strong>: Chromium(headless)만 실행해요. PRD 6은 Chrome·Safari·Edge를 요구하므로 Safari 쪽(WebKit) 프로젝트 추가를 검토할 만해요. Edge는 Chromium 기반이라 위험이 낮아요.</li>
+<li><strong>뷰포트</strong>: 데스크톱 기본 크기만 써요. 모바일 390×844 검증은 7단계 완료 조건으로 예정돼 있어요.</li>
+<li><strong>표본</strong>: 3회 연속 통과는 간헐 실패가 드물다는 근거이지 없다는 증명은 아니에요. 더 확인하려면 아래 명령으로 반복 횟수를 늘리면 돼요.</li></ul>
+</div>
+
+<h2>5. 환경과 재현</h2>
+<table><tr><th>항목</th><th>값</th></tr>
+<tr><td>커밋</td><td><code>45de511</code></td></tr>
+<tr><td>OS</td><td>macOS (Darwin 27.0.0)</td></tr>
+<tr><td>Node · Playwright</td><td>24.15.0 · 1.63.0</td></tr>
+<tr><td>브라우저</td><td>Chromium headless shell (Playwright build 1243)</td></tr>
+<tr><td>구성</td><td>workers 1, 재시도 0, Mock SSE 5199, Vite 5180 (<code>VITE_MOCK=true</code>), 테스트마다 <code>/__mock/reset</code>으로 월드 초기화</td></tr></table>
+<pre>pnpm test:e2e                                   # 1회
+node_modules/.bin/playwright test --repeat-each=3   # 같은 세션에서 3회 반복</pre>
+<p class="muted">이번 실행은 <code>pnpm test:e2e</code>와 같은 설정으로 프로세스를 3번 따로 띄워, 매번 서버 기동·종료까지 포함해 측정했어요.</p>
+
+</main></body>
+</html>
