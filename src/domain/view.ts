@@ -45,3 +45,8 @@ export interface PendingPublic {
   createdAt: number;
   errorCode?: string;
 }
+
+/** 낙관적 전송 중인 내 DM (상대별) */
+export interface PendingDm extends PendingPublic {
+  peerId: string;
+}
