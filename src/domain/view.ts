@@ -46,7 +46,7 @@ export interface PendingPublic {
   errorCode?: string;
 }
 
-/** 낙관적 전송 중인 내 DM (상대별) */
-export interface PendingDm extends PendingPublic {
-  peerId: string;
+/** 낙관적 전송 중인 내 DM·그룹 메시지. threadKey로 스레드를 구분한다 ('dm:<peerId>' | 'group:<groupId>') */
+export interface PendingThreadMessage extends PendingPublic {
+  threadKey: string;
 }

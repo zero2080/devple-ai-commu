@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ChatPublicEvent, PublicMessage } from '@/domain';
 
-import { PUBLIC_LOG_LIMIT, useChatStore } from './chatStore';
+import { dmThreadKey, groupThreadKey, PUBLIC_LOG_LIMIT, useChatStore } from './chatStore';
 
 const NOW = 1_700_000_000_000;
 
@@ -153,7 +153,7 @@ describe('removeBubble / reset', () => {
   });
 });
 
-describe('DM 말풍선·pendingDm', () => {
+describe('DM 말풍선·pendingThread', () => {
   it('showBubble은 variant를 지정해 같은 사용자의 말풍선을 대체한다 (공개·DM 공통 1개)', () => {
     chat().receivePublic(event('m1', 'a', '공개'), 'me', NOW);
     chat().showBubble({ id: 'dm1', userId: 'a', content: '귓속말', links: [] }, 'dm', NOW);
@@ -169,34 +169,39 @@ describe('DM 말풍선·pendingDm', () => {
     ]);
   });
 
-  it('에코가 먼저 오면 같은 상대·같은 본문(NFC)의 가장 오래된 sending만 해소한다', () => {
-    const t1 = chat().addPendingDm('peer', '가나', NOW);
-    const t2 = chat().addPendingDm('peer', '가나', NOW + 1);
-    chat().addPendingDm('other', '가나', NOW + 2);
-    chat().resolvePendingDmByEcho('peer', '\u1100\u1161나');
-    expect(chat().pendingDm.map((p) => p.tempId)).toEqual([t2, expect.stringMatching(/^tmpdm_/)]);
-    chat().removePendingDm(t2);
-    expect(chat().pendingDm.map((p) => p.peerId)).toEqual(['other']);
+  it('에코가 먼저 오면 같은 스레드·같은 본문(NFC)의 가장 오래된 sending만 해소한다', () => {
+    const peer = dmThreadKey('peer');
+    const t1 = chat().addPendingThread(peer, '가나', NOW);
+    const t2 = chat().addPendingThread(peer, '가나', NOW + 1);
+    chat().addPendingThread(groupThreadKey('peer'), '가나', NOW + 2);
+    chat().resolvePendingThreadByEcho(peer, '\u1100\u1161나');
+    expect(chat().pendingThread.map((p) => p.tempId)).toEqual([
+      t2,
+      expect.stringMatching(/^tmpth_/),
+    ]);
+    chat().removePendingThread(t2);
+    // 같은 id라도 DM 스레드와 그룹 스레드는 다른 키
+    expect(chat().pendingThread.map((p) => p.threadKey)).toEqual(['group:peer']);
     expect(t1).not.toBe(t2);
   });
 
   it('실패 → 다시 보내기 → 실패 → 지우기, sending은 지우지 않는다', () => {
-    const t = chat().addPendingDm('peer', '안녕', NOW);
-    chat().dismissPendingDm(t);
-    expect(chat().pendingDm).toHaveLength(1);
-    chat().failPendingDm(t, 'FORBIDDEN');
-    expect(chat().pendingDm[0]).toMatchObject({ status: 'failed', errorCode: 'FORBIDDEN' });
-    chat().markSendingDm(t);
-    expect(chat().pendingDm[0]).toEqual({
+    const t = chat().addPendingThread(dmThreadKey('peer'), '안녕', NOW);
+    chat().dismissPendingThread(t);
+    expect(chat().pendingThread).toHaveLength(1);
+    chat().failPendingThread(t, 'FORBIDDEN');
+    expect(chat().pendingThread[0]).toMatchObject({ status: 'failed', errorCode: 'FORBIDDEN' });
+    chat().markSendingThread(t);
+    expect(chat().pendingThread[0]).toEqual({
       tempId: t,
-      peerId: 'peer',
+      threadKey: 'dm:peer',
       content: '안녕',
       status: 'sending',
       createdAt: NOW,
     });
-    chat().failPendingDm(t, 'INTERNAL');
-    chat().dismissPendingDm(t);
+    chat().failPendingThread(t, 'INTERNAL');
+    chat().dismissPendingThread(t);
     chat().reset();
-    expect(chat().pendingDm).toEqual([]);
+    expect(chat().pendingThread).toEqual([]);
   });
 });

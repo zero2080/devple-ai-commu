@@ -1,9 +1,10 @@
 // SSE `chat.dm` (API_CONTRACT 3.3) → DM 캐시·말풍선 (8단계). 받은 것과 내 에코(다중 탭) 모두 온다
 import { dmBubbleSpeaker } from '@/domain';
 import { useAuthStore } from '@/store/authStore';
-import { useChatStore } from '@/store/chatStore';
-import { rememberUser, upsertDmMessage } from '@/store/dmCache';
+import { dmThreadKey, useChatStore } from '@/store/chatStore';
+import { upsertDmMessage } from '@/store/dmCache';
 import { queryClient } from '@/store/queryClient';
+import { rememberUser } from '@/store/userCache';
 import { useWorldStore } from '@/store/worldStore';
 import { chatDmPayloadSchema } from '@/transport/schemas';
 
@@ -22,7 +23,7 @@ export const chatDmHandler = defineSseHandler({
     upsertDmMessage(queryClient, payload, payload.peerId, myUserId);
     const chat = useChatStore.getState();
     if (payload.senderId === myUserId) {
-      chat.resolvePendingDmByEcho(payload.peerId, payload.content);
+      chat.resolvePendingThreadByEcho(dmThreadKey(payload.peerId), payload.content);
     }
     const radius = useAuthStore.getState().config?.proximityRadius ?? 0;
     const speaker = dmBubbleSpeaker(

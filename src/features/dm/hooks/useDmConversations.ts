@@ -1,13 +1,9 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { DmConversation } from '@/domain';
-import {
-  splitConversationPage,
-  totalUnread,
-  type ConversationsData,
-  type CursorPage,
-} from '@/store/dmCache';
+import { splitConversationPage, totalUnread, type ConversationsData } from '@/store/dmCache';
 import { queryKeys } from '@/store/queryKeys';
+import type { CursorPage } from '@/store/threadCache';
 import { fetchDmConversations } from '@/transport/api/dm';
 
 /** GET /dm (최근순, 커서). peer는 사용자 캐시로 분해해 넣는다 (DOMAIN 9) */

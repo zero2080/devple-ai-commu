@@ -2,22 +2,14 @@
 // 캐시에는 기본 엔티티만 둔다: 응답의 peer, 이벤트의 sender는 users.byId로 분해 (DOMAIN 9 이중 저장 금지).
 import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 
-import type { DmConversation, DmConversationWithPeer, DmMessage, User } from '@/domain';
+import type { DmConversation, DmConversationWithPeer, DmMessage } from '@/domain';
 
 import { queryKeys } from './queryKeys';
-
-/** API_CONTRACT 1.1 목록 응답 형태 */
-export interface CursorPage<T> {
-  items: T[];
-  nextCursor: string | null;
-}
+import { prependToThread, threadHas, type CursorPage, type ThreadPages } from './threadCache';
+import { rememberUser } from './userCache';
 
 export type ConversationsData = InfiniteData<CursorPage<DmConversation>, string | undefined>;
-export type ThreadData = InfiniteData<CursorPage<DmMessage>, string | undefined>;
-
-export function rememberUser(qc: QueryClient, user: User): void {
-  qc.setQueryData(queryKeys.user(user.id), user);
-}
+export type ThreadData = ThreadPages<DmMessage>;
 
 /** GET /dm 한 페이지: peer는 사용자 캐시로 보내고 대화만 남긴다 */
 export function splitConversationPage(
@@ -46,10 +38,6 @@ function stripEvent(message: DmMessage & { sender?: unknown; peerId?: unknown })
   return message.readAt === undefined ? base : { ...base, readAt: message.readAt };
 }
 
-function threadHas(data: ThreadData, id: string): boolean {
-  return data.pages.some((page) => page.items.some((m) => m.id === id));
-}
-
 /**
  * 새 메시지 반영 (받은 것·보낸 것 공통). 스레드 캐시가 있으면 첫 페이지 앞에 추가(id 중복 제거),
  * 대화 목록은 맨 위로 올리고 상대가 보낸 것이면 안 읽음 +1. 목록에 없는 대화면 새로 만든다 (참여자 = 나·상대)
@@ -63,17 +51,7 @@ export function upsertDmMessage(
   const message = stripEvent(input);
   const incoming = message.senderId !== myUserId;
 
-  qc.setQueryData<ThreadData>(queryKeys.dmThread(peerId), (old) => {
-    if (old === undefined || threadHas(old, message.id)) {
-      return old;
-    }
-    const [first, ...rest] = old.pages;
-    const head: CursorPage<DmMessage> = {
-      items: [message, ...(first?.items ?? [])],
-      nextCursor: first?.nextCursor ?? null,
-    };
-    return { ...old, pages: [head, ...rest] };
-  });
+  qc.setQueryData<ThreadData>(queryKeys.dmThread(peerId), (old) => prependToThread(old, message));
 
   qc.setQueryData<ConversationsData>(queryKeys.dmConversations(), (old) => {
     if (old === undefined) {

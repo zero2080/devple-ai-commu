@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { User } from '@/domain';
-import { rememberUser } from '@/store/dmCache';
 import { queryKeys } from '@/store/queryKeys';
+import { rememberUser } from '@/store/userCache';
 import { getUserProfile } from '@/transport/api/users';
 
 const USER_STALE_MS = 5 * 60_000;

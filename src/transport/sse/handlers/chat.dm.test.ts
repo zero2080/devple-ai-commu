@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Position } from '@/domain';
 import { useAuthStore } from '@/store/authStore';
-import { useChatStore } from '@/store/chatStore';
+import { dmThreadKey, useChatStore } from '@/store/chatStore';
 import type { ConversationsData, ThreadData } from '@/store/dmCache';
 import { queryClient } from '@/store/queryClient';
 import { queryKeys } from '@/store/queryKeys';
@@ -121,9 +121,9 @@ describe('chat.dm', () => {
   });
 
   it('내 에코는 같은 본문의 pending을 해소하고, 상대가 반경 안이면 내 머리 위', () => {
-    const temp = useChatStore.getState().addPendingDm('near', '내용-d3', 1);
+    const temp = useChatStore.getState().addPendingThread(dmThreadKey('near'), '내용-d3', 1);
     registry.dispatch({ id: '1', type: 'chat.dm', ts: 1, payload: dm('d3', 'u_me', 'near') });
-    expect(useChatStore.getState().pendingDm.find((p) => p.tempId === temp)).toBeUndefined();
+    expect(useChatStore.getState().pendingThread.find((p) => p.tempId === temp)).toBeUndefined();
     expect(useChatStore.getState().bubbles).toMatchObject([{ userId: 'u_me', variant: 'dm' }]);
   });
 });

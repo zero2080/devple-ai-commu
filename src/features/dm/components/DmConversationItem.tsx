@@ -1,9 +1,8 @@
 import type { DmConversation } from '@/domain';
 import { peerIdOf } from '@/domain';
 import { useUser } from '@/features/profile';
+import styles from '@/shared/ui/panel.module.css';
 import { useUiStore } from '@/store/uiStore';
-
-import styles from './DmPane.module.css';
 
 interface DmConversationItemProps {
   conversation: DmConversation;

@@ -1,13 +1,13 @@
 import { useDeferredValue, useState } from 'react';
 
+import { useUserSearch } from '@/features/profile';
 import { messageFor } from '@/shared/errorMessages';
+import styles from '@/shared/ui/panel.module.css';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
 
 import { DmConversationItem } from './DmConversationItem';
-import styles from './DmPane.module.css';
 import { useDmConversations } from '../hooks/useDmConversations';
-import { useUserSearch } from '../hooks/useUserSearch';
 
 /** DM 목록과 닉네임 검색 (PRD 5.5·5.7): 접속 여부와 무관하게 검색해 DM을 시작한다 */
 export function DmHome() {

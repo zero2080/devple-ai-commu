@@ -1,7 +1,7 @@
 // DM 전송·회수·읽음 (PRD 5.5·5.8). 확정된 메시지는 Query 캐시에만, 전송 중 상태는 chatStore (ARCHITECTURE 7)
 import { dmBubbleSpeaker } from '@/domain';
 import { useAuthStore } from '@/store/authStore';
-import { useChatStore } from '@/store/chatStore';
+import { dmThreadKey, useChatStore } from '@/store/chatStore';
 import {
   markConversationRead,
   markIncomingRead,
@@ -21,7 +21,7 @@ async function deliver(tempId: string, peerId: string, content: string): Promise
     const myUserId = world.myUserId ?? message.senderId;
     upsertDmMessage(queryClient, message, peerId, myUserId);
     const chat = useChatStore.getState();
-    chat.removePendingDm(tempId);
+    chat.removePendingThread(tempId);
     const radius = useAuthStore.getState().config?.proximityRadius ?? 0;
     const speaker = dmBubbleSpeaker(
       myUserId,
@@ -41,27 +41,27 @@ async function deliver(tempId: string, peerId: string, content: string): Promise
   } catch (error) {
     useChatStore
       .getState()
-      .failPendingDm(tempId, error instanceof ApiError ? error.code : 'NETWORK');
+      .failPendingThread(tempId, error instanceof ApiError ? error.code : 'NETWORK');
   }
 }
 
 /** pending 추가 → POST /dm/{userId}/messages → 캐시 반영(에코와 중복 없음) 또는 failed */
 export async function sendDmMessage(peerId: string, content: string): Promise<void> {
-  const tempId = useChatStore.getState().addPendingDm(peerId, content, Date.now());
+  const tempId = useChatStore.getState().addPendingThread(dmThreadKey(peerId), content, Date.now());
   await deliver(tempId, peerId, content);
 }
 
-export async function retryDm(tempId: string): Promise<void> {
-  const pending = useChatStore.getState().pendingDm.find((p) => p.tempId === tempId);
-  if (pending?.status !== 'failed') {
+export async function retryDm(tempId: string, peerId: string): Promise<void> {
+  const pending = useChatStore.getState().pendingThread.find((p) => p.tempId === tempId);
+  if (pending?.status !== 'failed' || pending.threadKey !== dmThreadKey(peerId)) {
     return;
   }
-  useChatStore.getState().markSendingDm(tempId);
-  await deliver(tempId, pending.peerId, pending.content);
+  useChatStore.getState().markSendingThread(tempId);
+  await deliver(tempId, peerId, pending.content);
 }
 
 export function dismissDm(tempId: string): void {
-  useChatStore.getState().dismissPendingDm(tempId);
+  useChatStore.getState().dismissPendingThread(tempId);
 }
 
 export type RecallResult = 'recalled' | 'already_read' | 'failed';

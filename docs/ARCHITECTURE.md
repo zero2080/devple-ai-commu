@@ -206,7 +206,7 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - 근접 대화 로그 항목(`PublicLogEntry`, `domain/view.ts`)은 발화 시점 닉네임을 함께 저장한다. 공개 대화는 히스토리 API가 없고 발신자가 맵을 떠날 수 있어 사용자 캐시로 되찾을 수 없기 때문이다 (DOMAIN 9 "sender는 사용자 캐시로"의 예외, 휘발성 로그 한정)
 - 내 공개 메시지 확정: `POST /chat/public` 201과 SSE `chat.public` 중 **먼저 온 쪽이 확정**한다. 로그는 메시지 id로 중복을 제거하고, SSE가 먼저 오면 NFC 정규화한 본문이 같은 가장 오래된 `sending` 항목을 해소한다
 - **DM 캐시** (8단계): 대화 목록 `dm.conversations`(무한 쿼리, 최근순)와 스레드 `dm.messages(peerId)`(무한 쿼리, 페이지는 최신순, 화면은 뒤집어 오래된 것 → 최신)에 **기본 엔티티만** 둔다. 응답의 `peer`와 이벤트의 `sender`는 `users.byId(id)` 캐시로 분해해 넣는다 (DOMAIN 9 이중 저장 금지). `chat.dm` 수신 시 목록 맨 위로 올리고 `lastMessage`·`updatedAt` 갱신, 상대가 보낸 것이면 `unreadCount + 1`(그 스레드가 열려 있고 읽음 처리하면 0). 목록에 없는 대화면 목록을 무효화해 다시 받는다. 회수는 모든 스레드 캐시에서 해당 id 제거 + 목록 무효화, 읽음은 내 메시지 중 `lastMessageId`까지 `readAt` 채움
-- 전송 중 DM은 `chatStore.pendingDm`(상대별). 확정 규칙은 공개 대화와 같다 (201과 `chat.dm` 에코 중 먼저 온 쪽, id 중복 제거, 에코가 먼저면 NFC 본문 일치로 해소)
+- 전송 중 DM·그룹 메시지는 `chatStore.pendingThread`(스레드별 키 `dmThreadKey(peerId)` = `dm:<peerId>`, `groupThreadKey(groupId)` = `group:<groupId>`). 확정 규칙은 공개 대화와 같다 (201과 `chat.dm`·`chat.group` 에코 중 먼저 온 쪽, id 중복 제거, 에코가 먼저면 같은 스레드·NFC 본문 일치로 해소). 스레드 화면은 DM·그룹 공통 `features/chat` `ThreadView`, 목록·스레드 CSS는 `shared/ui/panel.module.css`, 커서 페이지 캐시 헬퍼는 `store/threadCache.ts`, 사용자 캐시는 `store/userCache.ts`
 - `uiStore`: 하단 패널 탭(`public`·`dm`), 열린 DM 상대(`dmPeerId`), 열린 프로필(`profileUserId`). 프로필 카드는 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (보장 영역 규칙의 예외, 닫기·Esc)
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 

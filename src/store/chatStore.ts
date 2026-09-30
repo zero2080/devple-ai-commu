@@ -6,8 +6,8 @@ import {
   bubbleDurationMs,
   sameMessageText,
   type ChatPublicEvent,
-  type PendingDm,
   type PendingPublic,
+  type PendingThreadMessage,
   type PublicLogEntry,
   type PublicMessage,
   type SpeechBubble,
@@ -23,8 +23,8 @@ export interface ChatState {
   publicLog: readonly PublicLogEntry[];
   /** 전송 중·실패한 내 공개 메시지 */
   pendingPublic: readonly PendingPublic[];
-  /** 전송 중·실패한 내 DM (상대별). 확정된 DM은 Query 캐시에만 둔다 */
-  pendingDm: readonly PendingDm[];
+  /** 전송 중·실패한 내 DM·그룹 메시지 (스레드별). 확정된 메시지는 Query 캐시에만 둔다 */
+  pendingThread: readonly PendingThreadMessage[];
   /** SSE chat.public 수신. myUserId는 내 전송분 확정에 쓴다 */
   receivePublic: (event: ChatPublicEvent, myUserId: string | null, now: number) => void;
   /** 낙관적 전송 시작. tempId를 돌려준다 */
@@ -48,15 +48,26 @@ export interface ChatState {
     variant: SpeechBubble['variant'],
     now: number,
   ) => void;
-  addPendingDm: (peerId: string, content: string, now: number) => string;
+  /** 스레드 메시지 낙관적 전송 시작 (threadKey: dmThreadKey·groupThreadKey). tempId를 돌려준다 */
+  addPendingThread: (threadKey: string, content: string, now: number) => string;
   /** 201 확정 또는 에코로 해소 */
-  removePendingDm: (tempId: string) => void;
-  /** 에코(chat.dm)가 201보다 먼저 오면 같은 상대·같은 본문(NFC)의 가장 오래된 sending을 해소 */
-  resolvePendingDmByEcho: (peerId: string, content: string) => void;
-  failPendingDm: (tempId: string, errorCode: string) => void;
-  markSendingDm: (tempId: string) => void;
-  dismissPendingDm: (tempId: string) => void;
+  removePendingThread: (tempId: string) => void;
+  /** 에코(chat.dm·chat.group)가 201보다 먼저 오면 같은 스레드·같은 본문(NFC)의 가장 오래된 sending을 해소 */
+  resolvePendingThreadByEcho: (threadKey: string, content: string) => void;
+  failPendingThread: (tempId: string, errorCode: string) => void;
+  markSendingThread: (tempId: string) => void;
+  dismissPendingThread: (tempId: string) => void;
   reset: () => void;
+}
+
+/** DM 스레드 키 (상대 userId 기준, REST 경로와 같음) */
+export function dmThreadKey(peerId: string): string {
+  return `dm:${peerId}`;
+}
+
+/** 그룹 스레드 키 */
+export function groupThreadKey(groupId: string): string {
+  return `group:${groupId}`;
 }
 
 let tempSeq = 0;
@@ -107,7 +118,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   bubbles: [],
   publicLog: [],
   pendingPublic: [],
-  pendingDm: [],
+  pendingThread: [],
 
   receivePublic: (event, myUserId, now) => {
     const state = get();
@@ -186,43 +197,47 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set((s) => ({ bubbles: replaceBubble(s.bubbles, toBubble(message, variant, now)) }));
   },
 
-  addPendingDm: (peerId, content, now) => {
+  addPendingThread: (threadKey, content, now) => {
     tempSeq += 1;
-    const tempId = `tmpdm_${String(now)}_${String(tempSeq)}`;
+    const tempId = `tmpth_${String(now)}_${String(tempSeq)}`;
     set((s) => ({
-      pendingDm: [...s.pendingDm, { tempId, peerId, content, status: 'sending', createdAt: now }],
+      pendingThread: [
+        ...s.pendingThread,
+        { tempId, threadKey, content, status: 'sending', createdAt: now },
+      ],
     }));
     return tempId;
   },
 
-  removePendingDm: (tempId) => {
-    set((s) => ({ pendingDm: s.pendingDm.filter((p) => p.tempId !== tempId) }));
+  removePendingThread: (tempId) => {
+    set((s) => ({ pendingThread: s.pendingThread.filter((p) => p.tempId !== tempId) }));
   },
 
-  resolvePendingDmByEcho: (peerId, content) => {
-    const match = get().pendingDm.find(
-      (p) => p.peerId === peerId && p.status === 'sending' && sameMessageText(p.content, content),
+  resolvePendingThreadByEcho: (threadKey, content) => {
+    const match = get().pendingThread.find(
+      (p) =>
+        p.threadKey === threadKey && p.status === 'sending' && sameMessageText(p.content, content),
     );
     if (match !== undefined) {
-      set((s) => ({ pendingDm: s.pendingDm.filter((p) => p !== match) }));
+      set((s) => ({ pendingThread: s.pendingThread.filter((p) => p !== match) }));
     }
   },
 
-  failPendingDm: (tempId, errorCode) => {
+  failPendingThread: (tempId, errorCode) => {
     set((s) => ({
-      pendingDm: s.pendingDm.map((p) =>
+      pendingThread: s.pendingThread.map((p) =>
         p.tempId === tempId ? { ...p, status: 'failed', errorCode } : p,
       ),
     }));
   },
 
-  markSendingDm: (tempId) => {
+  markSendingThread: (tempId) => {
     set((s) => ({
-      pendingDm: s.pendingDm.map((p) =>
+      pendingThread: s.pendingThread.map((p) =>
         p.tempId === tempId
           ? {
               tempId: p.tempId,
-              peerId: p.peerId,
+              threadKey: p.threadKey,
               content: p.content,
               status: 'sending',
               createdAt: p.createdAt,
@@ -232,13 +247,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }));
   },
 
-  dismissPendingDm: (tempId) => {
+  dismissPendingThread: (tempId) => {
     set((s) => ({
-      pendingDm: s.pendingDm.filter((p) => !(p.tempId === tempId && p.status === 'failed')),
+      pendingThread: s.pendingThread.filter((p) => !(p.tempId === tempId && p.status === 'failed')),
     }));
   },
 
   reset: () => {
-    set({ bubbles: [], publicLog: [], pendingPublic: [], pendingDm: [] });
+    set({ bubbles: [], publicLog: [], pendingPublic: [], pendingThread: [] });
   },
 }));
