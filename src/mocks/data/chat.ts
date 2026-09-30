@@ -80,7 +80,13 @@ export const SEED_GROUPS: Group[] = [
 ];
 
 export const SEED_GROUP_MEMBERS: GroupMember[] = [
-  { groupId: 'g_01', userId: ME.id, role: 'owner', joinedAt: SEED_TIME - 5 * 86_400_000 },
+  {
+    groupId: 'g_01',
+    userId: ME.id,
+    role: 'owner',
+    joinedAt: SEED_TIME - 5 * 86_400_000,
+    lastReadMessageId: 'gm_001', // 내가 보낸 메시지까지 읽음 (내 메시지는 안 읽음에 세지 않음)
+  },
   { groupId: 'g_01', userId: 'u_01', role: 'member', joinedAt: SEED_TIME - 4 * 86_400_000 },
   { groupId: 'g_01', userId: 'u_02', role: 'member', joinedAt: SEED_TIME - 3 * 86_400_000 },
   { groupId: 'g_01', userId: 'u_04', role: 'member', joinedAt: SEED_TIME - 1 * 86_400_000 },

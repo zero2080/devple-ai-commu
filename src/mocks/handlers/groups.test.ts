@@ -133,7 +133,7 @@ describe('DEV 트리거', () => {
     expect(type).toBe('chat.group');
     expect(payload?.id).toBe(message?.id);
     expect(payload?.sender.id).toBe('u_01');
-    expect(await unreadOf('g_01')).toBe(3); // 시드 2 + 1 (g_01은 읽은 기록 없음)
+    expect(await unreadOf('g_01')).toBe(2); // 시드(내 것 제외 1) + 1
   });
 
   it('inviteMe → group.joined와 목록, kickMe → group.removed kicked (owner인 그룹은 불가)', async () => {
