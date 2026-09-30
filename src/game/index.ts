@@ -5,5 +5,6 @@ export * from './engine/loop';
 export * from './engine/camera';
 export * from './render/tilemap';
 export * from './render/characters';
+export * from './render/backingStore';
 export * from './assets/loader';
 export * from './world/worldGame';

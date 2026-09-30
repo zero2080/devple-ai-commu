@@ -6,6 +6,7 @@ import { TILE_SIZE } from '../constants';
 import { LocalPlayer } from './localPlayer';
 import { computeCamera, screenToWorld, type Camera } from '../engine/camera';
 import { GameLoop, type LoopOptions } from '../engine/loop';
+import { backingStoreSize } from '../render/backingStore';
 import { renderCharacters, type DrawableCharacter } from '../render/characters';
 import { createTilemapCache, renderTilemap, type TilemapCache } from '../render/tilemap';
 import { RemoteInterpolator, tileToPixel } from '../sync/interpolation';
@@ -46,6 +47,7 @@ export class WorldGame {
   private camera: Camera = { originX: 0, originY: 0, zoom: 2 };
   private widthPx = 0;
   private heightPx = 0;
+  private dpr = 1;
   private lastNow = 0;
 
   constructor(options: WorldGameOptions) {
@@ -101,12 +103,16 @@ export class WorldGame {
     this.loop.stop();
   }
 
-  /** CSS px 기준. 백킹 스토어 = CSS px (DPR 미반영, 정수 줌만 적용) */
-  resize(widthPx: number, heightPx: number): void {
+  /** CSS px 기준. 백킹 스토어 = CSS px × DPR (반올림), 줌 배율은 정수 유지 (ARCHITECTURE 2.1) */
+  resize(widthPx: number, heightPx: number, dpr = 1): void {
     this.widthPx = Math.max(1, Math.floor(widthPx));
     this.heightPx = Math.max(1, Math.floor(heightPx));
-    this.canvas.width = this.widthPx;
-    this.canvas.height = this.heightPx;
+    const backing = backingStoreSize(this.widthPx, this.heightPx, dpr);
+    this.dpr = backing.dpr;
+    this.canvas.width = backing.width;
+    this.canvas.height = backing.height;
+    this.canvas.style.width = `${String(this.widthPx)}px`;
+    this.canvas.style.height = `${String(this.heightPx)}px`;
     this.ctx.imageSmoothingEnabled = false;
   }
 
@@ -175,10 +181,10 @@ export class WorldGame {
     );
 
     const ctx = this.ctx;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = '#101014';
     ctx.fillRect(0, 0, this.widthPx, this.heightPx);
-    ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
+    ctx.setTransform(zoom * this.dpr, 0, 0, zoom * this.dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
     renderTilemap(ctx, this.tilemap, this.camera);
     this.collectDrawables(nowMs);
