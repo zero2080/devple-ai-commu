@@ -5,7 +5,8 @@ import type { Notice, User } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { SERVER_CONFIG } from '../data/config.ts';
-import { contentError, nextId, state, userAsMe } from '../state.ts';
+import { contentError } from '../data/messages.ts';
+import { nextId, state, userAsMe } from '../state.ts';
 import { apiError, noContent, page, param, readJson, requireAdmin, str, url } from './support.ts';
 
 function findUser(id: string): User | undefined {

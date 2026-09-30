@@ -126,6 +126,30 @@ export class WorldSim {
     }
   }
 
+  /** (x, y)에서 가까운 빈 타일로 옮긴다 (개발용 /__mock/say). 링 반경 maxRadius까지. 성공하면 위치를 돌려준다 */
+  placeNear(userId: string, x: number, y: number, maxRadius = 4): Presence['position'] | null {
+    const presence = this.find(userId);
+    if (presence === undefined) {
+      return null;
+    }
+    if (presence.position.x === x && presence.position.y === y) {
+      return presence.position;
+    }
+    for (let r = 0; r <= maxRadius; r += 1) {
+      for (let dy = -r; dy <= r; dy += 1) {
+        for (let dx = -r; dx <= r; dx += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) {
+            continue;
+          }
+          if (this.moveTo(userId, x + dx, y + dy, presence.position.dir) === 'moved') {
+            return presence.position;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   find(userId: string): Presence | undefined {
     return this.presences.find((p) => p.userId === userId);
   }

@@ -22,7 +22,7 @@ export default defineConfig({
       command: 'node_modules/.bin/tsx src/mocks/sse-server.ts',
       url: `http://localhost:${SSE_PORT}/__mock/state`,
       reuseExistingServer: false,
-      env: { MOCK_SSE_PORT: SSE_PORT },
+      env: { MOCK_SSE_PORT: SSE_PORT, MOCK_CHATTER_MS: '0' },
       timeout: 30_000,
     },
     {

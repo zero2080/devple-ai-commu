@@ -223,3 +223,102 @@ describe('/__mock/emit 브리지', () => {
     expect(chunks.some((c) => c.includes('presence.updated') && c.includes('새이름'))).toBe(true);
   });
 });
+
+describe('POST /api/v1/chat/public', () => {
+  const post = (content: unknown, headers: Record<string, string> = AUTH) =>
+    fetch(`${base}/api/v1/chat/public`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ content }),
+    });
+
+  it('Bearer가 없으면 401', async () => {
+    const res = await post('hi', { 'Content-Type': 'application/json' });
+    expect(res.status).toBe(401);
+  });
+
+  it('공백만·제어 문자·코드 포인트 초과는 400 MESSAGE_INVALID_CONTENT', async () => {
+    for (const bad of ['   ', 'a\u0007b', '가'.repeat(201), 42]) {
+      const res = await post(bad);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ code: 'MESSAGE_INVALID_CONTENT' });
+    }
+  });
+
+  it('NFC 정규화·링크 추출·서버 위치로 201을 주고 반경 안 연결에 chat.public을 보낸다', async () => {
+    await fetch(`${base}/__mock/reset`, { method: 'POST' });
+    const mine: string[] = [];
+    const farAway: string[] = [];
+    server.hub.add({ write: (c) => mine.push(c), end: () => undefined }, ME.id);
+    server.hub.add({ write: (c) => farAway.push(c), end: () => undefined }, 'u_01');
+    expect(server.world.place('u_01', 3, 3, 'down')).toBe(true); // 스폰(20,15)에서 17칸
+
+    const res = await post('가 https://example.com/a');
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      content: string;
+      links: string[];
+      position: { x: number; y: number };
+      senderId: string;
+    };
+    expect(body).toMatchObject({
+      content: '가 https://example.com/a',
+      links: ['https://example.com/a'],
+      senderId: ME.id,
+    });
+    expect(body.position).toMatchObject({ x: MAIN_MAP.spawn.x, y: MAIN_MAP.spawn.y });
+    expect(
+      mine.some((c) => c.includes('event: chat.public') && c.includes('"nickname":"데모"')),
+    ).toBe(true);
+    expect(farAway.some((c) => c.includes('chat.public'))).toBe(false);
+  });
+});
+
+describe('/__mock/say · chatter', () => {
+  it('at 근처로 옮겨 말하면 반경 안의 나에게 전달되고, 멀면 전달되지 않는다', async () => {
+    await fetch(`${base}/__mock/reset`, { method: 'POST' });
+    const chunks: string[] = [];
+    server.hub.add({ write: (c) => chunks.push(c), end: () => undefined }, ME.id);
+    const say = (body: unknown) =>
+      fetch(`${base}/__mock/say`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(async (r) => ({
+        status: r.status,
+        body: (await r.json()) as { delivered: boolean; position: { x: number; y: number } },
+      }));
+
+    const near = await say({ userId: 'u_02', content: '근처', at: { x: 22, y: 15 } });
+    expect(near.status).toBe(202);
+    expect(near.body.delivered).toBe(true);
+    expect(
+      Math.max(Math.abs(near.body.position.x - 20), Math.abs(near.body.position.y - 15)),
+    ).toBeLessThanOrEqual(5);
+    expect(chunks.some((c) => c.includes('world.positions') && c.includes('"userId":"u_02"'))).toBe(
+      true,
+    );
+
+    const far = await say({ userId: 'u_03', content: '멀리', at: { x: 3, y: 3 } });
+    expect(far.body.delivered).toBe(false);
+    expect(chunks.some((c) => c.includes('멀리'))).toBe(false);
+
+    const bad = await say({ userId: 'nobody', content: 'x' });
+    expect(bad.status).toBe(400);
+  });
+
+  it('chatter는 연결된 사용자 반경 안의 가짜 접속자만 말하게 한다', async () => {
+    await fetch(`${base}/__mock/reset`, { method: 'POST' });
+    const lonely = createMockServer({ now: () => clock });
+    expect(lonely.chatter()).toBe(0); // 연결 없음
+    const chunks: string[] = [];
+    lonely.hub.add({ write: (c) => chunks.push(c), end: () => undefined }, ME.id);
+    expect(lonely.world.placeNear('u_04', 21, 15)).not.toBeNull();
+    let delivered = 0;
+    for (let i = 0; i < 20 && delivered === 0; i += 1) {
+      delivered = lonely.chatter();
+    }
+    expect(delivered).toBe(1);
+    expect(chunks.some((c) => c.includes('event: chat.public'))).toBe(true);
+  });
+});

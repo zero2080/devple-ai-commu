@@ -7,7 +7,7 @@ import { BASE } from './support.ts';
 import { EXPRESS_MOCK_ENDPOINT_NAMES } from '../data/config.ts';
 
 describe('MSW 핸들러', () => {
-  it('Express 담당 4개를 제외한 엔드포인트 전부와 1:1이다 (33 + Express 4 = 37)', () => {
+  it('Express 담당 5개를 제외한 엔드포인트 전부와 1:1이다 (32 + Express 5 = 37)', () => {
     const expressOwned = new Set<unknown>(
       EXPRESS_MOCK_ENDPOINT_NAMES.map((name) => ENDPOINTS[name]),
     );
@@ -20,7 +20,7 @@ describe('MSW 핸들러', () => {
       ),
     );
     expect([...actual].sort()).toEqual([...expected].sort());
-    expect(handlers).toHaveLength(33);
+    expect(handlers).toHaveLength(32);
     expect(handlers.length + EXPRESS_MOCK_ENDPOINT_NAMES.length).toBe(ENDPOINT_LIST.length);
   });
 });

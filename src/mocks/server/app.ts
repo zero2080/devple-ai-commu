@@ -1,13 +1,16 @@
-// Express mock 앱 (ARCHITECTURE 9장). 티켓·SSE·월드 REST(위치·상태·접속자)를 한곳에서 담당한다.
+// Express mock 앱 (ARCHITECTURE 9장). 티켓·SSE·월드 REST(위치·상태·접속자)·근접 대화(chat.public)를 한곳에서 담당한다.
 // sse-server.ts가 이 앱을 띄우고, app.test.ts가 포트 0으로 띄워 검증한다.
 import express, { json, type Express, type Request, type Response } from 'express';
 
 import { SseHub, type SseSink } from './sse.ts';
 import { TicketStore } from './tickets.ts';
 import { WorldSim, type PositionDelta } from './world.ts';
-import type { Direction } from '../../domain/types.ts';
+import type { Direction, Presence, PublicMessage } from '../../domain/types.ts';
+import { CHATTER_LINES } from '../data/chatter.ts';
+import { SERVER_CONFIG } from '../data/config.ts';
 import { isBlocked, MAIN_MAP } from '../data/map.ts';
-import { mulberry32, type Rng } from '../data/rng.ts';
+import { contentError, extractLinks } from '../data/messages.ts';
+import { mulberry32, pick, type Rng } from '../data/rng.ts';
 import { ME } from '../data/users.ts';
 import { createInitialPresences, WORLD_SEED } from '../data/world.ts';
 
@@ -28,6 +31,8 @@ export interface MockServer {
   /** 200ms 틱: 가짜 접속자 이동 + 실제 사용자 이동을 world.positions로 방송 (본인 포함) */
   tick: () => void;
   heartbeat: () => void;
+  /** 가짜 접속자 1명이 근처에서 말한다 (반경 판정). 전달된 연결 수 */
+  chatter: () => number;
 }
 
 interface PositionRecord {
@@ -76,6 +81,41 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const ticketOwners = new Map<string, string>();
   const positionRecords = new Map<string, PositionRecord>();
   const pendingDeltas = new Map<string, PositionDelta>();
+  let messageSeq = 0;
+
+  /** 체비쇼프 거리 반경 판정 (DOMAIN 5.2, CLAUDE.md 핵심 제약 8) */
+  const withinRadius = (a: Presence['position'], b: Presence['position']): boolean =>
+    a.mapId === b.mapId &&
+    Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= SERVER_CONFIG.proximityRadius;
+
+  /**
+   * 발신자 현재 위치 기준으로 반경 내 연결에만 chat.public을 보낸다 (본인 포함, API_CONTRACT 2.5).
+   * 수신자 판정은 연결 소유자의 서버 위치로 한다
+   */
+  const publishPublic = (
+    sender: Presence,
+    content: string,
+  ): { message: PublicMessage; recipients: number } => {
+    messageSeq += 1;
+    const message: PublicMessage = {
+      id: `pm_${String(messageSeq)}`,
+      kind: 'public',
+      senderId: sender.userId,
+      content: content.normalize('NFC'),
+      links: extractLinks(content),
+      createdAt: now(),
+      position: { ...sender.position },
+    };
+    const { recipients } = hub.broadcastWhere(
+      'chat.public',
+      { ...message, sender: { nickname: sender.nickname, avatarId: sender.avatarId } },
+      (userId) => {
+        const listener = world.find(userId);
+        return listener !== undefined && withinRadius(message.position, listener.position);
+      },
+    );
+    return { message, recipients };
+  };
 
   /* ---------- 티켓 · SSE ---------- */
 
@@ -113,7 +153,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     res.flushHeaders();
 
     const sink: SseSink = { write: (chunk) => void res.write(chunk), end: () => res.end() };
-    hub.add(sink);
+    hub.add(sink, owner);
     hub.sendTo(sink, 'world.snapshot', {
       mapId: MAIN_MAP.id,
       presences: world.presences,
@@ -227,7 +267,68 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     res.json({ mapId: MAIN_MAP.id, presences: world.presences, serverTime: now() });
   });
 
+  /* ---------- 근접 대화 (API_CONTRACT 2.5) ---------- */
+
+  app.post('/api/v1/chat/public', (req, res) => {
+    const userId = bearerUserId(req);
+    if (userId === null) {
+      apiError(res, 401, 'AUTH_REQUIRED', 'access token missing');
+      return;
+    }
+    const content = field(req.body, 'content');
+    const problem =
+      typeof content === 'string'
+        ? contentError(content, SERVER_CONFIG.maxMessageLength)
+        : 'content must be a string';
+    if (problem !== null || typeof content !== 'string') {
+      apiError(res, 400, 'MESSAGE_INVALID_CONTENT', problem ?? 'invalid content');
+      return;
+    }
+    const sender = world.find(userId);
+    if (sender === undefined) {
+      apiError(res, 404, 'NOT_FOUND', 'presence not found', { resource: 'presence' });
+      return;
+    }
+    const { message, recipients } = publishPublic(sender, content);
+    log(`chat.public ${message.id} from ${userId} → ${String(recipients)} clients`);
+    res.status(201).json(message);
+  });
+
   /* ---------- 개발용 트리거 ---------- */
+
+  app.post('/__mock/say', (req, res) => {
+    // 가짜 접속자 발화. at이 있으면 그 근처 빈 타일로 옮긴 뒤(즉시 world.positions) 말한다. 반경 밖이면 전달되지 않는다
+    const userId = field(req.body, 'userId');
+    const content = field(req.body, 'content');
+    const at = field(req.body, 'at');
+    const speaker = typeof userId === 'string' ? world.find(userId) : undefined;
+    if (
+      speaker === undefined ||
+      typeof content !== 'string' ||
+      contentError(content, SERVER_CONFIG.maxMessageLength) !== null
+    ) {
+      apiError(res, 400, 'VALIDATION_FAILED', 'body must be { userId, content, at? }');
+      return;
+    }
+    const x = field(at, 'x');
+    const y = field(at, 'y');
+    if (typeof x === 'number' && typeof y === 'number') {
+      const placed = world.placeNear(speaker.userId, x, y);
+      if (placed === null) {
+        apiError(res, 409, 'POSITION_REJECTED', 'no free tile near at');
+        return;
+      }
+      hub.broadcast('world.positions', {
+        mapId: MAIN_MAP.id,
+        positions: [{ userId: speaker.userId, x: placed.x, y: placed.y, dir: placed.dir }],
+      });
+    }
+    const { message, recipients } = publishPublic(speaker, content);
+    log(`say ${message.id} by ${speaker.userId} → ${String(recipients)} clients`);
+    res
+      .status(202)
+      .json({ id: message.id, delivered: recipients > 0, recipients, position: speaker.position });
+  });
 
   app.post('/__mock/emit', (req, res) => {
     const type = field(req.body, 'type');
@@ -290,12 +391,34 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     }
   };
 
+  const chatterRng = options.rng ?? mulberry32(WORLD_SEED + 2);
+  const chatter = (): number => {
+    const listeners = hub
+      .connectedUserIds()
+      .map((id) => world.find(id))
+      .filter((p): p is Presence => p !== undefined);
+    const nearby = world.presences.filter(
+      (p) =>
+        p.userId !== ME.id &&
+        p.state === 'online' &&
+        listeners.some(
+          (listener) => listener.userId !== p.userId && withinRadius(p.position, listener.position),
+        ),
+    );
+    if (nearby.length === 0) {
+      return 0;
+    }
+    const { recipients } = publishPublic(pick(chatterRng, nearby), pick(chatterRng, CHATTER_LINES));
+    return recipients;
+  };
+
   return {
     app,
     hub,
     world,
     tickets,
     tick,
+    chatter,
     heartbeat: () => {
       hub.heartbeat(now());
     },

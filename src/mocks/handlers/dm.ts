@@ -5,7 +5,8 @@ import type { DmConversation, DmMessage } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { SERVER_CONFIG } from '../data/config.ts';
-import { contentError, extractLinks, nextId, state } from '../state.ts';
+import { contentError, extractLinks } from '../data/messages.ts';
+import { nextId, state } from '../state.ts';
 import { apiError, noContent, page, param, readJson, requireAuth, str, url } from './support.ts';
 
 function conversationWith(userId: string): DmConversation | undefined {
