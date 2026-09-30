@@ -1,4 +1,5 @@
-// SSE 연결 수명 (ARCHITECTURE 4장): 탭당 EventSource 1개. 핸들러 16종을 registry에 등록하고 봉투를 디스패치한다.
+// SSE 연결 수명 = 세션 (ARCHITECTURE 4.1·6장): 로그인·세션 복구 직후 연결, 로그아웃에서 종료. 페이지 effect가 아니라
+// 세션 함수가 호출하므로 StrictMode 이중 effect로 티켓이 낭비되지 않는다. 탭당 EventSource 1개, 핸들러 17종 등록.
 import { useWorldStore } from '@/store/worldStore';
 import { createSseTicket } from '@/transport/api/auth';
 import { SseClient } from '@/transport/sse/client';

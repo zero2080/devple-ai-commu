@@ -75,10 +75,11 @@ export function useWorldGame(
           createdGame.moveToScreen(x, y);
         },
       });
-      createdGame.resize(container.clientWidth, container.clientHeight);
-      observer = new ResizeObserver(() => {
-        createdGame.resize(container.clientWidth, container.clientHeight);
-      });
+      const fit = (): void => {
+        createdGame.resize(container.clientWidth, container.clientHeight, window.devicePixelRatio);
+      };
+      fit();
+      observer = new ResizeObserver(fit);
       observer.observe(container);
       input.attach();
       batcher.start();
