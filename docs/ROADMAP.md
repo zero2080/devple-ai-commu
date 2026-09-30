@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.7 (2026-09-30, 픽셀 폰트 자산 동봉 완료)
+> 문서 버전: 1.8 (2026-09-30, 7단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -128,7 +128,7 @@
 
 **만들 것**
 - `src/mocks/data/` — 고정 시드 데이터: 사용자 21명(본인 + 20), 맵 `main` 40×30, DM 대화 3개, 그룹 2개
-- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **Express가 담당하는 4개(티켓·`PUT /me/position`·`PUT /me/presence`·`GET /world/{mapId}/presences`)를 제외한 33개** (ARCHITECTURE 9장, 2026-09-30 결정). 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
+- `src/mocks/handlers/*.ts` — MSW 핸들러, API_CONTRACT 2장 중 **Express가 담당하는 4개(티켓·`PUT /me/position`·`PUT /me/presence`·`GET /world/{mapId}/presences`)를 제외한 33개** (ARCHITECTURE 9장, 2026-09-30 결정). 7단계에서 `POST /chat/public`도 Express로 옮겨 MSW 32 + Express 5 예시 응답 그대로. `POST /auth/login`은 accessKey `DEMO-0000-0000`만 성공
 - `src/mocks/browser.ts` — `VITE_MOCK=true`일 때만 워커 시작. `/api/v1/sse`로 시작하는 요청은 MSW가 건드리지 않고 통과(bypass)시켜 Vite proxy → Express로 간다
 - `src/mocks/sse-server.ts` — Express, 포트 5174
     - `POST /api/v1/sse/ticket` → 30초 유효 **1회용** 티켓 발급 (MSW와 상태를 공유할 수 없으므로 티켓은 Express가 발급·검증한다)
@@ -139,7 +139,7 @@
 
 **완료 조건**
 - [x] `pnpm dev:sse` 실행 후 `curl -X POST localhost:5174/api/v1/sse/ticket`로 티켓 발급 → `curl -N "localhost:5174/api/v1/sse?ticket=…"`로 스트림 확인 → 같은 티켓 재사용 시 `401`
-- [x] MSW 핸들러 33개 + Express 4개(티켓·position·presence·presences) = `endpoints.ts` 37개 (테스트로 자동 검사)
+- [x] MSW 핸들러 33개 + Express 4개(티켓·position·presence·presences) = `endpoints.ts` 37개 (테스트로 자동 검사). 7단계 이후 32 + 5
 
 ---
 
@@ -185,13 +185,30 @@
 - [x] localPlayer 테스트(fake time): 150ms/타일, 벽·점유 시 dir만 변경, 키 입력이 자동 이동 취소, 막히면 100ms 스로틀로 재계산, 409 스냅
 - [x] E2E: 방향키 → 내 위치가 바뀌고 Express `/__mock/state`에 `u_me` 위치가 반영됨, 벽 방향으로는 이동 불가, 클릭 이동으로 목적지 도착, 가짜 접속자가 내 타일로 들어오지 않음
 
-### 7~12단계 (각 단계 착수 전에 3~6단계 형식으로 상세화)
+### 7단계: 근접 대화 + 말풍선 + 링크 버튼 `[ ]`
 
-- 7단계: 근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼
-    - 상세화 시 명시: 말풍선·링크 버튼 CSS는 **GRAPHICS 5.1~5.2** 기준. 폰트 크기는 em(12px) × 줌 배율만
-    - ✅ 픽셀 웹폰트 동봉 완료 (2026-09-30): `src/assets/fonts/PixelKo.woff2` = Galmuri11 부분집합·개명본(OFL 1.1, 약 156 kB), `OFL-Galmuri.txt`, `src/assets/LICENSES.md`. 빌드 `scripts/fonts/build-pixelko.sh`, 검수 `scripts/fonts/check-font.py`. `index.css`에 `@font-face`·`--pixel-font-em` 등록, E2E가 `document.fonts.check` 확인
-    - `POST /chat/public`은 근접 판정 브로드캐스트를 위해 Express mock으로 이관 (ARCHITECTURE 9장)
-    - 완료 조건에 추가: 뷰포트 390×844(모바일)에서 반경 5의 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800(데스크톱)에서 20×15 타일 이상 표시 — Playwright `viewport` 옵션으로 검증 (`domain/viewport.ts`, ARCHITECTURE 2.5)
+PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍선(보라 계열)·프로필 카드는 8단계.
+
+**만들 것**
+- `src/domain/link.ts` — `linkLabel(url)`(호스트명, 표시용), `isOpenableLink(url)`(http/https만). 서버 `links[]`만 다루고 본문에서 URL을 찾지 않는다
+- `src/domain/view.ts` — `PublicLogEntry`(발화 시점 닉네임 스냅샷), `PendingPublic`(`sending`·`failed`)
+- `src/store/chatStore.ts` — `bubbles`(사용자당 1개, 새 발화가 대체), `publicLog`(세션 한정, 최대 200), `pendingPublic`. `receivePublic`(id 중복 제거, 내 메시지면 pending 해소, 말풍선 생성), `addPending`·`confirmPending`·`failPending`·`dismissPending`, `removeBubble`, `reset`(로그아웃)
+- `src/transport/sse/handlers/chat.public.ts` — `receivePublic` 연결
+- `src/features/chat/` — `sendPublic(content)`(낙관적 pending → `POST /chat/public` → 확정/실패), `ChatPanel`(로그 `role="log"` + 입력창 + 코드 포인트 카운터 + 실패 시 다시 보내기·지우기), `SpeechBubbleLayer`(DOM 오버레이, 프레임마다 `transform`, 만료·호버 유지), `LinkButton`(`↗ hostname`, `title`=전체 URL, `window.open(url, '_blank', 'noopener,noreferrer')`)
+- `src/features/world/` — `WorldProvider`(프레임 구독·캔버스 포커스를 채팅 쪽에 제공), `WorldCanvas`에 `tabIndex=0`과 오버레이 children, 뷰포트 보장 레이아웃(채팅 패널은 캔버스 아래 분할, 최대 높이 = 뷰포트 − 보장 캔버스 높이)
+- `src/game/` — `WorldGame`의 렌더 후 콜백과 `anchorOf(userId)`(말풍선 꼬리 위치, CSS px), 캐릭터 그리기 좌표 정수 스냅(GRAPHICS 1.2), `InputController`는 텍스트 입력에 포커스가 들어가면 누른 방향키를 모두 놓음
+- 키보드: 포커스가 body·캔버스일 때 `Enter` → 입력창, 입력창 `Enter` → 전송(IME 조합 중 제외), `Esc` → 캔버스
+- ✅ 픽셀 웹폰트 동봉 완료 (2026-09-30): `src/assets/fonts/PixelKo.woff2` = Galmuri11 부분집합·개명본(OFL 1.1, 약 156 kB), `OFL-Galmuri.txt`, `src/assets/LICENSES.md`. 빌드 `scripts/fonts/build-pixelko.sh`, 검수 `scripts/fonts/check-font.py`. `index.css`에 `@font-face`·`--pixel-font-em` 등록, E2E가 `document.fonts.check` 확인
+- 말풍선·로그·입력 CSS: GRAPHICS 5.1~5.2 — `PixelKo` em(12px) × 줌, 최대 폭 12타일, `box-shadow` 1px × 줌 외곽선(모서리 깎음), 픽셀 꼬리. 색은 Endesga 32 임시값(팔레트 확정은 12단계)
+- Mock(Express): `POST /api/v1/chat/public` 이관(인증, DOMAIN 5.1 content 검증·NFC·링크 추출, 서버 위치 기준 반경 판정 후 `chat.public` 방송), 가짜 접속자 발화(`MOCK_CHATTER_MS`, 기본 7000, E2E는 0), 개발용 `POST /__mock/say { userId, content, at? }`(반경 밖이면 미전달)
+
+**완료 조건**
+- [ ] 단위: chatStore(중복 제거·pending 해소 양방향·말풍선 교체·로그 상한), link, 말풍선 앵커 계산, ChatPanel 키보드(Enter 전송·IME 조합 중 미전송·Esc), 말풍선 만료·호버 유지, Express `chat.public`(검증·NFC·링크·반경 판정·방송)
+- [ ] E2E: Enter → 입력 → 전송 → 로그와 내 말풍선에 본문·`↗ example.com` 버튼, 입력 중 방향키 무시 → Esc 후 이동, 링크 버튼 → 새 창(`opener` 없음), 반경 안 발화 수신·반경 밖 미수신, 링크 없는 말풍선 만료
+- [ ] E2E 뷰포트: 390×844에서 내 주변 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800에서 20×15 타일 이상 표시 (`domain/viewport.ts`)
+
+### 8~12단계 (각 단계 착수 전에 3~7단계 형식으로 상세화)
+
 - 8단계: 프로필 카드, DM 패널, 회수
 - 9단계: 그룹 채팅 패널
 - 10단계: 자리비움, 재동기화(`sync.required`), 정지 처리
@@ -220,6 +237,7 @@
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.8: 7단계 상세화 — 말풍선·로그·입력·링크 버튼, chat.public Express 이관, 뷰포트 보장 레이아웃 |
 | 2026-09-30 | 1.7: 폰트 추천안(Galmuri11 부분집합 → PixelKo) 사용자 채택, 자산·빌드 스크립트·LICENSES 동봉 |
 | 2026-09-30 | 1.6: 결정 리포트 3 반영 — 5단계 완료 조건 "콘솔 에러 0건"을 앱 에러 기준으로 정정 |
 | 2026-09-30 | 1.5 (handoff 2026-09-30-avatar-viewport): 7단계 완료 조건에 뷰포트 보장(모바일 11×11·데스크톱 20×15) 추가, 12단계 atlas `mirror` 예약 검수. `ServerConfig.avatarIds`·`PATCH /me` 검증 표를 코드에 반영 |

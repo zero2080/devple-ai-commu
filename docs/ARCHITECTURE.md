@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.7 (2026-09-30, DPR 백킹 스토어·SSE 수명=세션·부팅 refresh 401)
+> 문서 버전: 1.8 (2026-09-30, 7단계 설계 — 말풍선 위치·채팅 패널·포커스·chatStore·chat.public Mock)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -42,6 +42,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
 - 스프라이트시트 1장 + JSON atlas. 애니메이션은 프레임 인덱스 배열
+- 캐릭터·닉네임을 그리는 좌표는 **정수 월드 px로 반올림**한다 (보간 중 소수 좌표 금지, GRAPHICS 1.2). 월드 px가 정수면 화면 px는 줌의 배수가 된다
 - 자산 규격·시트 배치·atlas 스키마는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 16×32 4방향×4프레임 64×128 시트, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
 
 ### 2.2 렌더 루프
@@ -51,7 +52,11 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 
 ### 2.3 말풍선
 - Canvas가 아닌 **DOM 오버레이**로 렌더 (텍스트 렌더 품질, 이모지, 줄바꿈 처리 때문)
-- 매 프레임 캐릭터의 스크린 좌표를 계산해 `transform: translate()`로 위치 갱신
+- 매 프레임 캐릭터의 스크린 좌표를 계산해 `transform: translate()`로 위치 갱신. `WorldGame`이 렌더 직후 콜백으로 카메라와 `anchorOf(userId)`를 넘기고, `SpeechBubbleLayer`가 크기를 먼저 모두 읽은 뒤 transform을 쓴다 (레이아웃 스래싱 방지). 좌표는 정수 CSS px
+- **사용자당 말풍선 1개**: 같은 사람이 다시 말하면 이전 말풍선을 대체한다
+- **위치**: 꼬리 끝이 닉네임 바로 위(캐릭터 프레임 상단 − 닉네임 블록 12 월드 px)를 가리키고, 몸통은 그 위 3 월드 px(꼬리 높이)부터 쌓는다. GRAPHICS 5.2의 "프레임 상단 4px × 줌 위"를 그대로 따르면 머리 위 닉네임과 겹쳐서, 확정 전까지 닉네임 위에 쌓는다 (chat에 확인 요청 `to-chat/2026-09-30-bubble-nickname.md`)
+- 만료: `expiresAt = Date.now() + bubbleDurationMs(content, hasLinks)`. 레이어가 프레임마다 확인해 지나면 `chatStore.removeBubble`. 포인터가 올라가 있는 말풍선은 지우지 않고, 벗어난 뒤 이미 지났으면 다음 프레임에 지운다
+- 발신자 Presence가 없거나 발화자가 화면 밖이면 말풍선을 숨긴다 (로그에는 남음). 발화자는 보이는데 말풍선이 캔버스 좌우로 넘치면 **몸통만 캔버스 안으로 밀고 꼬리는 발화자를 가리킨다** (`features/chat/bubbleLayout.ts`)
 - 공개 말풍선과 DM 말풍선은 CSS 클래스로 배경색 구분
 - 표시 시간: 텍스트 길이 비례 (기본 3초 + 글자당 50ms, 최대 8초). 링크 버튼이 있으면 최소 6초
 - 본문은 **항상 plain text**로 렌더 (`textContent`, HTML 해석 없음)
@@ -70,7 +75,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 카메라는 내 캐릭터 중심, 맵 경계에서 클램프
 - 맵 데이터: JSON (`width, height, layers[], collision[]`). 단일 맵이지만 `mapId` 필드 포함
 - 근접 범위 계산은 항상 **타일 좌표** 기준 (`domain/proximity.ts`), 줌과 무관
-- **뷰포트 보장 영역** (GRAPHICS 1.2, PRD 6): 캔버스 CSS 폭 ≥ 640이면 **20×15 타일**, 미만(모바일)이면 근접 범위 정사각형 **`(2 × proximityRadius + 1)²`** 타일 (반경 5 → 11×11 = 352×352 CSS px). 계산은 `domain/viewport.ts` (`guaranteedViewportTiles`, `isViewportGuaranteed`). 줌을 낮춰 맞추지 않고 **레이아웃이 캔버스 크기를 확보**한다. 모바일에서 채팅 패널이 캔버스를 가리는 방식(오버레이/분할)은 7단계 설계에서 정하되 보장 영역 안은 가리지 않는다. `proximityRadius`는 서버 값이므로 로그인·`GET /me` 응답을 받을 때마다 재계산하고, 반경이 커져 캔버스를 넘으면 보장을 포기하고 카메라 중심만 유지한다
+- **뷰포트 보장 영역** (GRAPHICS 1.2, PRD 6): 캔버스 CSS 폭 ≥ 640이면 **20×15 타일**, 미만(모바일)이면 근접 범위 정사각형 **`(2 × proximityRadius + 1)²`** 타일 (반경 5 → 11×11 = 352×352 CSS px). 계산은 `domain/viewport.ts` (`guaranteedViewportTiles`, `isViewportGuaranteed`). 줌을 낮춰 맞추지 않고 **레이아웃이 캔버스 크기를 확보**한다. 모바일에서 채팅 패널이 캔버스를 가리는 방식(오버레이/분할)은 7단계 설계에서 정하되 보장 영역 안은 가리지 않는다. 7단계 결정: **채팅 패널은 캔버스 아래 분할**(겹치지 않음, 그리드 열 `minmax(0, 1fr)`로 가로 넘침 방지), 패널 높이는 `clamp(최소 입력줄, 30dvh, 280px)`이고 최대 높이 = 뷰포트 높이 − 보장 캔버스 높이. `proximityRadius`는 서버 값이므로 로그인·`GET /me` 응답을 받을 때마다 재계산하고, 반경이 커져 캔버스를 넘으면 보장을 포기하고 카메라 중심만 유지한다
 
 ## 3. 이동 동기화
 
@@ -81,10 +86,13 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 | 데스크톱 | 마우스 클릭 | 캐릭터 위 클릭 → 프로필 카드 / 빈 타일 클릭 → 경로 탐색 후 자동 이동 |
 | 모바일 | 터치(탭) | 캐릭터 탭 → 프로필 카드 / 빈 타일 탭 → 경로 탐색 후 자동 이동 (가상 D-pad 없음) |
 
-- 경로 탐색: **A\*** (4방향, 맨해튼 휴리스틱), `game/engine/pathfinding.ts`
+- 경로 탐색: **A\*** (4방향, 맨해튼 휴리스틱), `domain/pathfinding.ts` (순수 함수)
 - 목적지가 충돌 타일이면 가장 가까운 통행 가능 타일로 대체
 - 이동 중 키 입력이 들어오면 자동 이동 취소
 - 채팅 입력창에 포커스가 있으면 키보드 이동 비활성. `Enter`로 입력창 포커스, `Esc`로 캔버스 복귀. 클릭/터치 이동은 항상 가능 (PRD 5.3)
+    - `Enter` → 입력창은 포커스가 body 또는 캔버스일 때만 (버튼·링크의 Enter를 가로채지 않음). 입력창의 `Enter`는 전송이며 **IME 조합 중(`isComposing`)이면 전송하지 않는다** (한글 입력 마지막 글자 중복·조기 전송 방지). 전송 후 포커스는 입력창에 남는다
+    - 캔버스는 `tabIndex=0`로 포커스를 받는다. 캔버스를 클릭하면 입력창 포커스가 풀려 키 이동이 돌아온다
+    - 텍스트 입력에 포커스가 들어가면(`focusin`) 누르고 있던 방향키를 모두 놓는다 (입력창으로 옮긴 뒤 캐릭터가 계속 걷는 것 방지)
 - 이동 속도: 타일당 150ms (약 6.7타일/초) — 키/클릭/터치 공통
 
 ### 3.2 로컬 (클라이언트 예측)
@@ -184,12 +192,14 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 |---|---|---|
 | `authStore` | 토큰, 내 정보, 서버 설정 | REST |
 | `worldStore` | 접속자 위치 맵 (`Map<userId, Position>`), 내 위치 | SSE, Game Engine |
-| `chatStore` | 활성 말풍선, 근접 대화 로그(세션 한정), 안 읽음 수 합계, 전송 중 메시지 상태 | SSE, REST |
+| `chatStore` | 활성 말풍선(사용자당 1), 근접 대화 로그(세션 한정, 최대 200), 전송 중 공개 메시지(`sending`·`failed`). 안 읽음 합계는 Query 캐시에서 파생(8단계) | SSE, REST |
 | `uiStore` | 열린 패널, 선택된 DM 대상, 줌 배율 | UI |
 
 - `worldStore`의 위치 데이터는 **60Hz로 갱신**되므로 React 구독 대상이 아니다. Game Engine이 `getState()`로 직접 읽는다
 - React 컴포넌트는 선택자(selector)로 필요한 최소 조각만 구독
 - **서버 원본 목록**(DM 대화 목록, 그룹 목록, 메시지 히스토리, 프로필)은 스토어가 아니라 **TanStack Query 캐시**에만 둔다. SSE 수신 시 `setQueryData`로 캐시를 갱신하고, `chatStore`는 캐시에 없는 휘발성·UI 상태만 가진다 (이중 저장 금지)
+- 근접 대화 로그 항목(`PublicLogEntry`, `domain/view.ts`)은 발화 시점 닉네임을 함께 저장한다. 공개 대화는 히스토리 API가 없고 발신자가 맵을 떠날 수 있어 사용자 캐시로 되찾을 수 없기 때문이다 (DOMAIN 9 "sender는 사용자 캐시로"의 예외, 휘발성 로그 한정)
+- 내 공개 메시지 확정: `POST /chat/public` 201과 SSE `chat.public` 중 **먼저 온 쪽이 확정**한다. 로그는 메시지 id로 중복을 제거하고, SSE가 먼저 오면 NFC 정규화한 본문이 같은 가장 오래된 `sending` 항목을 해소한다
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 
 ## 8. 디렉토리 구조
@@ -213,7 +223,7 @@ src/
 
 ## 9. Mock / 개발 환경
 
-- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 위치·근접 판정이 필요한 `POST /chat/public`은 7단계에서 Express로 옮긴다
+- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 위치·근접 판정이 필요한 `POST /chat/public`도 Express가 담당한다(7단계, MSW 32 + Express 5). Express는 서버가 인정한 발신자 위치 기준으로 반경 판정 후 `chat.public`을 방송하고, 가짜 접속자 발화(`MOCK_CHATTER_MS`)와 개발용 `POST /__mock/say`도 같은 판정을 거친다
 - **emit 브리지**: 상태는 MSW에 있지만 SSE 방송이 필요한 엔드포인트(`PATCH /me` → `presence.updated`, 이후 DM·그룹 메시지·공지)는 MSW 핸들러가 Express의 `POST /__mock/emit`으로 방송을 위임한다 (`src/mocks/bridge.ts`, `/__mock` 접두도 proxy·통과 목록에 포함). Express는 `presence.updated` 페이로드를 자기 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다. 따라서 **`PATCH /me`는 MSW에 남긴다** (2026-09-30 판단, 8단계 프로필 카드에서도 유지)
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
@@ -242,3 +252,4 @@ src/
 | 2026-09-30 | 1.5: 자산 규격은 GRAPHICS.md(2.1·2.3 참조 추가). 닉네임 렌더는 12단계에서 Canvas fillText → DOM 오버레이로 확정 |
 | 2026-09-30 | 1.6: 2.5 뷰포트 보장 영역(데스크톱 20×15 / 모바일 `(2r+1)²`, 레이아웃이 확보). 9장 `PATCH /me`는 MSW 유지 + emit 브리지로 `presence.updated` 위임, `/__mock` proxy |
 | 2026-09-30 | 1.7 (결정 리포트 3·4·5 사용자 승인): 부팅 refresh 401은 허용(힌트 쿠키 없음), SSE 연결 수명은 세션(로그인·복구 → 로그아웃), 캔버스 백킹 스토어는 CSS px × DPR |
+| 2026-09-30 | 1.8: 7단계 설계 — 말풍선은 사용자당 1개·닉네임 위에 쌓음(GRAPHICS 확인 요청)·렌더 후 콜백으로 위치 갱신, 캐릭터 좌표 정수 스냅, 채팅 패널 분할 배치, Enter/IME/Esc 포커스 규칙, chatStore 구조와 내 메시지 확정 규칙, `chat.public` Express 이관. 3.1 경로 탐색 파일 위치 정정 |
