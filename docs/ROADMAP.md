@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.6 (2026-09-30, 5단계 콘솔 조건 문구 정정)
+> 문서 버전: 1.7 (2026-09-30, 픽셀 폰트 자산 동봉 완료)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -188,7 +188,8 @@
 ### 7~12단계 (각 단계 착수 전에 3~6단계 형식으로 상세화)
 
 - 7단계: 근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼
-    - 상세화 시 명시: 말풍선·링크 버튼 CSS는 **GRAPHICS 5.1~5.2** 기준. 픽셀 웹폰트를 `src/assets/fonts/`에 동봉하고 라이선스 파일을 함께 둔다. 폰트 채택 전 OFL 원문 확인. 폰트 크기는 기본 px × 줌 배율만
+    - 상세화 시 명시: 말풍선·링크 버튼 CSS는 **GRAPHICS 5.1~5.2** 기준. 폰트 크기는 em(12px) × 줌 배율만
+    - ✅ 픽셀 웹폰트 동봉 완료 (2026-09-30): `src/assets/fonts/PixelKo.woff2` = Galmuri11 부분집합·개명본(OFL 1.1, 약 156 kB), `OFL-Galmuri.txt`, `src/assets/LICENSES.md`. 빌드 `scripts/fonts/build-pixelko.sh`, 검수 `scripts/fonts/check-font.py`. `index.css`에 `@font-face`·`--pixel-font-em` 등록, E2E가 `document.fonts.check` 확인
     - `POST /chat/public`은 근접 판정 브로드캐스트를 위해 Express mock으로 이관 (ARCHITECTURE 9장)
     - 완료 조건에 추가: 뷰포트 390×844(모바일)에서 반경 5의 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800(데스크톱)에서 20×15 타일 이상 표시 — Playwright `viewport` 옵션으로 검증 (`domain/viewport.ts`, ARCHITECTURE 2.5)
 - 8단계: 프로필 카드, DM 패널, 회수
@@ -219,6 +220,7 @@
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.7: 폰트 추천안(Galmuri11 부분집합 → PixelKo) 사용자 채택, 자산·빌드 스크립트·LICENSES 동봉 |
 | 2026-09-30 | 1.6: 결정 리포트 3 반영 — 5단계 완료 조건 "콘솔 에러 0건"을 앱 에러 기준으로 정정 |
 | 2026-09-30 | 1.5 (handoff 2026-09-30-avatar-viewport): 7단계 완료 조건에 뷰포트 보장(모바일 11×11·데스크톱 20×15) 추가, 12단계 atlas `mirror` 예약 검수. `ServerConfig.avatarIds`·`PATCH /me` 검증 표를 코드에 반영 |
 

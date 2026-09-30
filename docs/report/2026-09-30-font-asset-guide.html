@@ -25,6 +25,8 @@ ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--acc
 <p class="meta">devple-ai-commu · 2026-09-30 · 작성: Claude Code · 대상: GRAPHICS 5.1(폰트)·5.2(말풍선)·5.3(닉네임), ROADMAP 7단계 · 실측: npm 패키지 다운로드 후 fontTools로 글리프 수 확인</p>
 <p><strong>결론.</strong> 후보 두 종 모두 SIL OFL 1.1이고 현대 한글 11,172자를 전부 갖고 있어 어느 쪽이든 쓸 수 있어요. 말풍선·닉네임 크기(2x 줌 기준)와 파일 크기를 고려하면 <strong>Galmuri11을 한글·라틴·문장부호만 남겨 부분집합으로 만들고 내부 이름을 바꿔 동봉</strong>하는 안을 추천해요. 이 결정은 GRAPHICS 5.1(chat 담당)에 기록돼야 하므로 <code>docs/handoff/to-chat/</code>에 요청을 남겼어요. 사용자가 할 일은 <strong>폰트 선택 1가지</strong>뿐이고, 파일 준비는 아래 절차대로 Claude Code가 7단계에서 수행할 수 있어요.</p>
 
+<div class="card"><strong>2026-09-30 결정.</strong> 사용자가 추천안(Galmuri11 부분집합 → <code>PixelKo</code>)을 채택했어요. 3장 절차대로 <code>scripts/fonts/build-pixelko.sh</code>가 <code>src/assets/fonts/PixelKo.woff2</code>(약 156 kB, 한글 11,172자·ASCII 95자, 검수 통과)와 <code>OFL-Galmuri.txt</code>를 만들었고, <code>src/assets/LICENSES.md</code>·<code>index.css</code>(@font-face, <code>--pixel-font-em: 12px</code>)에 반영했어요. GRAPHICS 5.1 기록은 chat에 요청했어요.</div>
+
 <h2>1. 후보 실측</h2>
 <table><tr><th>항목</th><th>Galmuri11 (galmuri 2.40.3)</th><th>Neo둥근모 (@kfonts/neodgm 0.5.0)</th></tr>
 <tr><td>라이선스</td><td>SIL OFL 1.1, <strong>Reserved Font Name "Galmuri"</strong> (dist/LICENSE.txt·galmuri.css 확인)</td><td>SIL OFL 1.1 (GitHub·공식 사이트). npm 패키지에는 라이선스 파일이 없어 저장소의 OFL 원문을 함께 동봉해야 함. Reserved Font Name 선언 여부 미확인</td></tr>
