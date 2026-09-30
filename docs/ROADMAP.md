@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.15 (2026-09-30, 11단계 상세화)
+> 문서 버전: 1.16 (2026-09-30, 11단계 완료)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -263,7 +263,7 @@ PRD 5.2·5.9, ARCHITECTURE 3.5·4.1·4.2·6, API_CONTRACT 2.2(`PUT /me/presence`
 - [x] 단위: 자리비움 추적(만료 → away 1회, 입력 → online 1회, 입력마다 타이머를 다시 걸지 않음, 실패 후 재시도, 중지 후 무반응), SseClient 60초 초과 재연결만 `onResync`, resync(월드 교체·목록 무효화·스레드 reset·single-flight), `sync.required`·`system.suspended`·`403 USER_SUSPENDED` → 세션 종료, 배지·프로필 카드 자리비움 표시
 - [x] E2E: 입력 없이 두면 away(Express Presence·배지) → 키 입력으로 online, `sync.required` → 조용히 바뀐 DM 목록·월드를 다시 받음, `suspendMe` → 로그인 화면 + 안내 + 재연결 없음(열린 EventSource 0)·다시 로그인해도 정지 안내
 
-### 11단계: 운영자 콘솔 + 공지 배너 `[ ]`
+### 11단계: 운영자 콘솔 + 공지 배너 `[x]`
 
 PRD 5.9·5.1(6), DOMAIN 3.4·6·7, API_CONTRACT 2.8·3.3(`system.notice`).
 
@@ -279,8 +279,8 @@ PRD 5.9·5.1(6), DOMAIN 3.4·6·7, API_CONTRACT 2.8·3.3(`system.notice`).
 - Mock: 공지 → emit 브리지로 `system.notice`, 정지 → `presence.left`(Express가 월드에서 제거 — 정지된 사용자는 SSE가 끊기므로), 시드 가입 신청 추가(대기 2·승인 1·거절 1)
 
 **완료 조건** — 검증 자산: `e2e/phase2-admin.spec.ts`, 단위(`src/domain/admin.test.ts`, `src/features/admin/**/*.test.tsx`, `src/app/RequireAuth.test.tsx`, `src/mocks/handlers/admin.test.ts`)
-- [ ] 단위: 거절 사유 검증, 운영자 가드(비운영자 → 월드), 가입 신청(승인·거절 사유 필수·409 안내), 회원(본인 정지 버튼 없음·확인 후 정지·해제·재발급), 공지(빈 본문·길이 초과 막기, 201 반영), `system.notice` → 배너·닫기, Mock 공지 방송·정지 시 presence.left
-- [ ] E2E: 월드 → 운영자 콘솔 → 대기 신청 승인(회원 목록에 나타남)·거절(사유 없으면 막힘, 거절 필터에 사유), 회원 정지 → 월드에서 사라짐 → 해제, 키 재발급 확인, 공지 발송 → 콘솔·월드에 배너 → 닫기
+- [x] 단위: 거절 사유 검증, 운영자 가드(비운영자 → 월드), 가입 신청(승인·거절 사유 필수·409 안내), 회원(본인 정지 버튼 없음·확인 후 정지·해제·재발급), 공지(빈 본문·길이 초과 막기, 201 반영), `system.notice` → 배너·닫기, Mock 공지 방송·정지 시 presence.left
+- [x] E2E: 월드 → 운영자 콘솔 → 대기 신청 승인(회원 목록에 나타남)·거절(사유 없으면 막힘, 거절 필터에 사유), 회원 정지 → 월드에서 사라짐 → 해제, 키 재발급 확인, 공지 발송 → 콘솔·월드에 배너 → 닫기
 
 ### 12a~12b단계 (각 단계 착수 전에 3~11단계 형식으로 상세화)
 
@@ -314,6 +314,7 @@ PRD 5.9·5.1(6), DOMAIN 3.4·6·7, API_CONTRACT 2.8·3.3(`system.notice`).
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.16: 11단계 완료 — 단위 363건·domain 100%·E2E 26건(반복 130회 무실패). 6단계 이동 E2E가 가짜 접속자 무작위 이동으로 가끔 실패(104회 중 2회)하던 것을 `/__mock/freeze-all`로 결정적으로. 가입 신청 화면은 결정 대기 |
 | 2026-09-30 | 1.15: 11단계 상세화 — `/admin` 운영자 가드, 가입 신청·회원·공지 탭, 거절 사유 검증, 공지 배너(`system.notice`), Mock 공지 방송·정지 시 presence.left. **가입 신청 화면(PRD 5.1)은 어느 단계에도 없어 결정 요청**(리포트) |
 | 2026-09-30 | 1.14: 10단계 완료 — 단위 341건·domain 100%·E2E 23건(2회 연속). 재로그인 시 정지 안내와 폼 오류가 겹치던 것을 안내 지우기로 정리 |
 | 2026-09-30 | 1.13: 10단계 상세화 — 자리비움 추적(마지막 입력 시각 방식), 재동기화(single-flight, 스레드는 최신 페이지만), 60초 초과 재연결 감지, 정지 처리(`endSession('suspended')`, 훅 주입), Mock 정지·DEV 훅 |
