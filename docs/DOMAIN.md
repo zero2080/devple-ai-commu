@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 1.4 (2026-09-30, ServerConfig.avatarIds 추가)
+> 문서 버전: 1.5 (2026-09-30, 안 읽음 수 정의 — 내 메시지 제외)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -214,6 +214,7 @@ interface DmMessage extends MessageBase {
 ```
 - DM은 **상대 userId만 알면 누구에게나** 가능 (친구 관계 없음). 프론트는 캐릭터 클릭 또는 닉네임 검색으로 userId를 얻음
 - 첫 메시지 전송 시 서버가 DmConversation을 자동 생성 (`POST /dm/{userId}/messages`)
+- 안 읽음 수(`unreadCount`) = **상대가 보낸** 메시지 중 `readAt == null`인 것의 수. 내가 보낸 메시지는 세지 않는다 (`readAt`은 수신자가 읽은 시각이므로 내 메시지의 `readAt`은 상대의 읽음 여부다)
 - 수신 시 프론트 판정: 발신자가 내 근접 범위 안이면 말풍선(DM 스타일) + 패널, 밖이면 패널만
 - **삭제 불가.** 단, 본인 메시지이고 상대가 아직 읽지 않았으면(`readAt == null`) **회수** 가능 → 서버에서 실제 제거, 상대 화면에서도 제거
 
@@ -242,7 +243,7 @@ interface GroupMessage extends MessageBase {
 - `owner`만 초대·강퇴·해산. owner가 나가면 가장 오래된 멤버가 승계
 - 그룹 메시지는 **누구도 수정·삭제 불가** (owner 포함)
 - 위치 무관 전달. 그룹 메시지는 말풍선을 띄우지 않음
-- 안 읽음 수 = `lastReadMessageId` 이후 메시지 수
+- 안 읽음 수 = `lastReadMessageId` 이후 메시지 수. 서버는 그룹 메시지를 받으면 **발신자의 `lastReadMessageId`를 그 메시지로 옮긴다** — 따라서 내 메시지는 안 읽음에 세지 않는다 (DM과 같은 결과)
 
 ### 5.5 Message 유니온
 ```ts
@@ -360,3 +361,4 @@ interface GroupUpdatedEvent extends Group {
 | 2026-09-29 | 1.2: 9장 합성 타입 신설 (ROADMAP 3단계 선행 결정) |
 | 2026-09-30 | 1.3: `MapData.tileset` 추가, `avatarId` 형식 `char_NN`·서버 검증 명시, 자산 규격은 GRAPHICS.md 참조 |
 | 2026-09-30 | 1.4: `ServerConfig.avatarIds` 추가 — 아바타 목록 원천은 서버 (Claude Code 결정 요청 B). 승인 시 목록 중 배정 |
+| 2026-09-30 | 1.5: 안 읽음 수 정의 — 그룹은 전송 시 발신자 `lastReadMessageId` 자동 갱신(Claude Code 제안), DM은 상대 메시지 중 `readAt == null`. 두 경우 모두 내 메시지 제외 |

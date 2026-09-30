@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.5 (2026-09-30, 응답 미정의 엔드포인트 명시·그룹 이름 검증·group.removed 'left')
+> 문서 버전: 1.6 (2026-09-30, 목록 정렬·그룹 전송 시 발신자 읽음 갱신)
 > 상태: 확정
-> 기준: DOMAIN.md 1.4, ARCHITECTURE.md 1.8
+> 기준: DOMAIN.md 1.5, ARCHITECTURE.md 1.12
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -177,7 +177,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | POST | `/dm/messages/{messageId}/recall` | 🔒 | 내 메시지 회수 (상대 미열람 시에만) |
 | POST | `/dm/{userId}/read` | 🔒 | 읽음 처리 |
 
-**GET /dm** → `200 { "items": DmConversationWithPeer[], "nextCursor" }` (DOMAIN 9장)
+**GET /dm** → `200 { "items": DmConversationWithPeer[], "nextCursor" }` (DOMAIN 9장). 정렬: `updatedAt` 내림차순 (최근 활동 먼저)
 
 **GET /dm/{userId}/messages?cursor=&limit=50** → `200 { "items": DmMessage[], "nextCursor" }` — 최신순, `cursor`는 이전 페이지의 가장 오래된 messageId
 
@@ -207,7 +207,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | POST | `/groups/{groupId}/messages` | 🔒 멤버 | 전송 |
 | POST | `/groups/{groupId}/read` | 🔒 멤버 | 읽음 처리 `{ lastMessageId }` |
 
-**GET /groups** → `200 { "items": GroupListItem[] }` (DOMAIN 9장)
+**GET /groups** → `200 { "items": GroupListItem[] }` (DOMAIN 9장). 정렬: 최근 활동 먼저 — `lastMessage.createdAt`, 메시지가 없으면 `createdAt` 기준 내림차순
 **POST /groups** — body `{ "name" }` → `201 Group`
 - `name` 2~20자(코드 포인트) 위반 → `400 VALIDATION_FAILED`, `details.fields.name: 'length'` (PATCH도 동일)
 **GET /groups/{id}** → `200 GroupDetail` = `{ group: Group, members: GroupMemberWithUser[] }`
@@ -222,6 +222,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 **GET /groups/{id}/messages?cursor=&limit=50** → DM과 동일 구조
 **POST /groups/{id}/read** — body `{ "lastMessageId" }` → `204` (`GroupMember.lastReadMessageId` 갱신, 이벤트 없음)
 **POST /groups/{id}/messages** — body `{ "content" }` → `201 GroupMessage` (전 멤버에게 `chat.group`)
+- 서버는 발신자의 `lastReadMessageId`를 새 메시지로 갱신한다 (내 메시지는 안 읽음에 세지 않음, DOMAIN 5.4)
 
 ### 2.8 운영자
 
@@ -349,6 +350,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-30 | 1.3: 하트비트를 SSE 주석에서 `system.heartbeat` 이벤트(15초, `{ serverTime }`, 버퍼 제외)로 변경 — EventSource가 주석을 관찰할 수 없어 30초 무수신 감시가 동작하지 않았음. 이벤트 17종 |
 | 2026-09-30 | 1.4: `PATCH /me` 검증 실패 응답 명시(`details.fields.avatarId: 'unknown'` 등), 성공 시 `presence.updated` 발송 명시. `ServerConfig.avatarIds`는 DOMAIN 1.4 (로그인·`GET /me` 응답의 `config`에 포함) |
 | 2026-09-30 | 1.5 (결정 리포트 7번): 응답 미정의 엔드포인트 명시 — `POST /auth/logout` 204, `PATCH /groups/{id}` 200 Group, `DELETE /groups/{id}` 204, `DELETE /groups/{id}/members/{userId}` 204, `reject` 204(reason 필수), `suspend`·`unsuspend` 204(멱등), `POST /admin/notices` 201 Notice. 그룹 이름 검증 응답, 초대 시 기존 멤버 `group.updated`, `group.removed`에 `'left'` 추가(다중 탭) |
+| 2026-09-30 | 1.6 (Claude Code 결정 요청): 그룹 메시지 전송 시 발신자 `lastReadMessageId` 갱신, `GET /groups` 정렬(최근 활동 먼저, 안 A), `GET /dm` 정렬 기준 `updatedAt` 명시 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
