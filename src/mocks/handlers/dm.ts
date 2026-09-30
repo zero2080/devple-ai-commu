@@ -16,34 +16,22 @@ import {
   scheduleBot,
 } from '../dmSim.ts';
 import { nextId, state } from '../state.ts';
-import { apiError, noContent, page, param, readJson, requireAuth, str, url } from './support.ts';
+import {
+  apiError,
+  botDelayMs,
+  cursorPage,
+  noContent,
+  page,
+  param,
+  readJson,
+  requireAuth,
+  str,
+  url,
+} from './support.ts';
 
 function peerOf(conversation: DmConversation) {
   const peerId = conversation.participantIds.find((id) => id !== state.me.id) ?? state.me.id;
   return state.users.find((u) => u.id === peerId) ?? meAsSender();
-}
-
-const DEFAULT_PAGE_LIMIT = 50;
-/** 가짜 상대 봇 기본 지연 (ms). VITE_MOCK_DM_BOT_MS=0이면 끔 (E2E) */
-const DEFAULT_BOT_MS = 5000;
-const MAX_PAGE_LIMIT = 100;
-
-/** 커서 페이지네이션 (API_CONTRACT 2.6): 최신순, cursor = 이전 페이지의 가장 오래된 messageId */
-function pageOf(messages: DmMessage[], cursor: string | null, limitParam: string | null) {
-  const limit = Math.min(
-    Math.max(Number(limitParam ?? DEFAULT_PAGE_LIMIT) || DEFAULT_PAGE_LIMIT, 1),
-    MAX_PAGE_LIMIT,
-  );
-  const start = cursor === null ? 0 : messages.findIndex((m) => m.id === cursor) + 1;
-  if (cursor !== null && start === 0) {
-    return { items: [], nextCursor: null }; // 모르는 커서
-  }
-  const items = messages.slice(start, start + limit);
-  const last = items.at(-1);
-  return {
-    items,
-    nextCursor: start + limit < messages.length && last !== undefined ? last.id : null,
-  };
 }
 
 export const dmHandlers = [
@@ -62,7 +50,7 @@ export const dmHandlers = [
     const conversation = conversationWith(param(params, 'userId'));
     const query = new URL(request.url).searchParams;
     const messages = conversation === undefined ? [] : messagesOf(conversation.id);
-    return HttpResponse.json(pageOf(messages, query.get('cursor'), query.get('limit')));
+    return HttpResponse.json(cursorPage(messages, query.get('cursor'), query.get('limit')));
   }),
 
   http.post(url(ENDPOINTS.sendDm), async ({ request, params }) => {
@@ -97,7 +85,7 @@ export const dmHandlers = [
     conversation.updatedAt = now;
     // 양쪽에 chat.dm (API_CONTRACT 2.6). Mock에서 상대는 가짜라 연결이 없고, 내 에코(다중 탭)만 실제로 받는다
     void emitViaExpress('chat.dm', dmEvent(message, meAsSender(), userId));
-    scheduleBot(userId, Number(import.meta.env.VITE_MOCK_DM_BOT_MS ?? DEFAULT_BOT_MS));
+    scheduleBot(userId, botDelayMs());
     return HttpResponse.json(message, { status: 201 });
   }),
 

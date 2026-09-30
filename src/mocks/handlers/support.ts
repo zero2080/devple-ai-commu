@@ -80,3 +80,39 @@ export function num(body: Record<string, unknown>, key: string): number | undefi
 export function page<T>(items: T[]): { items: T[]; nextCursor: null } {
   return { items, nextCursor: null };
 }
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
+
+/**
+ * 메시지 히스토리 커서 페이지네이션 (API_CONTRACT 2.6·2.7): messages는 최신순,
+ * cursor = 이전 페이지의 가장 오래된 id. 모르는 커서면 빈 페이지
+ */
+export function cursorPage<T extends { id: string }>(
+  messages: readonly T[],
+  cursor: string | null,
+  limitParam: string | null,
+): { items: T[]; nextCursor: string | null } {
+  const limit = Math.min(
+    Math.max(Number(limitParam ?? DEFAULT_PAGE_LIMIT) || DEFAULT_PAGE_LIMIT, 1),
+    MAX_PAGE_LIMIT,
+  );
+  const start = cursor === null ? 0 : messages.findIndex((m) => m.id === cursor) + 1;
+  if (cursor !== null && start === 0) {
+    return { items: [], nextCursor: null };
+  }
+  const items = messages.slice(start, start + limit);
+  const last = items.at(-1);
+  return {
+    items,
+    nextCursor: start + limit < messages.length && last !== undefined ? last.id : null,
+  };
+}
+
+/** 가짜 상대 봇 기본 지연 (ms) */
+const DEFAULT_BOT_MS = 5000;
+
+/** 가짜 상대 봇 지연 (DM·그룹 공통). VITE_MOCK_BOT_MS=0이면 끔 (E2E) */
+export function botDelayMs(): number {
+  return Number(import.meta.env.VITE_MOCK_BOT_MS ?? DEFAULT_BOT_MS);
+}

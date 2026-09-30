@@ -1,31 +1,38 @@
-// API_CONTRACT 2.7 그룹
+// API_CONTRACT 2.7 그룹. 상태는 MSW, SSE(chat.group·group.*)는 emit 브리지로 방송 (ARCHITECTURE 9장)
 import { http, HttpResponse } from 'msw';
 
 import type { Group, GroupListItem, GroupMember, GroupMessage } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
+import { emitViaExpress } from '../bridge.ts';
 import { SERVER_CONFIG } from '../data/config.ts';
 import { contentError, extractLinks } from '../data/messages.ts';
+import { meAsSender } from '../dmSim.ts';
+import {
+  emitGroupUpdated,
+  groupMembersOf,
+  groupMessagesOf,
+  groupUserOf,
+  membersWithUser,
+  myMembership,
+  scheduleGroupBot,
+} from '../groupSim.ts';
 import { nextId, state } from '../state.ts';
-import { apiError, noContent, page, param, readJson, requireAuth, str, url } from './support.ts';
-
-function membersOf(groupId: string): GroupMember[] {
-  return state.groupMembers.filter((m) => m.groupId === groupId);
-}
-
-function messagesOf(groupId: string): GroupMessage[] {
-  return state.groupMessages
-    .filter((m) => m.groupId === groupId)
-    .sort((a, b) => b.createdAt - a.createdAt);
-}
-
-function myMembership(groupId: string): GroupMember | undefined {
-  return state.groupMembers.find((m) => m.groupId === groupId && m.userId === state.me.id);
-}
+import {
+  apiError,
+  botDelayMs,
+  cursorPage,
+  noContent,
+  param,
+  readJson,
+  requireAuth,
+  str,
+  url,
+} from './support.ts';
 
 function listItem(group: Group): GroupListItem {
   const membership = myMembership(group.id);
-  const messages = messagesOf(group.id); // 최신순
+  const messages = groupMessagesOf(group.id); // 최신순
   const lastReadIndex =
     membership?.lastReadMessageId === undefined
       ? messages.length
@@ -37,10 +44,6 @@ function listItem(group: Group): GroupListItem {
     : { ...group, unreadCount, lastMessage: last };
 }
 
-function userOf(userId: string) {
-  return userId === state.me.id ? state.me : state.users.find((u) => u.id === userId);
-}
-
 function requireGroup(groupId: string): Group | Response {
   const group = state.groups.find((g) => g.id === groupId);
   return group ?? apiError(404, 'NOT_FOUND', 'group not found', { resource: 'group' });
@@ -50,6 +53,14 @@ function deleteGroup(groupId: string): void {
   state.groups = state.groups.filter((g) => g.id !== groupId);
   state.groupMembers = state.groupMembers.filter((m) => m.groupId !== groupId);
   state.groupMessages = state.groupMessages.filter((m) => m.groupId !== groupId);
+}
+
+/** 이름 2~20 코드 포인트 (API_CONTRACT 2.7). 위반이면 400 응답 */
+function nameError(name: string): Response | null {
+  const length = Array.from(name).length;
+  return length < 2 || length > 20
+    ? apiError(400, 'VALIDATION_FAILED', 'invalid fields', { fields: { name: 'length' } })
+    : null;
 }
 
 export const groupsHandlers = [
@@ -64,12 +75,8 @@ export const groupsHandlers = [
     const denied = requireAuth(request);
     if (denied !== null) return denied;
     const name = str(await readJson(request), 'name') ?? '';
-    const length = Array.from(name).length;
-    if (length < 2 || length > 20) {
-      return apiError(400, 'VALIDATION_FAILED', 'invalid fields', {
-        fields: { name: 'length' },
-      });
-    }
+    const invalid = nameError(name);
+    if (invalid !== null) return invalid;
     const now = Date.now();
     const group: Group = {
       id: nextId('g'),
@@ -93,11 +100,7 @@ export const groupsHandlers = [
     if (denied !== null) return denied;
     const group = requireGroup(param(params, 'groupId'));
     if (group instanceof Response) return group;
-    const members = membersOf(group.id).flatMap((m) => {
-      const user = userOf(m.userId);
-      return user === undefined ? [] : [{ ...m, user }];
-    });
-    return HttpResponse.json({ group, members });
+    return HttpResponse.json({ group, members: membersWithUser(group.id) });
   }),
 
   http.patch(url(ENDPOINTS.renameGroup), async ({ request, params }) => {
@@ -109,13 +112,10 @@ export const groupsHandlers = [
       return apiError(403, 'FORBIDDEN', 'owner only');
     }
     const name = str(await readJson(request), 'name') ?? '';
-    const length = Array.from(name).length;
-    if (length < 2 || length > 20) {
-      return apiError(400, 'VALIDATION_FAILED', 'invalid fields', {
-        fields: { name: 'length' },
-      });
-    }
+    const invalid = nameError(name);
+    if (invalid !== null) return invalid;
     group.name = name;
+    emitGroupUpdated(group); // 전 멤버 (API_CONTRACT 2.7)
     return HttpResponse.json(group);
   }),
 
@@ -128,6 +128,8 @@ export const groupsHandlers = [
       return apiError(403, 'FORBIDDEN', 'owner only');
     }
     deleteGroup(group.id);
+    // 멤버 전원(owner 포함)에게. Mock에서 연결된 건 나뿐이다
+    void emitViaExpress('group.removed', { groupId: group.id, reason: 'dissolved' });
     return noContent();
   }),
 
@@ -140,10 +142,10 @@ export const groupsHandlers = [
       return apiError(403, 'FORBIDDEN', 'owner only');
     }
     const userId = str(await readJson(request), 'userId') ?? '';
-    if (userOf(userId) === undefined) {
+    if (groupUserOf(userId) === undefined) {
       return apiError(404, 'NOT_FOUND', 'user not found', { resource: 'user' });
     }
-    if (membersOf(group.id).some((m) => m.userId === userId)) {
+    if (groupMembersOf(group.id).some((m) => m.userId === userId)) {
       return apiError(409, 'VALIDATION_FAILED', 'already a member');
     }
     if (group.memberCount >= SERVER_CONFIG.maxGroupMembers) {
@@ -152,6 +154,8 @@ export const groupsHandlers = [
     const member: GroupMember = { groupId: group.id, userId, role: 'member', joinedAt: Date.now() };
     state.groupMembers.push(member);
     group.memberCount += 1;
+    // 초대된 사용자에게 group.joined(가짜라 연결 없음), 기존 멤버(나 포함)에게 group.updated
+    emitGroupUpdated(group);
     return HttpResponse.json(member, { status: 201 });
   }),
 
@@ -165,21 +169,26 @@ export const groupsHandlers = [
     if (!isSelf && group.ownerId !== state.me.id) {
       return apiError(403, 'FORBIDDEN', 'owner can kick, members can only leave');
     }
-    const target = membersOf(group.id).find((m) => m.userId === userId);
+    const target = groupMembersOf(group.id).find((m) => m.userId === userId);
     if (target === undefined) {
       return apiError(404, 'NOT_FOUND', 'member not found', { resource: 'member' });
     }
-    state.groupMembers = state.groupMembers.filter(
-      (m) => !(m.groupId === group.id && m.userId === userId),
-    );
+    state.groupMembers = state.groupMembers.filter((m) => m !== target);
     group.memberCount -= 1;
-    const remaining = membersOf(group.id).sort((a, b) => a.joinedAt - b.joinedAt);
+    const remaining = groupMembersOf(group.id).sort((a, b) => a.joinedAt - b.joinedAt);
     const oldest = remaining[0];
     if (oldest === undefined) {
       deleteGroup(group.id);
     } else if (target.role === 'owner') {
       oldest.role = 'owner';
       group.ownerId = oldest.userId;
+    }
+    if (isSelf) {
+      // 나간 본인(모든 탭)에게 left. 남은 멤버의 group.updated는 가짜라 보내지 않는다
+      void emitViaExpress('group.removed', { groupId: group.id, reason: 'left' });
+    } else {
+      // 강퇴 대상(가짜)에게 kicked, 남은 멤버(나 포함)에게 group.updated
+      emitGroupUpdated(group);
     }
     return noContent();
   }),
@@ -192,7 +201,10 @@ export const groupsHandlers = [
     if (myMembership(group.id) === undefined) {
       return apiError(403, 'FORBIDDEN', 'not a member');
     }
-    return HttpResponse.json(page(messagesOf(group.id)));
+    const query = new URL(request.url).searchParams;
+    return HttpResponse.json(
+      cursorPage(groupMessagesOf(group.id), query.get('cursor'), query.get('limit')),
+    );
   }),
 
   http.post(url(ENDPOINTS.sendGroupMessage), async ({ request, params }) => {
@@ -200,7 +212,8 @@ export const groupsHandlers = [
     if (denied !== null) return denied;
     const group = requireGroup(param(params, 'groupId'));
     if (group instanceof Response) return group;
-    if (myMembership(group.id) === undefined) {
+    const membership = myMembership(group.id);
+    if (membership === undefined) {
       return apiError(403, 'FORBIDDEN', 'not a member');
     }
     const content = str(await readJson(request), 'content') ?? '';
@@ -218,6 +231,10 @@ export const groupsHandlers = [
       createdAt: Date.now(),
     };
     state.groupMessages.push(message);
+    // 내 메시지는 안 읽음에 세지 않는다 (to-chat 2026-09-30-group-unread-order 추천안)
+    membership.lastReadMessageId = message.id;
+    void emitViaExpress('chat.group', { ...message, sender: meAsSender() }); // 전 멤버 (나는 에코)
+    scheduleGroupBot(group.id, botDelayMs());
     return HttpResponse.json(message, { status: 201 });
   }),
 

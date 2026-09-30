@@ -16,6 +16,10 @@ interface DevpleMockControls {
   dmFrom: (userId: string, content: string) => string | null;
   readBy: (userId: string) => number;
   seedDm: (userId: string, count: number) => number;
+  groupFrom: (groupId: string, userId: string, content: string) => string | null;
+  inviteMe: (name: string) => string;
+  kickMe: (groupId: string) => boolean;
+  seedGroup: (groupId: string, count: number) => number;
 }
 
 interface Window {

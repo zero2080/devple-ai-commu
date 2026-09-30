@@ -29,7 +29,7 @@ export default defineConfig({
       command: `node_modules/.bin/vite --port ${WEB_PORT} --strictPort`,
       url: `http://localhost:${WEB_PORT}`,
       reuseExistingServer: false,
-      env: { MOCK_SSE_PORT: SSE_PORT, VITE_MOCK: 'true', VITE_MOCK_DM_BOT_MS: '0' },
+      env: { MOCK_SSE_PORT: SSE_PORT, VITE_MOCK: 'true', VITE_MOCK_BOT_MS: '0' },
       timeout: 60_000,
     },
   ],

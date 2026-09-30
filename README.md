@@ -66,4 +66,4 @@ src/
 
 레이어 경계는 `eslint.config.js`가 강제합니다. `game/`은 React를, `domain/`은 같은 폴더 밖의 어떤 것도 import할 수 없습니다.
 
-DM은 브라우저 콘솔의 DEV 트리거로 흉내 낼 수 있습니다: `__devpleMock.dmFrom('u_03', '안녕')`(가짜 상대가 나에게 DM), `__devpleMock.readBy('u_03')`(내 DM을 읽음), `__devpleMock.seedDm('u_05', 60)`(과거 메시지). 내가 DM을 보내면 가짜 상대 봇이 `VITE_MOCK_DM_BOT_MS`(기본 5000, 0이면 끔) 뒤 읽고 짧게 답합니다.
+DM은 브라우저 콘솔의 DEV 트리거로 흉내 낼 수 있습니다: `__devpleMock.dmFrom('u_03', '안녕')`(가짜 상대가 나에게 DM), `__devpleMock.readBy('u_03')`(내 DM을 읽음), `__devpleMock.seedDm('u_05', 60)`(과거 메시지). 그룹도 같은 방식입니다: `__devpleMock.groupFrom('g_01', 'u_01', '안녕')`(가짜 멤버 발화), `__devpleMock.inviteMe('새 모임')`(가짜 사용자가 나를 초대), `__devpleMock.kickMe('g_02')`(나를 강퇴), `__devpleMock.seedGroup('g_01', 60)`(과거 메시지). 내가 DM이나 그룹 메시지를 보내면 가짜 상대 봇이 `VITE_MOCK_BOT_MS`(기본 5000, 0이면 끔, DM·그룹 공통) 뒤 짧게 답합니다(DM은 먼저 읽음 표시).

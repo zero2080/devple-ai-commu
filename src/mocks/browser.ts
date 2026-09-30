@@ -4,6 +4,7 @@ import { setupWorker } from 'msw/browser';
 
 import { EXPRESS_MOCK_PATH_PREFIXES } from './data/config.ts';
 import { readMyMessagesBy, receiveDmFrom, seedDm } from './dmSim.ts';
+import { inviteMe, kickMe, receiveGroupMessage, seedGroup } from './groupSim.ts';
 import { handlers } from './handlers/index.ts';
 
 export const worker = setupWorker(...handlers);
@@ -33,11 +34,18 @@ export function isExpressMockRequest(url: string): boolean {
   return EXPRESS_MOCK_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** DEV 트리거 (ARCHITECTURE 9장): 콘솔이나 E2E에서 가짜 상대의 DM·읽음을 흉내 낸다 */
+/** DEV 트리거 (ARCHITECTURE 9장): 콘솔이나 E2E에서 가짜 상대의 DM·읽음, 가짜 멤버의 그룹 활동을 흉내 낸다 */
 export interface DevpleMockControls {
   dmFrom: (userId: string, content: string) => string | null;
   readBy: (userId: string) => number;
   seedDm: (userId: string, count: number) => number;
+  /** 가짜 멤버가 그룹에 말한다. 멤버가 아니면 null */
+  groupFrom: (groupId: string, userId: string, content: string) => string | null;
+  /** 가짜 사용자가 그룹을 만들고 나를 초대 (group.joined). 그룹 id */
+  inviteMe: (name: string) => string;
+  /** 가짜 owner가 나를 강퇴 (group.removed kicked) */
+  kickMe: (groupId: string) => boolean;
+  seedGroup: (groupId: string, count: number) => number;
 }
 
 declare global {
@@ -52,6 +60,11 @@ export async function startMockWorker(): Promise<void> {
       dmFrom: (userId, content) => receiveDmFrom(userId, content)?.id ?? null,
       readBy: (userId) => readMyMessagesBy(userId),
       seedDm: (userId, count) => seedDm(userId, count),
+      groupFrom: (groupId, userId, content) =>
+        receiveGroupMessage(groupId, userId, content)?.id ?? null,
+      inviteMe: (name) => inviteMe(name),
+      kickMe: (groupId) => kickMe(groupId),
+      seedGroup: (groupId, count) => seedGroup(groupId, count),
     };
   }
   await worker.start({
