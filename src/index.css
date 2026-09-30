@@ -1,5 +1,16 @@
 /* 전역 기본값. 컴포넌트 스타일은 CSS Modules(*.module.css)로 둔다 (CONVENTIONS 1장). */
+
+/* 픽셀 웹폰트 (GRAPHICS 5.1): Galmuri11 부분집합·개명본. 표시 크기는 em(12px) × 정수 줌만 쓴다. 폴백은 시스템 폰트 */
+@font-face {
+  font-family: 'PixelKo';
+  src: url('./assets/fonts/PixelKo.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block; /* swap이면 시스템 폰트가 잠깐 보여 배치가 튄다 */
+}
+
 :root {
+  --pixel-font-em: 12px; /* PixelKo(Galmuri11) em. 말풍선·닉네임 font-size = em × 줌 */
   color-scheme: dark;
   font-family:
     system-ui,

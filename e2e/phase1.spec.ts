@@ -97,6 +97,12 @@ test('로그인 → 월드 진입 → 가짜 접속자 이동 → 강제 끊김 
   await expect(badge).toContainText('접속자 20명');
   await expect(page.getByRole('img', { name: '가상공간 맵' })).toBeVisible();
 
+  // 픽셀 웹폰트 동봉 확인 (GRAPHICS 5.1): 2x 기준 24px로 로드된다
+  expect(
+    await page.evaluate(() => document.fonts.load('24px PixelKo').then((faces) => faces.length)),
+  ).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.fonts.check('24px PixelKo'))).toBe(true);
+
   // 가짜 접속자 20명이 움직이고(리비전 증가), 아무도 겹치지 않으며, 본인은 스폰에 그대로
   const before = await sampleWorld(page);
   await page.waitForTimeout(1500);

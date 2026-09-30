@@ -30,3 +30,6 @@ coverage
 # Playwright
 test-results
 playwright-report
+
+# 폰트 빌드용 Python venv (scripts/fonts)
+.fonttools
