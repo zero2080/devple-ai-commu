@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-import { EXPRESS_MOCK_PATH_PREFIXES } from './src/mocks/data/config';
+import { EXPRESS_MOCK_PATH_PREFIXES } from './src/mocks/data/config.ts';
 
 // Mock SSE 서버 포트. 5174가 점유돼 있으면 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾼다 (sse-server.ts와 공유)
 const SSE_MOCK_ORIGIN = `http://localhost:${process.env.MOCK_SSE_PORT ?? '5174'}`;
