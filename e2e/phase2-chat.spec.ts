@@ -134,6 +134,52 @@ test('반경 안 발화는 받고, 반경 밖 발화는 받지 않으며, 말풍
   await expect(nearEntry).toHaveCount(1);
 });
 
+test('반경 끝(5칸 위) 발화자의 두 줄 말풍선도 캔버스 위로 잘리지 않는다 (1280×800, B안)', async ({
+  page,
+  request,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await login(page);
+  // 가짜 접속자가 걸어가지 않게 멈춘다. 수정 전 측정: 말풍선 상단 -12px (docs/report/2026-09-30-dev-mock-port-fix.html)
+  const placed = await request.post(`${MOCK}/__mock/place`, {
+    data: { userId: 'u_02', x: 20, y: 10, freeze: true },
+  });
+  expect(placed.ok()).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__devple?.worldStore.getState().presences.get('u_02')?.position.y),
+    )
+    .toBe(10);
+  const said = await request.post(`${MOCK}/__mock/say`, {
+    data: { userId: 'u_02', content: '위쪽 끝에서 말하면 말풍선이 보일까요?' },
+  });
+  expect(((await said.json()) as { delivered: boolean }).delivered).toBe(true);
+
+  const bubble = bubbleOf(page, 'u_02');
+  await expect(bubble).toBeVisible();
+  // 발화자는 200ms 보간으로 도착한다. 이동 중 프레임으로 판정하지 않도록, 보간보다 긴 간격의 두 표본이
+  // 같고 말풍선 가로 중앙이 발화자 위에 온 뒤(마지막 위치)에 본다
+  const cam = await camera(page);
+  const speakerX = (20 * TILE + TILE / 2 - cam.originX) * cam.zoom;
+  let previous = '';
+  await expect
+    .poll(
+      async () => {
+        const b = await bubble.boundingBox();
+        const current = b === null ? '' : `${String(b.x)},${String(b.y)}`;
+        const settled =
+          b !== null && current === previous && Math.abs(b.x + b.width / 2 - speakerX) <= cam.zoom;
+        previous = current;
+        return settled;
+      },
+      { intervals: [250] },
+    )
+    .toBe(true);
+  const [b, c] = await Promise.all([bubble.boundingBox(), canvas(page).boundingBox()]);
+  expect(b?.height).toBeGreaterThan(40); // 두 줄
+  expect(b?.y).toBeGreaterThanOrEqual(c?.y ?? 0);
+});
+
 test.describe('뷰포트 보장 (GRAPHICS 1.2, ARCHITECTURE 2.5)', () => {
   test('390×844: 내 주변 11×11 타일이 채팅 패널에 가려지지 않는다', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

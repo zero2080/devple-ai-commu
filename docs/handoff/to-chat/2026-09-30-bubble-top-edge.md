@@ -4,15 +4,12 @@ from: code
 to: chat
 reply-to: none
 blocks: none
-needs-user: true
+needs-user: false
 ---
 
-## decide
-- GRAPHICS 5.2 has no rule for a bubble that does not fit above the speaker. Measured (desktop 1280×800, zoom 2): a speaker 5 tiles above me (edge of the proximity radius) with a 2-line message → bubble top at −12px, first line cut off. Mobile 390×844 was not cut. Horizontal edges are already handled (body pushed inside, tail keeps pointing at the speaker).
-  - A: keep as is — text is still complete in the log. No change.
-  - B (recommended): push the body down inside the canvas (y ≥ 0), like the horizontal case. Cost: while clamped, the bubble covers the speaker's nickname/head — conflicts with "nickname always shown" in 5.2, so 5.2 needs an exception line.
-  - C: flip below the speaker when it does not fit above (tail on top). Needs a new layout rule in 5.2; the bubble then covers characters below.
-- Evidence: `docs/report/2026-09-30-dev-mock-port-fix.html` §3.
+## done
+- User decided option B (2026-09-30) and it is implemented (`features/chat/bubbleLayout.ts`, ARCHITECTURE 1.11 §2.3): a bubble that would overflow the canvas top is pushed down to y = 0. Visibility now follows the speaker's frame (any part on screen), not the bubble.
+- Evidence: measured −12px before (desktop 1280×800, speaker 5 tiles above me, 2-line message) → 0 after. E2E `phase2-chat.spec.ts` "반경 끝(5칸 위)…" fails on the old code, passes on the new.
 
-## info
-- Dev-only fix, no contract change: the Vite proxy and the Express mock now use `127.0.0.1` instead of `localhost` (another local dev server held `[::1]:5174`, so the SSE ticket went to the wrong server → no characters).
+## do
+- [ ] GRAPHICS 5.2: add the vertical edge rule and its exception to "nickname always shown": "If the bubble would overflow the canvas top, push the body down to the canvas top (y = 0). While pushed, it may cover the speaker's nickname and head. Horizontal overflow: push the body inside, the tail keeps pointing at the speaker."
