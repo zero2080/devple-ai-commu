@@ -7,3 +7,7 @@ export const AWAY_TIMEOUT_MS = 5 * 60 * 1000; // 자리비움 판정, ARCHITECTU
 export const ZOOM_LEVELS = [2, 3, 4] as const; // 정수 배율만, ARCHITECTURE 2.1
 export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
 export const DEFAULT_ZOOM: ZoomLevel = 2;
+/** 말풍선 꼬리 끝과 캐릭터 프레임 상단 사이 (닉네임 블록, 월드 px). ARCHITECTURE 2.3 */
+export const BUBBLE_NICKNAME_CLEARANCE_PX = 12;
+/** 말풍선 픽셀 꼬리 높이 (월드 px). 몸통 아래로 3줄 */
+export const BUBBLE_TAIL_PX = 3;

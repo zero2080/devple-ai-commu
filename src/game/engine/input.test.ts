@@ -75,6 +75,20 @@ describe('InputController', () => {
     expect(onDirectionChange).toHaveBeenLastCalledWith('left');
   });
 
+  it('텍스트 입력에 포커스가 들어가면 누른 방향키를 모두 놓는다', () => {
+    const { input, onDirectionChange } = setup();
+    cleanup = () => {
+      input.detach();
+    };
+    key('keydown', 'KeyD');
+    expect(input.heldDirection).toBe('right');
+    const field = document.createElement('input');
+    document.body.append(field);
+    field.focus(); // focusin이 window까지 버블링
+    expect(input.heldDirection).toBeNull();
+    expect(onDirectionChange).toHaveBeenLastCalledWith(null);
+  });
+
   it('창이 포커스를 잃으면 누른 키를 전부 놓는다', () => {
     const { input, onDirectionChange } = setup();
     cleanup = () => {

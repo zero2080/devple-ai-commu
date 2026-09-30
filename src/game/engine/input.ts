@@ -95,6 +95,13 @@ export class InputController {
     }
   };
 
+  /** 텍스트 입력으로 포커스가 옮겨가면 누르고 있던 방향키를 모두 놓는다 (ARCHITECTURE 3.1) */
+  private readonly handleFocusIn = (): void => {
+    if (this.isTextEntryActive()) {
+      this.handleBlur();
+    }
+  };
+
   private readonly handleClick = (event: Event): void => {
     const mouse = event as MouseEvent;
     const rect = this.options.pointerTarget.getBoundingClientRect();
@@ -118,6 +125,7 @@ export class InputController {
     this.options.keyTarget.addEventListener('keydown', this.handleKeyDown);
     this.options.keyTarget.addEventListener('keyup', this.handleKeyUp);
     this.options.keyTarget.addEventListener('blur', this.handleBlur);
+    this.options.keyTarget.addEventListener('focusin', this.handleFocusIn);
     this.options.pointerTarget.addEventListener('click', this.handleClick);
   }
 
@@ -129,6 +137,7 @@ export class InputController {
     this.options.keyTarget.removeEventListener('keydown', this.handleKeyDown);
     this.options.keyTarget.removeEventListener('keyup', this.handleKeyUp);
     this.options.keyTarget.removeEventListener('blur', this.handleBlur);
+    this.options.keyTarget.removeEventListener('focusin', this.handleFocusIn);
     this.options.pointerTarget.removeEventListener('click', this.handleClick);
     this.handleBlur();
   }

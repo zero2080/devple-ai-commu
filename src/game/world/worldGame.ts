@@ -2,7 +2,7 @@
 // 스토어는 직접 import하지 않고 WorldSource로 읽는다 (테스트 용이, 60Hz 읽기는 getState() 경로).
 import type { Direction, MapData, Position, Presence } from '@/domain';
 
-import { TILE_SIZE } from '../constants';
+import { BUBBLE_NICKNAME_CLEARANCE_PX, CHARACTER_HEIGHT_TILES, TILE_SIZE } from '../constants';
 import { LocalPlayer } from './localPlayer';
 import { computeCamera, screenToWorld, type Camera } from '../engine/camera';
 import { GameLoop, type LoopOptions } from '../engine/loop';
@@ -20,12 +20,28 @@ export interface WorldSource {
   zoom: () => number;
 }
 
+/** 렌더 직후 DOM 오버레이(말풍선)가 읽는 프레임 정보. 매 프레임 같은 객체를 재사용한다 */
+export interface WorldFrame {
+  readonly camera: Camera;
+  /** 캔버스 CSS 크기 */
+  readonly viewportWidthPx: number;
+  readonly viewportHeightPx: number;
+  readonly nowMs: number;
+  /**
+   * 말풍선 꼬리 끝(캐릭터 머리 위 닉네임 블록 위)의 캔버스 기준 CSS px를 out에 쓴다.
+   * 그 캐릭터가 없으면 false. 좌표는 정수 (월드 px 정수 × 정수 줌)
+   */
+  anchorOf(userId: string, out: { x: number; y: number }): boolean;
+}
+
 export interface WorldGameOptions {
   canvas: HTMLCanvasElement;
   map: MapData;
   source: WorldSource;
   /** 내 캐릭터가 타일에 도착하거나 방향을 바꿀 때 (배처 push·스토어 갱신) */
   onMyMove?: (position: Position) => void;
+  /** 매 프레임 렌더 직후 (말풍선 위치 갱신) */
+  onRendered?: (frame: WorldFrame) => void;
   now?: () => number;
   loop?: LoopOptions;
   createTilemap?: (map: MapData) => TilemapCache;
@@ -49,6 +65,13 @@ export class WorldGame {
   private heightPx = 0;
   private dpr = 1;
   private lastNow = 0;
+  private readonly onRendered: ((frame: WorldFrame) => void) | undefined;
+  private readonly frame: WorldFrame & {
+    nowMs: number;
+    viewportWidthPx: number;
+    viewportHeightPx: number;
+    camera: Camera;
+  };
 
   constructor(options: WorldGameOptions) {
     this.canvas = options.canvas;
@@ -61,6 +84,16 @@ export class WorldGame {
     this.source = options.source;
     this.now = options.now ?? (() => performance.now());
     this.tilemap = (options.createTilemap ?? createTilemapCache)(options.map);
+    this.onRendered = options.onRendered;
+    const anchorOf = (userId: string, out: { x: number; y: number }): boolean =>
+      this.anchorOf(userId, out);
+    this.frame = {
+      camera: this.camera,
+      viewportWidthPx: 0,
+      viewportHeightPx: 0,
+      nowMs: 0,
+      anchorOf,
+    };
     this.player = new LocalPlayer({
       map: options.map,
       mapId: options.map.id,
@@ -189,6 +222,27 @@ export class WorldGame {
     renderTilemap(ctx, this.tilemap, this.camera);
     this.collectDrawables(nowMs);
     renderCharacters(ctx, this.drawables.values(), this.camera);
+    if (this.onRendered !== undefined) {
+      this.frame.camera = this.camera;
+      this.frame.viewportWidthPx = this.widthPx;
+      this.frame.viewportHeightPx = this.heightPx;
+      this.frame.nowMs = nowMs;
+      this.onRendered(this.frame);
+    }
+  }
+
+  /** 말풍선 꼬리 끝 (ARCHITECTURE 2.3): 캐릭터 프레임 상단에서 닉네임 블록만큼 위, 가로 중앙. 캔버스 기준 CSS px */
+  private anchorOf(userId: string, out: { x: number; y: number }): boolean {
+    const drawable = this.drawables.get(userId);
+    if (drawable === undefined) {
+      return false;
+    }
+    const worldX = Math.round(drawable.pixelX) + TILE_SIZE / 2;
+    const frameTop = Math.round(drawable.pixelY) + TILE_SIZE - TILE_SIZE * CHARACTER_HEIGHT_TILES;
+    const worldY = frameTop - BUBBLE_NICKNAME_CLEARANCE_PX;
+    out.x = (worldX - this.camera.originX) * this.camera.zoom;
+    out.y = (worldY - this.camera.originY) * this.camera.zoom;
+    return true;
   }
 
   private collectDrawables(nowMs: number): void {
