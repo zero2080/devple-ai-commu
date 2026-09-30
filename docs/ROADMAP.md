@@ -207,7 +207,7 @@ PRD 5.4·5.8, ARCHITECTURE 2.3·2.4·2.5·3.1·7, GRAPHICS 5.1·5.2. DM 말풍�
 - [x] E2E: Enter → 입력 → 전송 → 로그와 내 말풍선에 본문·`↗ example.com` 버튼, 입력 중 방향키 무시 → Esc 후 이동, 링크 버튼 → 새 창(`opener` 없음), 반경 안 발화 수신·반경 밖 미수신, 링크 없는 말풍선 만료
 - [x] E2E 뷰포트: 390×844에서 내 주변 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800에서 20×15 타일 이상 표시 (`domain/viewport.ts`)
 
-### 8단계: 프로필 카드 + DM 패널 + 회수 `[ ]`
+### 8단계: 프로필 카드 + DM 패널 + 회수 `[x]`
 
 PRD 5.5·5.7·5.8, ARCHITECTURE 2.3·3.1·5·7·9, DOMAIN 5.3·9, API_CONTRACT 2.3·2.6·3.3.
 
@@ -223,11 +223,11 @@ PRD 5.5·5.7·5.8, ARCHITECTURE 2.3·3.1·5·7·9, DOMAIN 5.3·9, API_CONTRACT 2
 - `src/features/dm/` — 대화 목록(안 읽음 표시) + 닉네임 검색(`GET /users?nickname=`) → 스레드. 스레드는 50개씩 무한 스크롤(위로 스크롤 또는 "이전 메시지" 버튼), 입력·전송, 내 메시지 "읽음" 표시, 미열람이면 "회수"(409면 안내), 스레드가 보이는 동안 받은 메시지 읽음 처리
 - `src/features/chat/ChatPanel` — 탭 `근접` / `DM`(안 읽음 합계는 대화 목록 캐시에서 파생)
 - DM 말풍선 CSS: 공개와 다른 배경(Endesga 32 임시값, 12단계 확정)
-- Mock: MSW DM 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id), 전송·회수 시 emit 브리지로 `chat.dm`·`chat.dm.recalled`. DEV 트리거 `window.__devpleMock`(`dmFrom`·`readBy`·`seedDm`), 가짜 상대 봇(`VITE_MOCK_DM_BOT_MS`, 기본 5000, E2E 0 — 내 DM을 읽고 짧게 답함), Express `POST /__mock/place { userId, x, y }`
+- Mock: MSW DM 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id), 전송·회수 시 emit 브리지로 `chat.dm`·`chat.dm.recalled`. DEV 트리거 `window.__devpleMock`(`dmFrom`·`readBy`·`seedDm`), 가짜 상대 봇(`VITE_MOCK_DM_BOT_MS`, 기본 5000, E2E 0 — 내 DM을 읽고 짧게 답함), Express `POST /__mock/place { userId, x, y, freeze? }`(freeze: 배치한 가짜 접속자를 멈춤, `/__mock/reset`이 해제)
 
-**완료 조건**
-- [ ] 단위: dmCache(목록 갱신·안 읽음·중복 제거·회수·읽음·분해), chatStore `pendingDm`, DM 말풍선 판정, `characterAt`, ProfileCard, DM 스레드(회수 버튼 조건·읽음 표시·409 안내), 탭 안 읽음 합계, MSW DM 페이지네이션
-- [ ] E2E: 캐릭터 클릭 → 프로필 카드 → DM 보내기 → 전송·반경 안이면 DM 말풍선, 반경 밖 상대의 DM은 말풍선 없이 탭 안 읽음 → 열면 읽음 처리, 미열람 회수 → 양쪽 목록에서 사라짐·읽힌 뒤엔 회수 불가, 닉네임 검색 → 스레드, 60개 시드 → 50개 → 위로 스크롤 시 10개 추가
+**완료 조건** — 검증 자산: `e2e/phase2-dm.spec.ts`, 단위(`src/store/dmCache.test.ts`, `src/features/{dm,profile}/**/*.test.tsx`, `src/mocks/handlers/dm.test.ts`)
+- [x] 단위: dmCache(목록 갱신·안 읽음·중복 제거·회수·읽음·분해), chatStore `pendingDm`, DM 말풍선 판정, `characterAt`, ProfileCard, DM 스레드(회수 버튼 조건·읽음 표시·409 안내), 탭 안 읽음 합계, MSW DM 페이지네이션
+- [x] E2E: 캐릭터 클릭 → 프로필 카드 → DM 보내기 → 전송·반경 안이면 DM 말풍선, 반경 밖 상대의 DM은 말풍선 없이 탭 안 읽음 → 열면 읽음 처리, 미열람 회수 → 양쪽 목록에서 사라짐·읽힌 뒤엔 회수 불가, 닉네임 검색 → 스레드, 60개 시드 → 50개 → 위로 스크롤 시 10개 추가
 
 ### 9~12단계 (각 단계 착수 전에 3~8단계 형식으로 상세화)
 
@@ -258,6 +258,7 @@ PRD 5.5·5.7·5.8, ARCHITECTURE 2.3·3.1·5·7·9, DOMAIN 5.3·9, API_CONTRACT 2
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.9: 8단계 완료 — 단위 256건·E2E 13건(2회 연속). 배치 후 가짜 접속자가 걸어가 클릭이 빗나가던 E2E 불안정성을 /__mock/place freeze로 막음 |
 | 2026-09-30 | 1.9: 8단계 상세화 — 프로필 카드, DM 패널(목록·검색·스레드·무한 스크롤·회수·읽음), DM 말풍선 판정, 캐시 분해, Mock 트리거 |
 | 2026-09-30 | 1.8: 7단계 완료 — 단위 209건·E2E 9건 통과. 스크린샷 검토로 모바일 가로 넘침·말풍선 가장자리 잘림 발견·수정 |
 | 2026-09-30 | 1.8: 7단계 상세화 — 말풍선·로그·입력·링크 버튼, chat.public Express 이관, 뷰포트 보장 레이아웃 |
