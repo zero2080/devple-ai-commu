@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.8 (2026-09-30, 7단계 설계 — 말풍선 위치·채팅 패널·포커스·chatStore·chat.public Mock)
+> 문서 버전: 1.9 (2026-09-30, GRAPHICS 1.2 반영 — 말풍선·닉네임 수직 배치 공식, line-height 1)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -54,7 +54,9 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - Canvas가 아닌 **DOM 오버레이**로 렌더 (텍스트 렌더 품질, 이모지, 줄바꿈 처리 때문)
 - 매 프레임 캐릭터의 스크린 좌표를 계산해 `transform: translate()`로 위치 갱신. `WorldGame`이 렌더 직후 콜백으로 카메라와 `anchorOf(userId)`를 넘기고, `SpeechBubbleLayer`가 크기를 먼저 모두 읽은 뒤 transform을 쓴다 (레이아웃 스래싱 방지). 좌표는 정수 CSS px
 - **사용자당 말풍선 1개**: 같은 사람이 다시 말하면 이전 말풍선을 대체한다
-- **위치**: 꼬리 끝이 닉네임 바로 위(캐릭터 프레임 상단 − 닉네임 블록 12 월드 px)를 가리키고, 몸통은 그 위 3 월드 px(꼬리 높이)부터 쌓는다. GRAPHICS 5.2의 "프레임 상단 4px × 줌 위"를 그대로 따르면 머리 위 닉네임과 겹쳐서, 확정 전까지 닉네임 위에 쌓는다 (chat에 확인 요청 `to-chat/2026-09-30-bubble-nickname.md`)
+- **위치** (GRAPHICS 5.2 수직 배치, 확정): 월드 px 기준 × 줌, `top` = 캐릭터 프레임 상단. 닉네임 블록 하단 = `top − 2`, 꼬리 끝 = 닉네임 블록 상단 − 1, 몸통 하단 = 꼬리 끝 − 3. 즉 꼬리 끝 = `top − (2 + 닉네임 line-height + 1)` — 12단계 전 Canvas 플레이스홀더(8px)는 `top − 11`, PixelKo(12px) 전환 후 `top − 15`. 상수 `game/constants.ts`의 `NICKNAME_GAP_PX`·`NICKNAME_LINE_HEIGHT_PX`·`BUBBLE_TAIL_GAP_PX`로 계산한다. 닉네임은 말풍선이 떠 있어도 항상 보인다
+- 겹침 순서: 말풍선끼리는 최근 메시지가 위(`bubbles` 배열 끝 = DOM 뒤), 닉네임끼리는 캐릭터 그리기 순서와 같이 y가 큰 캐릭터가 위
+- 픽셀 폰트 텍스트(말풍선·로그·입력)는 `line-height: 1` (GRAPHICS 5.1)
 - 만료: `expiresAt = Date.now() + bubbleDurationMs(content, hasLinks)`. 레이어가 프레임마다 확인해 지나면 `chatStore.removeBubble`. 포인터가 올라가 있는 말풍선은 지우지 않고, 벗어난 뒤 이미 지났으면 다음 프레임에 지운다
 - 발신자 Presence가 없거나 발화자가 화면 밖이면 말풍선을 숨긴다 (로그에는 남음). 발화자는 보이는데 말풍선이 캔버스 좌우로 넘치면 **몸통만 캔버스 안으로 밀고 꼬리는 발화자를 가리킨다** (`features/chat/bubbleLayout.ts`)
 - 공개 말풍선과 DM 말풍선은 CSS 클래스로 배경색 구분
@@ -253,3 +255,4 @@ src/
 | 2026-09-30 | 1.6: 2.5 뷰포트 보장 영역(데스크톱 20×15 / 모바일 `(2r+1)²`, 레이아웃이 확보). 9장 `PATCH /me`는 MSW 유지 + emit 브리지로 `presence.updated` 위임, `/__mock` proxy |
 | 2026-09-30 | 1.7 (결정 리포트 3·4·5 사용자 승인): 부팅 refresh 401은 허용(힌트 쿠키 없음), SSE 연결 수명은 세션(로그인·복구 → 로그아웃), 캔버스 백킹 스토어는 CSS px × DPR |
 | 2026-09-30 | 1.8: 7단계 설계 — 말풍선은 사용자당 1개·닉네임 위에 쌓음(GRAPHICS 확인 요청)·렌더 후 콜백으로 위치 갱신, 캐릭터 좌표 정수 스냅, 채팅 패널 분할 배치, Enter/IME/Esc 포커스 규칙, chatStore 구조와 내 메시지 확정 규칙, `chat.public` Express 이관. 3.1 경로 탐색 파일 위치 정정 |
+| 2026-09-30 | 1.9: GRAPHICS 1.2 반영 — 말풍선 꼬리 끝 = 프레임 상단 − (2 + 닉네임 line-height + 1)(플레이스홀더 11, PixelKo 15), 겹침 순서, 픽셀 폰트 line-height 1 |
