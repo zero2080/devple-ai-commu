@@ -152,3 +152,51 @@ describe('removeBubble / reset', () => {
     expect(chat().pendingPublic).toEqual([]);
   });
 });
+
+describe('DM 말풍선·pendingDm', () => {
+  it('showBubble은 variant를 지정해 같은 사용자의 말풍선을 대체한다 (공개·DM 공통 1개)', () => {
+    chat().receivePublic(event('m1', 'a', '공개'), 'me', NOW);
+    chat().showBubble({ id: 'dm1', userId: 'a', content: '귓속말', links: [] }, 'dm', NOW);
+    expect(chat().bubbles).toEqual([
+      {
+        id: 'dm1',
+        userId: 'a',
+        content: '귓속말',
+        links: [],
+        variant: 'dm',
+        expiresAt: NOW + 3150,
+      },
+    ]);
+  });
+
+  it('에코가 먼저 오면 같은 상대·같은 본문(NFC)의 가장 오래된 sending만 해소한다', () => {
+    const t1 = chat().addPendingDm('peer', '가나', NOW);
+    const t2 = chat().addPendingDm('peer', '가나', NOW + 1);
+    chat().addPendingDm('other', '가나', NOW + 2);
+    chat().resolvePendingDmByEcho('peer', '\u1100\u1161나');
+    expect(chat().pendingDm.map((p) => p.tempId)).toEqual([t2, expect.stringMatching(/^tmpdm_/)]);
+    chat().removePendingDm(t2);
+    expect(chat().pendingDm.map((p) => p.peerId)).toEqual(['other']);
+    expect(t1).not.toBe(t2);
+  });
+
+  it('실패 → 다시 보내기 → 실패 → 지우기, sending은 지우지 않는다', () => {
+    const t = chat().addPendingDm('peer', '안녕', NOW);
+    chat().dismissPendingDm(t);
+    expect(chat().pendingDm).toHaveLength(1);
+    chat().failPendingDm(t, 'FORBIDDEN');
+    expect(chat().pendingDm[0]).toMatchObject({ status: 'failed', errorCode: 'FORBIDDEN' });
+    chat().markSendingDm(t);
+    expect(chat().pendingDm[0]).toEqual({
+      tempId: t,
+      peerId: 'peer',
+      content: '안녕',
+      status: 'sending',
+      createdAt: NOW,
+    });
+    chat().failPendingDm(t, 'INTERNAL');
+    chat().dismissPendingDm(t);
+    chat().reset();
+    expect(chat().pendingDm).toEqual([]);
+  });
+});

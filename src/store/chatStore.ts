@@ -6,6 +6,7 @@ import {
   bubbleDurationMs,
   sameMessageText,
   type ChatPublicEvent,
+  type PendingDm,
   type PendingPublic,
   type PublicLogEntry,
   type PublicMessage,
@@ -22,6 +23,8 @@ export interface ChatState {
   publicLog: readonly PublicLogEntry[];
   /** 전송 중·실패한 내 공개 메시지 */
   pendingPublic: readonly PendingPublic[];
+  /** 전송 중·실패한 내 DM (상대별). 확정된 DM은 Query 캐시에만 둔다 */
+  pendingDm: readonly PendingDm[];
   /** SSE chat.public 수신. myUserId는 내 전송분 확정에 쓴다 */
   receivePublic: (event: ChatPublicEvent, myUserId: string | null, now: number) => void;
   /** 낙관적 전송 시작. tempId를 돌려준다 */
@@ -39,6 +42,20 @@ export interface ChatState {
   /** 실패한(보내지지 않은) 항목만 지운다. 전송된 메시지는 불변 */
   dismissPending: (tempId: string) => void;
   removeBubble: (messageId: string) => void;
+  /** 말풍선을 띄운다 (DM 등). 같은 사용자의 이전 말풍선을 대체 */
+  showBubble: (
+    message: { id: string; userId: string; content: string; links: string[] },
+    variant: SpeechBubble['variant'],
+    now: number,
+  ) => void;
+  addPendingDm: (peerId: string, content: string, now: number) => string;
+  /** 201 확정 또는 에코로 해소 */
+  removePendingDm: (tempId: string) => void;
+  /** 에코(chat.dm)가 201보다 먼저 오면 같은 상대·같은 본문(NFC)의 가장 오래된 sending을 해소 */
+  resolvePendingDmByEcho: (peerId: string, content: string) => void;
+  failPendingDm: (tempId: string, errorCode: string) => void;
+  markSendingDm: (tempId: string) => void;
+  dismissPendingDm: (tempId: string) => void;
   reset: () => void;
 }
 
@@ -55,16 +72,27 @@ function toLogEntry(message: PublicMessage, senderNickname: string): PublicLogEn
   };
 }
 
-function toBubble(message: PublicMessage, now: number): SpeechBubble {
+function toBubble(
+  message: { id: string; userId: string; content: string; links: string[] },
+  variant: SpeechBubble['variant'],
+  now: number,
+): SpeechBubble {
   return {
     id: message.id,
-    userId: message.senderId,
+    userId: message.userId,
     content: message.content,
     links: message.links,
-    variant: 'public',
+    variant,
     expiresAt: now + bubbleDurationMs(message.content, message.links.length > 0),
   };
 }
+
+const publicBubble = (message: PublicMessage, now: number): SpeechBubble =>
+  toBubble(
+    { id: message.id, userId: message.senderId, content: message.content, links: message.links },
+    'public',
+    now,
+  );
 
 function appendLog(log: readonly PublicLogEntry[], entry: PublicLogEntry): PublicLogEntry[] {
   const next = [...log, entry];
@@ -79,6 +107,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   bubbles: [],
   publicLog: [],
   pendingPublic: [],
+  pendingDm: [],
 
   receivePublic: (event, myUserId, now) => {
     const state = get();
@@ -98,7 +127,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set({
       publicLog: appendLog(state.publicLog, toLogEntry(event, event.sender.nickname)),
       pendingPublic,
-      bubbles: replaceBubble(state.bubbles, toBubble(event, now)),
+      bubbles: replaceBubble(state.bubbles, publicBubble(event, now)),
     });
   },
 
@@ -121,7 +150,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set({
       pendingPublic,
       publicLog: appendLog(state.publicLog, toLogEntry(message, senderNickname)),
-      bubbles: replaceBubble(state.bubbles, toBubble(message, now)),
+      bubbles: replaceBubble(state.bubbles, publicBubble(message, now)),
     });
   },
 
@@ -153,7 +182,63 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set((s) => ({ bubbles: s.bubbles.filter((b) => b.id !== messageId) }));
   },
 
+  showBubble: (message, variant, now) => {
+    set((s) => ({ bubbles: replaceBubble(s.bubbles, toBubble(message, variant, now)) }));
+  },
+
+  addPendingDm: (peerId, content, now) => {
+    tempSeq += 1;
+    const tempId = `tmpdm_${String(now)}_${String(tempSeq)}`;
+    set((s) => ({
+      pendingDm: [...s.pendingDm, { tempId, peerId, content, status: 'sending', createdAt: now }],
+    }));
+    return tempId;
+  },
+
+  removePendingDm: (tempId) => {
+    set((s) => ({ pendingDm: s.pendingDm.filter((p) => p.tempId !== tempId) }));
+  },
+
+  resolvePendingDmByEcho: (peerId, content) => {
+    const match = get().pendingDm.find(
+      (p) => p.peerId === peerId && p.status === 'sending' && sameMessageText(p.content, content),
+    );
+    if (match !== undefined) {
+      set((s) => ({ pendingDm: s.pendingDm.filter((p) => p !== match) }));
+    }
+  },
+
+  failPendingDm: (tempId, errorCode) => {
+    set((s) => ({
+      pendingDm: s.pendingDm.map((p) =>
+        p.tempId === tempId ? { ...p, status: 'failed', errorCode } : p,
+      ),
+    }));
+  },
+
+  markSendingDm: (tempId) => {
+    set((s) => ({
+      pendingDm: s.pendingDm.map((p) =>
+        p.tempId === tempId
+          ? {
+              tempId: p.tempId,
+              peerId: p.peerId,
+              content: p.content,
+              status: 'sending',
+              createdAt: p.createdAt,
+            }
+          : p,
+      ),
+    }));
+  },
+
+  dismissPendingDm: (tempId) => {
+    set((s) => ({
+      pendingDm: s.pendingDm.filter((p) => !(p.tempId === tempId && p.status === 'failed')),
+    }));
+  },
+
   reset: () => {
-    set({ bubbles: [], publicLog: [], pendingPublic: [] });
+    set({ bubbles: [], publicLog: [], pendingPublic: [], pendingDm: [] });
   },
 }));
