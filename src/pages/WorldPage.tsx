@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 import { ChatPanel, SpeechBubbleLayer } from '@/features/chat';
 import { DmPane, useDmUnreadTotal } from '@/features/dm';
+import { GroupPane, useGroupUnreadTotal } from '@/features/group';
 import { ProfileCard } from '@/features/profile';
 import {
   ConnectionBadge,
@@ -17,7 +18,7 @@ import styles from './WorldPage.module.css';
 type CssVars = CSSProperties & Record<`--${string}`, string>;
 
 /**
- * 월드 화면: 캔버스(+말풍선·프로필 카드 오버레이)와 아래 채팅 패널(근접·DM 탭) (ARCHITECTURE 2.5 분할 배치).
+ * 월드 화면: 캔버스(+말풍선·프로필 카드 오버레이)와 아래 채팅 패널(근접·DM·그룹 탭) (ARCHITECTURE 2.5 분할 배치).
  * SSE 연결은 세션 수명(features/auth/session.ts)이 관리한다
  */
 export function WorldPage() {
@@ -25,6 +26,7 @@ export function WorldPage() {
   const zoom = useUiStore((s) => s.zoom);
   const guaranteedHeight = useGuaranteedCanvasHeight();
   const dmUnread = useDmUnreadTotal();
+  const groupUnread = useGroupUnreadTotal();
   const style: CssVars = {
     '--zoom': String(zoom),
     '--guaranteed-canvas-h': `${String(guaranteedHeight)}px`,
@@ -39,7 +41,12 @@ export function WorldPage() {
           <ConnectionBadge />
           <ProfileCard />
         </div>
-        <ChatPanel dmPane={<DmPane />} dmUnread={dmUnread} />
+        <ChatPanel
+          dmPane={<DmPane />}
+          dmUnread={dmUnread}
+          groupPane={<GroupPane />}
+          groupUnread={groupUnread}
+        />
       </main>
     </WorldProvider>
   );

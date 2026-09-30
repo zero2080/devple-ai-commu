@@ -1,0 +1,72 @@
+/* 그룹 탭 전용 배치. 목록·스레드 공통 모양은 shared/ui/panel.module.css. 글자는 em × 줌만 (GRAPHICS 5.1) */
+.home,
+.members {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-family: PixelKo, system-ui, sans-serif;
+  font-size: calc(var(--pixel-font-em) * var(--zoom));
+  line-height: 1;
+  color: var(--panel-fg);
+}
+
+.grow {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.inlineForm {
+  display: flex;
+  gap: calc(2px * var(--zoom));
+  padding: calc(2px * var(--zoom)) calc(4px * var(--zoom));
+}
+
+.inlineForm input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.banner {
+  display: flex;
+  align-items: baseline;
+  gap: calc(4px * var(--zoom));
+  margin: 0;
+  padding: calc(2px * var(--zoom)) calc(4px * var(--zoom));
+  color: #feae34;
+}
+
+.memberRow {
+  display: flex;
+  align-items: baseline;
+  gap: calc(4px * var(--zoom));
+  padding: calc(1px * var(--zoom)) 0;
+}
+
+.ownerTag {
+  padding: 0 calc(1px * var(--zoom));
+  background: #feae34;
+  color: #181425;
+}
+
+.danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(2px * var(--zoom));
+  padding: calc(2px * var(--zoom)) calc(4px * var(--zoom));
+}
+
+.dangerButton {
+  padding: 0 calc(2px * var(--zoom));
+  border: 0;
+  background: #e43b44;
+  color: #181425;
+  font: inherit;
+  cursor: pointer;
+}

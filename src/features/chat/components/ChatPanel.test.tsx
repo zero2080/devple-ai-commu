@@ -13,8 +13,17 @@ beforeEach(() => {
 });
 
 describe('ChatPanel 탭', () => {
-  it('근접 탭이 기본이고 DM 탭에 안 읽음 합계를 보여준다', async () => {
-    render(withWorld(<ChatPanel dmPane={<p>DM 내용</p>} dmUnread={3} />));
+  it('근접 탭이 기본이고 DM·그룹 탭에 안 읽음 합계를 보여준다', async () => {
+    render(
+      withWorld(
+        <ChatPanel
+          dmPane={<p>DM 내용</p>}
+          dmUnread={3}
+          groupPane={<p>그룹 내용</p>}
+          groupUnread={2}
+        />,
+      ),
+    );
     expect(screen.getByRole('tab', { name: '근접' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('log', { name: '근접 대화 기록' })).toBeInTheDocument();
     expect(screen.getByTestId('dm-unread')).toHaveTextContent('3');
@@ -22,10 +31,15 @@ describe('ChatPanel 탭', () => {
     expect(screen.getByRole('tab', { name: /DM/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('DM 내용')).toBeInTheDocument();
     expect(screen.queryByRole('log', { name: '근접 대화 기록' })).toBeNull();
+    expect(screen.getByTestId('group-unread')).toHaveTextContent('2');
+    await userEvent.click(screen.getByRole('tab', { name: /그룹/ }));
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('그룹 내용');
+    expect(screen.getByRole('tab', { name: /그룹/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('안 읽음이 없으면 배지를 그리지 않는다', () => {
-    render(withWorld(<ChatPanel dmPane={null} dmUnread={0} />));
+    render(withWorld(<ChatPanel dmPane={null} dmUnread={0} groupPane={null} groupUnread={0} />));
     expect(screen.queryByTestId('dm-unread')).toBeNull();
+    expect(screen.queryByTestId('group-unread')).toBeNull();
   });
 });
