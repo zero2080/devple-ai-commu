@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.12 (2026-09-30, 아바타 v2 반영 — 12단계를 12a·12b로 분리)
+> 문서 버전: 1.13 (2026-09-30, 10단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -247,9 +247,24 @@ PRD 5.6·5.8, ARCHITECTURE 5·7·9, DOMAIN 5.4·9, API_CONTRACT 2.7·3.3.
 - [x] 단위: groupCache(새 메시지·안 읽음·중복 제거·만든 그룹·updated·removed·joined·분해), 그룹 정렬·owner·이름 검증, 핸들러 4종(말풍선 없음, 에코로 pending 해소, 열린 그룹에서 빠지면 닫고 안내), 목록·만들기, 스레드 읽음 처리 조건, 멤버 화면(owner·멤버별 버튼, GROUP_FULL 안내), 탭 안 읽음 합계, MSW 그룹 페이지네이션·emit
 - [x] E2E: 그룹 만들기 → 스레드 전송(말풍선 없음), 다른 탭에 있을 때 멤버 메시지 → 그룹 탭 안 읽음 → 열면 0, owner 초대(검색) → 인원 +1 → 강퇴 → 인원 −1 → 이름 변경 → 해산 → 목록에서 사라짐, 멤버로 속한 그룹 나가기, 열어 둔 그룹에서 강퇴되면 스레드가 닫히고 안내, 초대받으면(`group.joined`) 목록에 나타남, 60개 시드 → 50개 → 위로 스크롤 시 이전 메시지 추가
 
-### 10~12b단계 (각 단계 착수 전에 3~9단계 형식으로 상세화)
+### 10단계: 자리비움 · 재동기화 · 정지 처리 `[ ]`
 
-- 10단계: 자리비움, 재동기화(`sync.required`), 정지 처리
+PRD 5.2·5.9, ARCHITECTURE 3.5·4.1·4.2·6, API_CONTRACT 2.2(`PUT /me/presence`)·3.3·3.5, DOMAIN 7.
+
+**만들 것**
+- `src/features/realtime/presence.ts` — 자리비움 추적 (ARCHITECTURE 3.5): 키보드·포인터·휠·터치 입력이 `AWAY_TIMEOUT_MS`(5분) 없으면 `PUT /me/presence { state: 'away' }`, 다시 입력하면 `online`. `visibilitychange`로는 바꾸지 않는다. 입력마다 타이머를 다시 걸지 않고 마지막 입력 시각만 기록한다(타이머가 깨어나 남은 시간을 다시 잰다). 요청이 실패하면 상태를 바꾸지 않고 다음 입력·만료 때 다시 보낸다. 세션과 함께 시작·중지 (`session.ts`)
+- 자리비움 표시: 캐릭터 알파 0.5(기존), 연결 배지에 내 자리비움, 프로필 카드 "자리비움". `presence.updated` 반영은 아바타 v2에서 연결 완료
+- `src/transport/sse/resync.ts` — 재동기화 (API_CONTRACT 3.5): `GET /world/{mapId}/presences` → 스냅샷과 같은 경로로 월드 교체, DM·그룹 목록·그룹 상세 무효화, 열린 DM·그룹 스레드는 최신 페이지만 다시 받기(reset). 여러 번 동시에 불려도 한 번만 (single-flight)
+- `sync.required` 핸들러 → 재동기화. `SseClient`: 끊긴 시각부터 다시 열릴 때까지 60초를 넘으면 `onResync` (서버 재전송 버퍼 60초, ARCHITECTURE 4.2)
+- 정지 처리 (DOMAIN 7, API_CONTRACT 3.3): `system.suspended` 수신 또는 REST `403 USER_SUSPENDED` → `endSession('suspended')` — SSE를 재연결 없이 닫고 자리비움 추적 중지, 스토어·캐시 초기화, 로그인 화면에 "정지된 계정이에요" 안내(`authStore.notice`). 연결 방법은 `configureHttp({ onSuspended })`·`connectSse({ onSuspended })` (transport가 features를 모르게)
+- Mock: 로그인은 정지된 나를 `403 USER_SUSPENDED`, refresh는 `401`. DEV 트리거 `__devpleMock.suspendMe()`(MSW 상태 정지 → `system.suspended` 방송 → Express 연결 종료). `sync.required`는 `POST /__mock/emit`. 자리비움 E2E용 DEV 훅 `__devple.setAwayTimeoutMs(ms)`
+
+**완료 조건** — 검증 자산: `e2e/phase2-session.spec.ts`, 단위(`src/features/realtime/presence.test.ts`, `src/transport/sse/resync.test.ts`, `src/transport/sse/client.test.ts`, `src/features/auth/session.test.ts`)
+- [ ] 단위: 자리비움 추적(만료 → away 1회, 입력 → online 1회, 입력마다 타이머를 다시 걸지 않음, 실패 후 재시도, 중지 후 무반응), SseClient 60초 초과 재연결만 `onResync`, resync(월드 교체·목록 무효화·스레드 reset·single-flight), `sync.required`·`system.suspended`·`403 USER_SUSPENDED` → 세션 종료, 배지·프로필 카드 자리비움 표시
+- [ ] E2E: 입력 없이 두면 away(Express Presence·배지) → 키 입력으로 online, `sync.required` → 조용히 바뀐 DM 목록·월드를 다시 받음, `suspendMe` → 로그인 화면 + 안내 + 재연결 없음(열린 EventSource 0)·다시 로그인해도 정지 안내
+
+### 11~12b단계 (각 단계 착수 전에 3~10단계 형식으로 상세화)
+
 - 11단계: 운영자 콘솔
 - 12a단계: 아바타 파이프라인 + 옷장 — 실제 그림 없이 코드가 만든 자리표시 레이어로 끝까지 동작 (GRAPHICS 2장·7.2·8장)
     - 선행 완료(아바타 v2 마이그레이션, 2026-09-30): `Appearance` 타입·검증(`domain/appearance.ts`), zod, Mock `avatarOptions`·시드 외형·`PATCH /me` 검증, 프레임 24×40·몸 박스 판정, 외형 색 플레이스홀더, `palette.json`·`catalog.json` 골격
@@ -281,6 +296,7 @@ PRD 5.6·5.8, ARCHITECTURE 5·7·9, DOMAIN 5.4·9, API_CONTRACT 2.7·3.3.
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.13: 10단계 상세화 — 자리비움 추적(마지막 입력 시각 방식), 재동기화(single-flight, 스레드는 최신 페이지만), 60초 초과 재연결 감지, 정지 처리(`endSession('suspended')`, 훅 주입), Mock 정지·DEV 훅 |
 | 2026-09-30 | 1.12: 아바타 v2 반영(handoff 2026-09-30-avatar-v2) — 12단계를 12a(아바타 파이프라인 + 옷장, 자리표시 레이어)·12b(실제 그림·타일셋)로 분리. 옛 12단계의 atlas·`mirror`·64×128 항목 삭제. 계약 마이그레이션(`avatarId` → `appearance`)은 10단계 전에 완료 |
 | 2026-09-30 | 1.11: 9단계 완료 — 단위 306건·domain 100%·E2E 20건(2회 연속). 인박스(API_CONTRACT 1.6·DOMAIN 1.5) 반영: Mock DM 안 읽음을 메시지에서 계산, `GET /groups` 정렬. 화면 확인으로 멤버 화면 배치·시드 안 읽음·모바일 스레드 헤더 줄바꿈 수정 |
 | 2026-09-30 | 1.10: 9단계 상세화 — 그룹 캐시(목록·상세·스레드), 탭·멤버 화면, 핸들러 4종, Mock emit·DEV 트리거·봇, 선행 리팩터(pendingThread·ThreadView). 내 메시지 안 읽음 제외·목록 정렬은 to-chat 결정 요청 |

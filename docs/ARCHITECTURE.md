@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.14 (2026-09-30, 아바타 v2 — 프레임 24×40·몸 박스 판정·합성 캐시·플레이스홀더·옷장 위치)
+> 문서 버전: 1.15 (2026-09-30, 10단계 설계 — 자리비움·재동기화·정지)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -130,6 +130,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 ### 3.5 자리비움 판정
 - 키보드·마우스·터치 입력이 **5분간** 없으면 `PUT /me/presence { state: 'away' }`, 입력이 다시 들어오면 `online`
 - 탭이 백그라운드로 가도(`visibilitychange`) 즉시 away로 바꾸지 않는다 (채팅 읽기만 하는 사용자 고려). 5분 규칙만 적용
+- 구현 (10단계, `features/realtime/presence.ts`): `window`의 `keydown`·`pointerdown`·`pointermove`·`wheel`·`touchstart`(capture, passive)에서 **마지막 입력 시각만** 기록하고, 타이머 1개가 깨어날 때 남은 시간을 다시 잰다 (입력마다 타이머 재설정 금지 — `pointermove`가 초당 수십 번). away 중 입력이 오면 즉시 `online`. `PUT` 실패 시 상태를 바꾸지 않고 다음 입력·만료에 다시 보낸다. 세션과 함께 시작·중지. 내 자리비움은 연결 배지에, 남의 자리비움은 캐릭터 알파 0.5와 프로필 카드에 보인다 (상태 원천은 `presence.updated`)
 
 ### 3.6 근접 판정 위치
 - 서버가 판정 (공개 메시지 수신 대상 결정). 클라이언트는 UI 표시용(말풍선 여부)으로만 계산
@@ -145,6 +146,8 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - **재연결은 항상 수동**: 티켓이 1회용이라 EventSource의 자동 재연결(같은 URL 재요청)은 401로 실패한다. `onerror` → 기존 EventSource `close()` → `POST /sse/ticket` → 새 EventSource 생성
 - 수동 재연결 시 브라우저는 `Last-Event-ID` 헤더를 보내지 않으므로(자동 재연결 때만 전송, 정확도 높음) 마지막 수신 `id`를 **쿼리 `lastEventId`** 로 넘긴다: `GET /sse?ticket=...&lastEventId=1234`
 - 재연결 백오프: 1s → 2s → 4s → … 최대 30s, 지터 ±20%
+- **재동기화** (10단계, `transport/sse/resync.ts`, API_CONTRACT 3.5): `sync.required` 수신, 또는 끊긴 시각부터 다시 열릴 때까지 **60초 초과**(서버 재전송 버퍼 밖, `SseClient.onResync`)면 실행한다. `GET /world/{mapId}/presences`를 스냅샷과 같은 경로(`applySnapshot`)로 적용하고, DM·그룹 목록·그룹 상세는 무효화, 열린 DM·그룹 스레드는 `resetQueries`로 최신 페이지만 다시 받는다. 동시에 여러 번 불려도 진행 중인 한 번을 공유한다
+- **정지** (10단계): `system.suspended` 직후 서버가 연결을 닫으므로 재연결하지 않는다. `connectSse({ onSuspended })`가 이벤트를 받는 즉시 세션을 끝낸다 (6장)
 
 ### 4.2 이벤트 봉투
 모든 이벤트는 동일한 형태:
@@ -192,6 +195,7 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - 로그인 전(쿠키 없음) 새로고침의 refresh 401은 **정상 동작**이며 브라우저가 리소스 로그로 남긴다. 앱 에러가 아니므로 완료 조건의 "콘솔 에러 0건"에서 제외한다. 세션 힌트 쿠키는 두지 않는다 (2026-09-30 결정 3)
 - Refresh 토큰: httpOnly + Secure + SameSite 쿠키 — 백엔드 구현 필수 사항
 - 로그아웃: `POST /auth/logout` → 쿠키 삭제, SSE 종료, 스토어 초기화
+- **정지** (10단계): SSE `system.suspended` 또는 어떤 REST든 `403 USER_SUSPENDED` → `endSession('suspended')`: SSE를 재연결 없이 닫고 자리비움 추적을 멈춘 뒤 스토어·Query 캐시를 비우고 `authStore.notice = 'suspended'`로 로그인 화면에 안내한다. 서버가 이미 refresh를 무효화했으므로 `POST /auth/logout`은 보내지 않는다. transport는 features를 모르므로 `configureHttp({ onSuspended })`·`connectSse({ onSuspended })`로 주입한다
 
 ## 7. 상태 관리
 
@@ -275,3 +279,4 @@ src/
 | 2026-09-30 | 1.12: 9단계 설계 — 그룹 캐시(목록 그대로·상세 멤버 분해·스레드), 그룹 읽음 처리 조건, uiStore 그룹 탭·`groupNotice`, Mock 그룹 emit·DEV 트리거·봇(`VITE_MOCK_BOT_MS`). 스레드 부품 공용화(`pendingThread`·`ThreadView`·`shared/ui/panel.module.css`) |
 | 2026-09-30 | 1.13: 계약 반영(API_CONTRACT 1.6·DOMAIN 1.5, handoff 2026-09-30-unread-order-edge-color) — `GET /groups` 최근 활동 먼저, 그룹 전송 시 발신자 읽음 포인터 갱신, DM 안 읽음 = 상대 메시지 중 `readAt` 없음. Mock DM 안 읽음은 메시지에서 계산 |
 | 2026-09-30 | 1.14: 아바타 v2 반영(DOMAIN 2.0·API_CONTRACT 2.0·GRAPHICS 2.0, handoff 2026-09-30-avatar-v2) — 프레임 24×40·말풍선 `top` = 앵커 − 40, 클릭 판정 = 몸 박스, 레이어 합성 1회·캐시(12a단계), 그 전까지 외형 색 플레이스홀더, 자산 JSON은 `game/assets/avatarAssets.ts`만, `presence.updated` 반영, 옷장 = 프로필 카드·툴바 모달(A) |
+| 2026-09-30 | 1.15: 10단계 설계 — 자리비움은 마지막 입력 시각 + 타이머 1개(입력마다 재설정 금지)·실패 시 재시도, 재동기화(`sync.required`·60초 초과 재연결, 월드는 스냅샷 경로, 스레드는 최신 페이지만, single-flight), 정지(`endSession('suspended')`, 훅 주입, logout 호출 없음) |
