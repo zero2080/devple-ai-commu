@@ -51,6 +51,15 @@ describe('uiStore', () => {
     expect(useUiStore.getState().groupNotice).toBeNull();
   });
 
+  it('공지는 최신 1건만 두고 닫을 수 있다', () => {
+    const ui = useUiStore.getState();
+    ui.showNotice({ id: 'n1', content: '첫 공지', createdBy: 'u_me', createdAt: 1 });
+    ui.showNotice({ id: 'n2', content: '둘째 공지', createdBy: 'u_me', createdAt: 2 });
+    expect(useUiStore.getState().notice?.id).toBe('n2');
+    ui.dismissNotice();
+    expect(useUiStore.getState().notice).toBeNull();
+  });
+
   it('resetUi는 처음 상태로 (로그아웃)', () => {
     useUiStore.getState().setChatTab('dm');
     useUiStore.getState().openProfile('x');
@@ -61,6 +70,7 @@ describe('uiStore', () => {
       groupId: null,
       groupNotice: null,
       profileUserId: null,
+      notice: null,
       zoom: 2,
     });
   });

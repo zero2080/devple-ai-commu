@@ -11,6 +11,7 @@ const MESSAGES: Record<string, string> = {
   MESSAGE_INVALID_CONTENT: '보낼 수 없는 내용이에요.',
   NICKNAME_TAKEN: '이미 사용 중인 닉네임이에요.',
   GROUP_FULL: '그룹 인원이 가득 찼어요.',
+  SIGNUP_ALREADY_REVIEWED: '이미 처리된 신청이에요.',
   MESSAGE_ALREADY_READ: '상대가 이미 읽어서 회수할 수 없어요.',
   RATE_LIMITED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
   INTERNAL: '서버 오류가 발생했어요.',

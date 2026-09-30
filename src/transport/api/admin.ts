@@ -1,10 +1,10 @@
 // API_CONTRACT 2.8 운영자 (role: 'admin' 전용)
 import { z } from 'zod';
 
-import type { Me, SignupRequest, SignupStatus, UserStatus } from '@/domain';
+import type { Me, Notice, SignupRequest, SignupStatus, UserStatus } from '@/domain';
 
 import { request } from '../http';
-import { meSchema, paginated, signupRequestSchema } from '../schemas';
+import { meSchema, noticeSchema, paginated, signupRequestSchema } from '../schemas';
 import type { Page } from './dm';
 import { ENDPOINTS } from './endpoints';
 
@@ -51,7 +51,7 @@ export function reissueAccessKey(id: string): Promise<void> {
   return request({ ...ENDPOINTS.reissueAccessKey, params: { id } });
 }
 
-/** POST /admin/notices { content } → 전체 system.notice */
-export function postNotice(content: string): Promise<void> {
-  return request({ ...ENDPOINTS.postNotice, body: { content } });
+/** POST /admin/notices { content } → 201 Notice, 접속자 전원에게 system.notice */
+export function postNotice(content: string): Promise<Notice> {
+  return request({ ...ENDPOINTS.postNotice, body: { content } }, noticeSchema);
 }

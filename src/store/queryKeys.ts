@@ -16,6 +16,16 @@ export const queryKeys = {
   groupThreads: () => ['groups', 'threads'] as const,
   /** 그룹 스레드 (무한 쿼리, 페이지는 최신순) */
   groupThread: (groupId: string) => ['groups', 'threads', groupId] as const,
+  /** 운영자 콘솔 전체 (접두) */
+  admin: () => ['admin'] as const,
+  /** 모든 가입 신청 목록 (접두) */
+  adminSignupLists: () => ['admin', 'signups'] as const,
+  /** 모든 회원 목록 (접두) */
+  adminUserLists: () => ['admin', 'users'] as const,
+  /** 가입 신청 목록 (무한 쿼리). status 없으면 전체 */
+  adminSignups: (status: string) => ['admin', 'signups', status] as const,
+  /** 회원 목록 (무한 쿼리, Me — email/phone 포함). status 'all'이면 전체 */
+  adminUsers: (status: string) => ['admin', 'users', status] as const,
   /** 사용자 캐시 — 합성 응답의 peer·sender를 분해해 둔다 (DOMAIN 9) */
   user: (userId: string) => ['users', 'byId', userId] as const,
   userProfile: (userId: string) => ['users', 'profile', userId] as const,
