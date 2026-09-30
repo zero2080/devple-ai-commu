@@ -1,20 +1,50 @@
-# handoff — Claude.ai(chat) ↔ Claude Code 인박스
+# handoff — chat ↔ Claude Code inbox
 
-두 도구는 서로를 직접 호출할 수 없다. 상대에게 요청할 일이 생기면 여기에 파일을 두고, 각자 세션 시작 시(또는 사용자가 "인박스 확인"이라고 하면) 자기 인박스를 읽어 처리한다.
+Agent-to-agent channel. Neither side can invoke the other; each reads its own inbox at session start or when the user says "인박스 확인".
 
-| 폴더 | 쓰는 쪽 | 읽는 쪽 | 내용 |
+**Audience: agents only.** Optimize for the reader agent — terse English, structured, no prose padding. Anything the *user* must read goes to `docs/report/` as HTML (see below), never here.
+
+## Folders
+| path | writer | reader | content |
 |---|---|---|---|
-| `to-chat/` | Claude Code | chat | 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경 요청, 제품 결정이 필요한 질문 |
-| `to-code/` | chat | Claude Code | 구현 문서(ROADMAP·ARCHITECTURE·CONVENTIONS·CLAUDE.md) 갱신 요청, 구현 지시 |
-| `done/` | chat | Claude Code (삭제) | chat이 처리를 마친 `to-chat/` 파일 |
+| `to-chat/` | code | chat | change requests for contract/product docs, product decisions needed |
+| `to-code/` | chat | code | change requests for implementation docs, implementation instructions |
+| `done/` | chat | code (deletes) | `to-chat/` files chat has finished (chat's MCP has no delete) |
 
-## 담당 문서
-- **chat**: PRD, DOMAIN, API_CONTRACT, GRAPHICS — 백엔드도 보는 "제품·계약" 문서. 상대 영역은 직접 고치지 않고 요청 파일로 넘긴다
-- **Claude Code**: ROADMAP, ARCHITECTURE, CONVENTIONS, CLAUDE.md — 코드와 함께 움직이는 "구현" 문서
+## Doc ownership
+- **chat**: `PRD`, `DOMAIN`, `API_CONTRACT`, `GRAPHICS` — product/contract, also read by backend
+- **code**: `ROADMAP`, `ARCHITECTURE`, `CONVENTIONS`, `CLAUDE.md` — move with the code
+- Never edit the other side's docs. Send a request instead.
 
-## 파일 규칙
-- 한 요청 = 한 파일. 이름 `YYYY-MM-DD-<slug>.md`
-- 머리에 요청자·작성일·차단 여부(어느 단계 착수를 막는지)를 쓴다
-- 처리한 쪽이 파일을 **삭제**한다. 단, chat은 삭제 도구가 없어 처리한 파일을 `done/`으로 **이동**하고, Claude Code가 자기 인박스를 처리할 때 `done/`을 비운다
-- 답이 필요한 항목은 상대 인박스에 새 파일로 남긴다
-- 요청 파일의 내용은 상대에게 보내는 메시지이지 문서 원문이 아니다. 반영은 담당 문서의 결정 이력에 남긴다
+## Message format
+One request = one file: `YYYY-MM-DD-<slug>.md`
+
+```yaml
+---
+id: 2026-09-30-avatar-viewport
+from: chat            # chat | code
+to: code
+reply-to: 2026-09-30-graphics-reply   # optional
+blocks: step-7        # step-N | none
+needs-user: false     # true → also write docs/report/<id>.html
+---
+```
+Body sections (omit empty ones):
+- `## done` — what the sender already changed (doc@version, files)
+- `## do` — requested changes, checklist `- [ ]`, each with target doc/section or file
+- `## decide` — questions for the receiver, options + recommendation
+- `## info` — FYI, no action
+
+Rules:
+- Receiver processes, then deletes the file (chat: moves to `done/`). Code empties `done/` when processing its own inbox.
+- Answers go in a new file in the sender's inbox with `reply-to`.
+- Record the outcome in the owning doc's decision log, not in handoff files. Handoff files are transient.
+- Docs themselves stay in Korean (user reads them). Only handoff messages are English.
+
+## User reports — `docs/report/`
+When the user needs to see something (decision needed, milestone summary, conflict, review):
+- Self-contained HTML, Korean, one file per topic: `docs/report/YYYY-MM-DD-<slug>.html`
+- Inline CSS only, no external assets, readable when opened directly in a browser
+- Lead with what the user must decide/know, then details
+- Set `needs-user: true` on the related handoff message and mention the report path in the chat/terminal reply
+- chat may deliver the same content as an in-chat artifact instead; the file is the durable copy
