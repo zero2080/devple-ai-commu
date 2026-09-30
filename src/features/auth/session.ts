@@ -3,6 +3,8 @@
 import { connectSse, disconnectSse } from '@/features/realtime';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
+import { queryClient } from '@/store/queryClient';
+import { useUiStore } from '@/store/uiStore';
 import { useWorldStore } from '@/store/worldStore';
 import { login, logout } from '@/transport/api/auth';
 import { getMe } from '@/transport/api/me';
@@ -40,4 +42,6 @@ export async function logoutSession(): Promise<void> {
   useAuthStore.getState().clear();
   useWorldStore.getState().reset();
   useChatStore.getState().reset();
+  useUiStore.getState().resetUi();
+  queryClient.clear(); // 다른 사람이 같은 탭에서 로그인해도 이전 DM이 보이지 않게
 }

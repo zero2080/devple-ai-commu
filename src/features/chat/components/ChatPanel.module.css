@@ -1,10 +1,49 @@
 /* 높이: 선호 30dvh(56~280px), 최대 = 뷰포트 − 보장 캔버스 높이 (--guaranteed-canvas-h, WorldPage가 계산) */
 .panel {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-columns: minmax(0, 1fr);
   height: clamp(var(--chat-min-h), 30dvh, 280px);
   max-height: max(var(--chat-min-h), calc(100dvh - var(--guaranteed-canvas-h)));
   background: var(--panel-bg);
   border-top: var(--px) solid var(--panel-line);
+}
+
+.tabs {
+  display: flex;
+  gap: calc(2px * var(--zoom));
+  padding: 0 calc(4px * var(--zoom));
+  border-bottom: var(--px) solid var(--panel-line);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(2px * var(--zoom));
+  padding: calc(1px * var(--zoom)) calc(4px * var(--zoom));
+  border: 0;
+  background: none;
+  color: var(--panel-muted);
+  font-family: PixelKo, system-ui, sans-serif;
+  font-size: calc(var(--pixel-font-em) * var(--zoom)); /* GRAPHICS 5.1: em × 줌만 */
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  color: var(--panel-fg);
+  box-shadow: inset 0 calc(-1 * var(--px)) 0 0 #feae34;
+}
+
+.badge {
+  padding: 0 var(--px);
+  background: #e43b44;
+  color: #181425;
+}
+
+.tabpanel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
 }

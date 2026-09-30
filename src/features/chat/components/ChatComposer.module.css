@@ -29,7 +29,8 @@
 .counter,
 .counterOver {
   font-family: PixelKo, system-ui, sans-serif;
-  font-size: var(--pixel-font-em);
+  font-size: calc(var(--pixel-font-em) * var(--zoom)); /* GRAPHICS 5.1: em × 줌만 */
+  line-height: 1;
   color: var(--panel-muted);
   white-space: nowrap;
 }

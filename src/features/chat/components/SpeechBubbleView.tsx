@@ -26,7 +26,7 @@ export function SpeechBubbleView({ bubble, onElement, onHoverChange }: SpeechBub
           onElement(bubble.id, null, null);
         };
       }}
-      className={`${styles.bubble ?? ''} ${hasLinks ? (styles.interactive ?? '') : ''}`}
+      className={`${styles.bubble ?? ''} ${bubble.variant === 'dm' ? (styles.dm ?? '') : ''} ${hasLinks ? (styles.interactive ?? '') : ''}`}
       data-testid="speech-bubble"
       data-user-id={bubble.userId}
       data-variant={bubble.variant}

@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 
 import { ChatPanel, SpeechBubbleLayer } from '@/features/chat';
+import { DmPane, useDmUnreadTotal } from '@/features/dm';
+import { ProfileCard } from '@/features/profile';
 import {
   ConnectionBadge,
   useGuaranteedCanvasHeight,
@@ -15,13 +17,14 @@ import styles from './WorldPage.module.css';
 type CssVars = CSSProperties & Record<`--${string}`, string>;
 
 /**
- * 월드 화면: 캔버스(+말풍선 오버레이)와 아래 근접 대화 패널 (ARCHITECTURE 2.5 분할 배치).
+ * 월드 화면: 캔버스(+말풍선·프로필 카드 오버레이)와 아래 채팅 패널(근접·DM 탭) (ARCHITECTURE 2.5 분할 배치).
  * SSE 연결은 세션 수명(features/auth/session.ts)이 관리한다
  */
 export function WorldPage() {
   const mapId = useAuthStore((s) => s.config?.defaultMapId ?? 'main');
   const zoom = useUiStore((s) => s.zoom);
   const guaranteedHeight = useGuaranteedCanvasHeight();
+  const dmUnread = useDmUnreadTotal();
   const style: CssVars = {
     '--zoom': String(zoom),
     '--guaranteed-canvas-h': `${String(guaranteedHeight)}px`,
@@ -34,8 +37,9 @@ export function WorldPage() {
             <SpeechBubbleLayer />
           </WorldCanvas>
           <ConnectionBadge />
+          <ProfileCard />
         </div>
-        <ChatPanel />
+        <ChatPanel dmPane={<DmPane />} dmUnread={dmUnread} />
       </main>
     </WorldProvider>
   );

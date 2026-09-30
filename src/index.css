@@ -15,6 +15,7 @@
   --bubble-bg: #c0cbdc;
   --bubble-fg: #181425;
   --bubble-outline: #181425;
+  --bubble-dm-bg: #2ce8f5; /* DM 말풍선: 연한 파랑 (GRAPHICS 5.2, 12단계 확정) */
   --link-bg: #ead4aa;
   --link-bg-hover: #e4a672;
   --link-fg: #181425;

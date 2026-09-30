@@ -74,6 +74,13 @@ export function useWorldGame(
           createdGame.setHeldDirection(direction);
         },
         onPointer: (x, y) => {
+          // 캐릭터 위 클릭 → 프로필 카드, 빈 곳 → 카드 닫고 이동 (ARCHITECTURE 3.1)
+          const hit = createdGame.characterAt(x, y);
+          if (hit !== null) {
+            useUiStore.getState().openProfile(hit);
+            return;
+          }
+          useUiStore.getState().closeProfile();
           createdGame.moveToScreen(x, y);
         },
       });
