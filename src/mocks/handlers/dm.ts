@@ -10,6 +10,7 @@ import { contentError, extractLinks } from '../data/messages.ts';
 import {
   conversationWith,
   dmEvent,
+  dmUnreadOf,
   ensureConversation,
   meAsSender,
   messagesOf,
@@ -38,9 +39,10 @@ export const dmHandlers = [
   http.get(url(ENDPOINTS.dmConversations), ({ request }) => {
     const denied = requireAuth(request);
     if (denied !== null) return denied;
+    // API_CONTRACT 2.6: updatedAt 내림차순. 안 읽음은 메시지에서 계산 (DOMAIN 5.3)
     const items = [...state.dmConversations]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((c) => ({ ...c, peer: peerOf(c) }));
+      .map((c) => ({ ...c, unreadCount: dmUnreadOf(c.id), peer: peerOf(c) }));
     return HttpResponse.json(page(items));
   }),
 
@@ -133,7 +135,6 @@ export const dmHandlers = [
       }
       if (message.id === lastMessageId) break;
     }
-    conversation.unreadCount = 0;
     return noContent();
   }),
 ];

@@ -67,8 +67,15 @@ export const groupsHandlers = [
   http.get(url(ENDPOINTS.groups), ({ request }) => {
     const denied = requireAuth(request);
     if (denied !== null) return denied;
-    const mine = state.groups.filter((g) => myMembership(g.id) !== undefined);
-    return HttpResponse.json({ items: mine.map(listItem) });
+    // API_CONTRACT 2.7: 최근 활동 먼저 (lastMessage.createdAt, 없으면 createdAt)
+    const items = state.groups
+      .filter((g) => myMembership(g.id) !== undefined)
+      .map(listItem)
+      .sort(
+        (a, b) =>
+          (b.lastMessage?.createdAt ?? b.createdAt) - (a.lastMessage?.createdAt ?? a.createdAt),
+      );
+    return HttpResponse.json({ items });
   }),
 
   http.post(url(ENDPOINTS.createGroup), async ({ request }) => {
@@ -231,7 +238,7 @@ export const groupsHandlers = [
       createdAt: Date.now(),
     };
     state.groupMessages.push(message);
-    // 내 메시지는 안 읽음에 세지 않는다 (to-chat 2026-09-30-group-unread-order 추천안)
+    // 발신자 읽음 포인터를 새 메시지로 — 내 메시지는 안 읽음에 세지 않는다 (API_CONTRACT 2.7, DOMAIN 5.4)
     membership.lastReadMessageId = message.id;
     void emitViaExpress('chat.group', { ...message, sender: meAsSender() }); // 전 멤버 (나는 에코)
     scheduleGroupBot(group.id, botDelayMs());

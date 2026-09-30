@@ -55,12 +55,19 @@ export function messagesOf(conversationId: string): DmMessage[] {
     .sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : -1));
 }
 
+/** 안 읽음 수 (DOMAIN 5.3): 상대가 보낸 메시지 중 readAt이 없는 것. 내 메시지는 세지 않는다 — 저장하지 않고 매번 계산 */
+export function dmUnreadOf(conversationId: string): number {
+  return messagesOf(conversationId).filter(
+    (m) => m.senderId !== state.me.id && m.readAt === undefined,
+  ).length;
+}
+
 /** chat.dm 페이로드 (API_CONTRACT 3.3): peerId는 수신자(나) 관점의 상대 */
 export function dmEvent(message: DmMessage, sender: User, peerId: string) {
   return { ...message, sender, peerId };
 }
 
-/** 가짜 상대(userId)가 나에게 DM을 보낸다. 대화의 안 읽음 +1 후 chat.dm 방송 */
+/** 가짜 상대(userId)가 나에게 DM을 보낸다 (readAt 없음 = 안 읽음) 후 chat.dm 방송 */
 export function receiveDmFrom(
   userId: string,
   content: string,
@@ -83,7 +90,6 @@ export function receiveDmFrom(
   state.dmMessages.push(message);
   conversation.lastMessage = message;
   conversation.updatedAt = now;
-  conversation.unreadCount += 1;
   void emitViaExpress('chat.dm', dmEvent(message, sender, userId));
   return message;
 }
@@ -112,7 +118,7 @@ export function readMyMessagesBy(userId: string, now: number = Date.now()): numb
   return mine.length;
 }
 
-/** 무한 스크롤 확인용: 과거 메시지 count개를 서로 번갈아 만든다 (방송 없음) */
+/** 무한 스크롤 확인용: 과거 메시지 count개를 서로 번갈아 만든다 (방송 없음, 양쪽 모두 읽은 상태로) */
 export function seedDm(userId: string, count: number, now: number = Date.now()): number {
   if (state.users.every((u) => u.id !== userId)) {
     return 0;
@@ -128,7 +134,7 @@ export function seedDm(userId: string, count: number, now: number = Date.now()):
       content: `옛 메시지 ${String(i + 1)}`,
       links: [],
       createdAt: now - (count - i) * 60_000,
-      ...(mine ? { readAt: now - (count - i) * 60_000 + 1 } : {}),
+      readAt: now - (count - i) * 60_000 + 1,
     });
   }
   const latest = messagesOf(conversation.id)[0];

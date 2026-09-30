@@ -52,6 +52,20 @@ afterEach(() => {
   server.resetHandlers();
 });
 
+describe('GET /groups 정렬 (API_CONTRACT 2.7)', () => {
+  it('최근 활동 먼저: 새 메시지가 온 그룹, 메시지 없는 새 그룹은 만든 시각으로', async () => {
+    const before = ((await (await call('/groups')).json()) as ListBody).items.map((g) => g.id);
+    expect(before).toEqual(['g_02', 'g_01']); // 시드: 레트로 50분 전, 단골 190분 전
+    receiveGroupMessage('g_01', 'u_01', '지금');
+    const created = (await (await call('/groups', 'POST', { name: '새 모임' })).json()) as {
+      id: string;
+    };
+    const after = ((await (await call('/groups')).json()) as ListBody).items.map((g) => g.id);
+    expect(after[0]).toBe(created.id);
+    expect(after.slice(1)).toEqual(['g_01', 'g_02']);
+  });
+});
+
 describe('GET /groups/{id}/messages 커서 페이지네이션', () => {
   it('최신순 50개, 다음 페이지는 그보다 오래된 것', async () => {
     seedGroup('g_01', 60); // 시드 2개 + 60개

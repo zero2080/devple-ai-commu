@@ -15,7 +15,7 @@ export function groupActivityAt(item: Pick<GroupListItem, 'createdAt' | 'lastMes
   return item.lastMessage?.createdAt ?? item.createdAt;
 }
 
-/** 목록 정렬: 최근 활동순, 같으면 id 오름차순 (GET /groups 순서는 계약 미정 — to-chat 확인 요청) */
+/** 목록 정렬: 최근 활동순, 같으면 id (API_CONTRACT 2.7과 같은 규칙). 캐시에 직접 넣은 항목(만들기·초대·새 메시지)도 같은 순서로 보이게 다시 정렬한다 */
 export function sortGroupsByActivity<
   T extends Pick<GroupListItem, 'id' | 'createdAt' | 'lastMessage'>,
 >(items: readonly T[]): T[] {

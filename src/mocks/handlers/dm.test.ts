@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readMyMessagesBy, receiveDmFrom, seedDm } from '../dmSim.ts';
+import { dmUnreadOf, readMyMessagesBy, receiveDmFrom, seedDm } from '../dmSim.ts';
 import { resetMockState, state } from '../state.ts';
 import { dmHandlers } from './dm.ts';
 
@@ -116,13 +116,55 @@ describe('전송·회수는 emit 브리지로 방송한다', () => {
   });
 });
 
+describe('GET /dm 안 읽음·정렬 (DOMAIN 5.3, API_CONTRACT 2.6)', () => {
+  interface ConversationsBody {
+    items: { id: string; unreadCount: number; updatedAt: number }[];
+  }
+  const conversations = async () =>
+    ((await (await fetch(api('/dm'), { headers: AUTH })).json()) as ConversationsBody).items;
+
+  it('updatedAt 내림차순, 안 읽음 = 상대 메시지 중 readAt 없는 것 (내 메시지·시드 과거 메시지 제외)', async () => {
+    seedDm('u_05', 10);
+    await fetch(api('/dm/u_07/messages'), {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({ content: '내 메시지' }),
+    });
+    receiveDmFrom('u_03', '첫째');
+    receiveDmFrom('u_03', '둘째');
+    const items = await conversations();
+    expect(items.map((c) => c.updatedAt)).toEqual(
+      [...items.map((c) => c.updatedAt)].sort((a, b) => b - a),
+    );
+    const unreadOf = (peer: string) =>
+      items.find(
+        (c) => c.id === state.dmConversations.find((x) => x.participantIds.includes(peer))?.id,
+      )?.unreadCount;
+    expect(unreadOf('u_03')).toBe(2);
+    expect(unreadOf('u_07')).toBe(0);
+    expect(unreadOf('u_05')).toBe(0);
+    expect(unreadOf('u_01')).toBe(1); // 시드 c_01
+  });
+
+  it('읽음은 lastMessageId까지만 — 그 뒤에 온 메시지는 안 읽음으로 남는다', async () => {
+    const first = receiveDmFrom('u_03', '첫째');
+    receiveDmFrom('u_03', '둘째');
+    await fetch(api('/dm/u_03/read'), {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({ lastMessageId: first?.id }),
+    });
+    const conversation = state.dmConversations.find((c) => c.participantIds.includes('u_03'));
+    expect(dmUnreadOf(conversation?.id ?? '')).toBe(1);
+  });
+});
+
 describe('DEV 트리거', () => {
   it('dmFrom은 대화의 안 읽음을 올리고 chat.dm(peerId = 발신자)을 보낸다. 모르는 사용자는 null', () => {
     const message = receiveDmFrom('u_03', '안녕하세요');
     expect(message).not.toBeNull();
-    expect(state.dmConversations.find((c) => c.participantIds.includes('u_03'))?.unreadCount).toBe(
-      1,
-    );
+    const conversation = state.dmConversations.find((c) => c.participantIds.includes('u_03'));
+    expect(dmUnreadOf(conversation?.id ?? '')).toBe(1);
     expect(bridge.emitViaExpress).toHaveBeenCalledWith(
       'chat.dm',
       expect.objectContaining({ senderId: 'u_03', peerId: 'u_03' }),
