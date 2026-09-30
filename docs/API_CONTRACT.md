@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 1.3 (2026-09-30, 하트비트를 관찰 가능한 이벤트로)
+> 문서 버전: 1.4 (2026-09-30, PATCH /me 검증 응답·avatarIds)
 > 상태: 확정
-> 기준: DOMAIN.md 1.2, ARCHITECTURE.md 1.3
+> 기준: DOMAIN.md 1.4, ARCHITECTURE.md 1.5
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -102,6 +102,16 @@
 **GET /me** → `200 { "me": Me, "config": ServerConfig }`
 
 **PATCH /me** — body: `{ nickname?, statusMessage?, avatarId? }` → `200 Me`
+- 검증 실패 응답 (여러 필드가 동시에 틀리면 `details.fields`에 모두 담는다):
+
+| 조건 | 응답 |
+|---|---|
+| `nickname` 2~12자 위반 | `400 VALIDATION_FAILED`, `details.fields.nickname: 'length'` |
+| `statusMessage` 40자 초과 | `400 VALIDATION_FAILED`, `details.fields.statusMessage: 'length'` |
+| `avatarId`가 `ServerConfig.avatarIds`에 없음 | `400 VALIDATION_FAILED`, `details.fields.avatarId: 'unknown'` |
+| `nickname`이 다른 회원·대기 중 가입 신청과 중복 | `409 NICKNAME_TAKEN` |
+
+- 길이는 코드 포인트 기준 (DOMAIN 5.1과 동일). 성공 시 같은 맵 접속자에게 `presence.updated`(변경된 `nickname`·`avatarId`만) 전송
 
 **PUT /me/position**
 ```jsonc
@@ -324,6 +334,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-29 | 교차 검토: `GET /me` 응답 정의, SSE `lastEventId` 쿼리 추가, `presence.updated`에서 statusMessage 제거 |
 | 2026-09-29 | 1.2 (ROADMAP 선행 결정): seq=`Date.now()`, 이동 검증 `max(3, elapsedMs/100)`, positions 본인 포함·클라이언트 무시, `chat.dm.peerId`, 그룹 read body, 합성 타입명 DOMAIN 9장 참조, `presence.*` 버퍼 제외, `POST /admin/users/{id}/reissue-key` 추가 (엔드포인트 37개) |
 | 2026-09-30 | 1.3: 하트비트를 SSE 주석에서 `system.heartbeat` 이벤트(15초, `{ serverTime }`, 버퍼 제외)로 변경 — EventSource가 주석을 관찰할 수 없어 30초 무수신 감시가 동작하지 않았음. 이벤트 17종 |
+| 2026-09-30 | 1.4: `PATCH /me` 검증 실패 응답 명시(`details.fields.avatarId: 'unknown'` 등), 성공 시 `presence.updated` 발송 명시. `ServerConfig.avatarIds`는 DOMAIN 1.4 (로그인·`GET /me` 응답의 `config`에 포함) |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)

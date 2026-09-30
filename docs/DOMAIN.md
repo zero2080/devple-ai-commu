@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 1.3 (2026-09-30, MapData.tileset 추가·GRAPHICS 참조)
+> 문서 버전: 1.4 (2026-09-30, ServerConfig.avatarIds 추가)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -102,9 +102,11 @@ interface ServerConfig {
   maxMessageLength: number;    // 기본 200
   defaultMapId: string;
   maxGroupMembers: number;     // 기본 10
+  avatarIds: string[];         // 선택 가능한 아바타 목록의 원천 (GRAPHICS 2.3). 기본 ['char_01' … 'char_08']
 }
 ```
 - 프론트는 이 값을 하드코딩하지 않고 항상 서버 값을 사용
+- `avatarIds`는 순서가 있다 (선택 UI 표시 순서). 비어 있지 않다
 
 ## 4. 공간 · 위치
 
@@ -287,7 +289,7 @@ interface RemoteCharacter {
 | 규칙 | 검증 위치 |
 |---|---|
 | 닉네임 유니크, 2~12자 | 가입 신청 시 |
-| `avatarId`는 서버가 보유한 아바타 목록 안의 값 | 가입 승인·`PATCH /me` 시 |
+| `avatarId`는 `ServerConfig.avatarIds` 안의 값. 가입 승인 시 서버가 목록 중 하나를 배정(방식은 백엔드 재량) | 가입 승인 시 배정 · `PATCH /me` 시 검증 |
 | 두 사용자 간 DmConversation 1개 | 첫 전송 시 자동 생성 |
 | DM 대상은 active 상태 회원 | 전송 시 |
 | 이동 목적지는 collision=0 이며 이전 위치에서 도달 가능 | 위치 갱신 시 |
@@ -357,3 +359,4 @@ interface GroupUpdatedEvent extends Group {
 | 2026-09-29 | 1.1: 교차 검토 (RemoteCharacter 픽셀 좌표 명명) |
 | 2026-09-29 | 1.2: 9장 합성 타입 신설 (ROADMAP 3단계 선행 결정) |
 | 2026-09-30 | 1.3: `MapData.tileset` 추가, `avatarId` 형식 `char_NN`·서버 검증 명시, 자산 규격은 GRAPHICS.md 참조 |
+| 2026-09-30 | 1.4: `ServerConfig.avatarIds` 추가 — 아바타 목록 원천은 서버 (Claude Code 결정 요청 B). 승인 시 목록 중 배정 |
