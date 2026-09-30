@@ -1,4 +1,7 @@
-// SSE `chat.dm.read` (API_CONTRACT 3.3). 3단계: 파싱만. 스토어 갱신은 이후 단계에서 handle을 채운다.
+// SSE `chat.dm.read` (API_CONTRACT 3.3) → 내 메시지의 읽음 표시 (8단계). 발신자인 나에게만 온다
+import { applyDmRead } from '@/store/dmCache';
+import { queryClient } from '@/store/queryClient';
+import { useWorldStore } from '@/store/worldStore';
 import { chatDmReadPayloadSchema } from '@/transport/schemas';
 
 import { defineSseHandler } from '../registry';
@@ -6,4 +9,10 @@ import { defineSseHandler } from '../registry';
 export const chatDmReadHandler = defineSseHandler({
   type: 'chat.dm.read',
   schema: chatDmReadPayloadSchema,
+  handle(payload) {
+    const myUserId = useWorldStore.getState().myUserId;
+    if (myUserId !== null) {
+      applyDmRead(queryClient, payload, myUserId);
+    }
+  },
 });

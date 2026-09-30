@@ -1,4 +1,7 @@
-// SSE `chat.dm.recalled` (API_CONTRACT 3.3). 3단계: 파싱만. 스토어 갱신은 이후 단계에서 handle을 채운다.
+// SSE `chat.dm.recalled` (API_CONTRACT 3.3) → 스레드에서 제거·목록 갱신·말풍선 제거 (8단계)
+import { useChatStore } from '@/store/chatStore';
+import { removeDmMessage } from '@/store/dmCache';
+import { queryClient } from '@/store/queryClient';
 import { chatDmRecalledPayloadSchema } from '@/transport/schemas';
 
 import { defineSseHandler } from '../registry';
@@ -6,4 +9,8 @@ import { defineSseHandler } from '../registry';
 export const chatDmRecalledHandler = defineSseHandler({
   type: 'chat.dm.recalled',
   schema: chatDmRecalledPayloadSchema,
+  handle(payload) {
+    removeDmMessage(queryClient, payload.messageId);
+    useChatStore.getState().removeBubble(payload.messageId);
+  },
 });
