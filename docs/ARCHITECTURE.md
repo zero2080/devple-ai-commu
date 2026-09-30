@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.5 (2026-09-30, GRAPHICS.md 연결·닉네임 렌더 방식 확정)
+> 문서 버전: 1.6 (2026-09-30, 뷰포트 보장 영역·PATCH /me Mock 경계·emit 브리지)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -69,6 +69,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 카메라는 내 캐릭터 중심, 맵 경계에서 클램프
 - 맵 데이터: JSON (`width, height, layers[], collision[]`). 단일 맵이지만 `mapId` 필드 포함
 - 근접 범위 계산은 항상 **타일 좌표** 기준 (`domain/proximity.ts`), 줌과 무관
+- **뷰포트 보장 영역** (GRAPHICS 1.2, PRD 6): 캔버스 CSS 폭 ≥ 640이면 **20×15 타일**, 미만(모바일)이면 근접 범위 정사각형 **`(2 × proximityRadius + 1)²`** 타일 (반경 5 → 11×11 = 352×352 CSS px). 계산은 `domain/viewport.ts` (`guaranteedViewportTiles`, `isViewportGuaranteed`). 줌을 낮춰 맞추지 않고 **레이아웃이 캔버스 크기를 확보**한다. 모바일에서 채팅 패널이 캔버스를 가리는 방식(오버레이/분할)은 7단계 설계에서 정하되 보장 영역 안은 가리지 않는다. `proximityRadius`는 서버 값이므로 로그인·`GET /me` 응답을 받을 때마다 재계산하고, 반경이 커져 캔버스를 넘으면 보장을 포기하고 카메라 중심만 유지한다
 
 ## 3. 이동 동기화
 
@@ -209,7 +210,8 @@ src/
 
 ## 9. Mock / 개발 환경
 
-- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 실시간 이벤트를 유발하는 나머지 엔드포인트(공개·DM·그룹 메시지 전송, 공지)는 해당 단계(7~9·11)에서 Express로 옮긴다
+- REST: **MSW** (Mock Service Worker) — `API_CONTRACT.md`의 예시 응답을 그대로 핸들러로. 단, **티켓(`POST /sse/ticket`)과 월드 REST(`PUT /me/position`, `PUT /me/presence`, `GET /world/{mapId}/presences`)는 Express mock이 담당**한다 — 실시간 위치·점유 상태와 티켓은 SSE를 보내는 곳(Express)에 있어야 선착순 점유 검증과 본인 포함 `world.positions` 방송이 맞아떨어진다. Vite proxy가 `/api/v1/sse`, `/api/v1/me/position`, `/api/v1/me/presence`, `/api/v1/world` 접두 요청을 Express로 넘기고, MSW는 이 경로를 통과시킨다. 티켓 발급 시 Bearer 토큰으로 사용자를 바인딩한다(mock은 사용자 1명이라 항상 본인). 위치·근접 판정이 필요한 `POST /chat/public`은 7단계에서 Express로 옮긴다
+- **emit 브리지**: 상태는 MSW에 있지만 SSE 방송이 필요한 엔드포인트(`PATCH /me` → `presence.updated`, 이후 DM·그룹 메시지·공지)는 MSW 핸들러가 Express의 `POST /__mock/emit`으로 방송을 위임한다 (`src/mocks/bridge.ts`, `/__mock` 접두도 proxy·통과 목록에 포함). Express는 `presence.updated` 페이로드를 자기 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다. 따라서 **`PATCH /me`는 MSW에 남긴다** (2026-09-30 판단, 8단계 프로필 카드에서도 유지)
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -235,3 +237,4 @@ src/
 | 2026-09-29 | 1.3: `seq`는 `Date.now()`, `world.positions` 본인 항목 무시(보정은 PUT 응답으로만), 채팅 입력 포커스 규칙, Mock 티켓은 Express |
 | 2026-09-30 | 1.4: 하트비트를 `system.heartbeat` 이벤트로(무수신 감시 30초 기본 활성). Mock 월드 REST 3개를 Express로 일원화하고 티켓에 사용자 바인딩 (Phase 1 결정 리포트 1·2) |
 | 2026-09-30 | 1.5: 자산 규격은 GRAPHICS.md(2.1·2.3 참조 추가). 닉네임 렌더는 12단계에서 Canvas fillText → DOM 오버레이로 확정 |
+| 2026-09-30 | 1.6: 2.5 뷰포트 보장 영역(데스크톱 20×15 / 모바일 `(2r+1)²`, 레이아웃이 확보). 9장 `PATCH /me`는 MSW 유지 + emit 브리지로 `presence.updated` 위임, `/__mock` proxy |

@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.4 (2026-09-30, GRAPHICS.md 연결 — 7·12단계 상세화 시 포함할 것)
+> 문서 버전: 1.5 (2026-09-30, 7단계 뷰포트 보장 완료 조건·12단계 mirror 예약)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -190,6 +190,7 @@
 - 7단계: 근접 대화 + 말풍선 DOM 오버레이 + 링크 버튼
     - 상세화 시 명시: 말풍선·링크 버튼 CSS는 **GRAPHICS 5.1~5.2** 기준. 픽셀 웹폰트를 `src/assets/fonts/`에 동봉하고 라이선스 파일을 함께 둔다. 폰트 채택 전 OFL 원문 확인. 폰트 크기는 기본 px × 줌 배율만
     - `POST /chat/public`은 근접 판정 브로드캐스트를 위해 Express mock으로 이관 (ARCHITECTURE 9장)
+    - 완료 조건에 추가: 뷰포트 390×844(모바일)에서 반경 5의 11×11 타일이 채팅 패널에 가려지지 않음, 1280×800(데스크톱)에서 20×15 타일 이상 표시 — Playwright `viewport` 옵션으로 검증 (`domain/viewport.ts`, ARCHITECTURE 2.5)
 - 8단계: 프로필 카드, DM 패널, 회수
 - 9단계: 그룹 채팅 패널
 - 10단계: 자리비움, 재동기화(`sync.required`), 정지 처리
@@ -199,7 +200,7 @@
     - `game/render/sprite.ts`: atlas 기반 프레임 좌표 `(frame*16, rowOf(dir)*32)`, 걷기 `1→2→3→0` 75ms/프레임(150ms/타일 = 2프레임), away는 idle + 알파 0.5
     - `tilemap.ts` 플레이스홀더 → 타일셋 렌더, 레이어 `floor`/`objects`(below) → 캐릭터 → `overhead`(above)
     - 닉네임 Canvas `fillText` → DOM 오버레이 전환 (화면 밖 캐릭터 노드 생성 금지, 말풍선과 같은 레이어·폰트)
-    - `scripts/check-assets.ts` 검수 자동화(크기·알파·팔레트·여백, GRAPHICS 8장) + CI
+    - `scripts/check-assets.ts` 검수 자동화(크기·알파·팔레트·여백, GRAPHICS 8장) + CI. atlas 스키마의 `avatars[id].mirror?: 'right'` 예약 필드는 파싱만 하고, 값이 있으면 검수 실패 (GRAPHICS 2.4)
     - `src/assets/LICENSES.md`, `src/assets/palette.json`
     - 완료 조건: 아바타 8종 시트가 검수 스크립트 통과, 가짜 접속자 20명 걷기 애니메이션에서 rAF 프레임 간격 p95 ≤ 20ms (60fps 유지의 측정 가능한 대리 지표)
 
@@ -218,6 +219,7 @@
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-09-30 | 1.5 (handoff 2026-09-30-avatar-viewport): 7단계 완료 조건에 뷰포트 보장(모바일 11×11·데스크톱 20×15) 추가, 12단계 atlas `mirror` 예약 검수. `ServerConfig.avatarIds`·`PATCH /me` 검증 표를 코드에 반영 |
 
 ---
 
