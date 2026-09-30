@@ -204,4 +204,13 @@ describe('DM 말풍선·pendingThread', () => {
     chat().reset();
     expect(chat().pendingThread).toEqual([]);
   });
+
+  it('clearPendingThread는 그 스레드 항목만 모두 버린다 (그룹에서 빠짐)', () => {
+    chat().addPendingThread(groupThreadKey('g1'), '가', NOW);
+    const failed = chat().addPendingThread(groupThreadKey('g1'), '나', NOW);
+    chat().failPendingThread(failed, 'FORBIDDEN');
+    chat().addPendingThread(groupThreadKey('g2'), '다', NOW);
+    chat().clearPendingThread(groupThreadKey('g1'));
+    expect(chat().pendingThread.map((p) => p.content)).toEqual(['다']);
+  });
 });

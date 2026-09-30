@@ -6,6 +6,14 @@ export const queryKeys = {
   dmThreads: () => ['dm', 'threads'] as const,
   /** 상대 userId별 DM 스레드 (무한 쿼리, 페이지는 최신순) */
   dmThread: (peerId: string) => ['dm', 'threads', peerId] as const,
+  /** 내가 속한 그룹 목록 (페이지네이션 없음) */
+  groups: () => ['groups', 'list'] as const,
+  /** 그룹 상세 { group, members } — 멤버의 user는 사용자 캐시로 분해 */
+  groupDetail: (groupId: string) => ['groups', 'detail', groupId] as const,
+  /** 모든 그룹 스레드 (접두) */
+  groupThreads: () => ['groups', 'threads'] as const,
+  /** 그룹 스레드 (무한 쿼리, 페이지는 최신순) */
+  groupThread: (groupId: string) => ['groups', 'threads', groupId] as const,
   /** 사용자 캐시 — 합성 응답의 peer·sender를 분해해 둔다 (DOMAIN 9) */
   user: (userId: string) => ['users', 'byId', userId] as const,
   userProfile: (userId: string) => ['users', 'profile', userId] as const,

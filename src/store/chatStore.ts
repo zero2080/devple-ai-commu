@@ -57,6 +57,8 @@ export interface ChatState {
   failPendingThread: (tempId: string, errorCode: string) => void;
   markSendingThread: (tempId: string) => void;
   dismissPendingThread: (tempId: string) => void;
+  /** 스레드가 사라짐(그룹에서 빠짐): 그 스레드의 전송 중·실패 항목을 모두 버린다 */
+  clearPendingThread: (threadKey: string) => void;
   reset: () => void;
 }
 
@@ -251,6 +253,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set((s) => ({
       pendingThread: s.pendingThread.filter((p) => !(p.tempId === tempId && p.status === 'failed')),
     }));
+  },
+
+  clearPendingThread: (threadKey) => {
+    set((s) => ({ pendingThread: s.pendingThread.filter((p) => p.threadKey !== threadKey) }));
   },
 
   reset: () => {
