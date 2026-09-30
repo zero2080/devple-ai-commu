@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.6 (2026-09-30, 뷰포트 보장 영역·PATCH /me Mock 경계·emit 브리지)
+> 문서 버전: 1.7 (2026-09-30, DPR 백킹 스토어·SSE 수명=세션·부팅 refresh 401)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -40,6 +40,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 기본 타일 크기 **16×16px**, 캐릭터 스프라이트 16×32px (2타일 높이)
 - 줌은 **정수 배율만** 허용 (2x, 3x, 4x). **기본 2x**. 비정수 배율은 픽셀이 뭉개진다
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
+- 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
 - 스프라이트시트 1장 + JSON atlas. 애니메이션은 프레임 인덱스 배열
 - 자산 규격·시트 배치·atlas 스키마는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 16×32 4방향×4프레임 64×128 시트, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
 
@@ -124,6 +125,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 
 ### 4.1 연결 정책
 - 탭당 **EventSource 1개** (브라우저 HTTP/1.1 도메인당 연결 제한 6개 대응)
+- **연결 수명 = 세션**: 로그인·세션 복구 직후 `connectSse()`, 로그아웃에서 `disconnectSse()` (`features/auth/session.ts` → `features/realtime`). 페이지 effect에서 연결·해제하지 않는다 — React StrictMode의 이중 effect가 1회용 티켓을 낭비하고, DM 패널(8단계)은 월드 밖에서도 실시간이 필요하다
 - 모든 실시간 이벤트를 이 한 연결에 다중화
 - 서버 하트비트: 15초마다 `system.heartbeat` 이벤트 (SSE 주석은 `EventSource`가 JS에 전달하지 않아 관찰 불가). 클라이언트는 어떤 이벤트든 30초 무수신이면 `close()` 후 새 티켓으로 재연결 (`SseClient.idleTimeoutMs` 기본 30초)
 - **재연결은 항상 수동**: 티켓이 1회용이라 EventSource의 자동 재연결(같은 URL 재요청)은 401로 실패한다. `onerror` → 기존 EventSource `close()` → `POST /sse/ticket` → 새 EventSource 생성
@@ -172,6 +174,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 accessToken
 ```
 - Access 토큰: **메모리에만** 보관 (XSS 대비). 새로고침 시 `POST /auth/refresh` → `GET /me`로 세션 복구
+- 로그인 전(쿠키 없음) 새로고침의 refresh 401은 **정상 동작**이며 브라우저가 리소스 로그로 남긴다. 앱 에러가 아니므로 완료 조건의 "콘솔 에러 0건"에서 제외한다. 세션 힌트 쿠키는 두지 않는다 (2026-09-30 결정 3)
 - Refresh 토큰: httpOnly + Secure + SameSite 쿠키 — 백엔드 구현 필수 사항
 - 로그아웃: `POST /auth/logout` → 쿠키 삭제, SSE 종료, 스토어 초기화
 
@@ -238,3 +241,4 @@ src/
 | 2026-09-30 | 1.4: 하트비트를 `system.heartbeat` 이벤트로(무수신 감시 30초 기본 활성). Mock 월드 REST 3개를 Express로 일원화하고 티켓에 사용자 바인딩 (Phase 1 결정 리포트 1·2) |
 | 2026-09-30 | 1.5: 자산 규격은 GRAPHICS.md(2.1·2.3 참조 추가). 닉네임 렌더는 12단계에서 Canvas fillText → DOM 오버레이로 확정 |
 | 2026-09-30 | 1.6: 2.5 뷰포트 보장 영역(데스크톱 20×15 / 모바일 `(2r+1)²`, 레이아웃이 확보). 9장 `PATCH /me`는 MSW 유지 + emit 브리지로 `presence.updated` 위임, `/__mock` proxy |
+| 2026-09-30 | 1.7 (결정 리포트 3·4·5 사용자 승인): 부팅 refresh 401은 허용(힌트 쿠키 없음), SSE 연결 수명은 세션(로그인·복구 → 로그아웃), 캔버스 백킹 스토어는 CSS px × DPR |

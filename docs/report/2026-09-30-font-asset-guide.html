@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>픽셀 폰트 준비 가이드</title>
+<meta name="description" content="한글 픽셀 웹폰트 자산(GRAPHICS 5.1)을 어떤 형식으로 준비할지 실측 기반 가이드">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+
+<h1>한글 픽셀 폰트 자산 준비 가이드</h1>
+<p class="meta">devple-ai-commu · 2026-09-30 · 작성: Claude Code · 대상: GRAPHICS 5.1(폰트)·5.2(말풍선)·5.3(닉네임), ROADMAP 7단계 · 실측: npm 패키지 다운로드 후 fontTools로 글리프 수 확인</p>
+<p><strong>결론.</strong> 후보 두 종 모두 SIL OFL 1.1이고 현대 한글 11,172자를 전부 갖고 있어 어느 쪽이든 쓸 수 있어요. 말풍선·닉네임 크기(2x 줌 기준)와 파일 크기를 고려하면 <strong>Galmuri11을 한글·라틴·문장부호만 남겨 부분집합으로 만들고 내부 이름을 바꿔 동봉</strong>하는 안을 추천해요. 이 결정은 GRAPHICS 5.1(chat 담당)에 기록돼야 하므로 <code>docs/handoff/to-chat/</code>에 요청을 남겼어요. 사용자가 할 일은 <strong>폰트 선택 1가지</strong>뿐이고, 파일 준비는 아래 절차대로 Claude Code가 7단계에서 수행할 수 있어요.</p>
+
+<h2>1. 후보 실측</h2>
+<table><tr><th>항목</th><th>Galmuri11 (galmuri 2.40.3)</th><th>Neo둥근모 (@kfonts/neodgm 0.5.0)</th></tr>
+<tr><td>라이선스</td><td>SIL OFL 1.1, <strong>Reserved Font Name "Galmuri"</strong> (dist/LICENSE.txt·galmuri.css 확인)</td><td>SIL OFL 1.1 (GitHub·공식 사이트). npm 패키지에는 라이선스 파일이 없어 저장소의 OFL 원문을 함께 동봉해야 함. Reserved Font Name 선언 여부 미확인</td></tr>
+<tr><td>기본 픽셀 크기(em)</td><td><strong>12px</strong> (unitsPerEm 1200). 이름의 11은 한글 자면 높이</td><td><strong>16px</strong> (unitsPerEm 1024)</td></tr>
+<tr><td>2x 줌 표시 크기</td><td>24 CSS px (월드 12px = 타일 0.75)</td><td>32 CSS px (월드 16px = 타일 1개)</td></tr>
+<tr><td>말풍선 최대 폭 12타일(384 CSS px)에 들어가는 한글</td><td>약 16자/줄</td><td>약 12자/줄</td></tr>
+<tr><td>한글 완성형</td><td>11,172자 전부</td><td>11,172자 전부</td></tr>
+<tr><td>그 외</td><td>ASCII 95, 가나 187, 한자 6,477</td><td>ASCII 95 (가나·한자 없음)</td></tr>
+<tr><td>woff2 크기</td><td>504.7 kB (한자 포함). Bold는 166.6 kB(한자 없음)</td><td>44.6 kB</td></tr>
+<tr><td>가족</td><td>Galmuri7·9·11·14, 11 Bold·Condensed, Mono 7·9·11</td><td>단일</td></tr></table>
+<p class="muted">참고: GRAPHICS 5.1의 예시 "11px 폰트 → 2x에서 22px"는 Galmuri11의 실제 em이 12px이므로 24px가 맞아요. 규칙은 "폰트의 em 크기 × 줌"으로 적는 게 정확해요.</p>
+
+<h2>2. 추천과 근거</h2>
+<div class="card">
+<h3>추천: Galmuri11 부분집합 + 내부 이름 변경 (family <code>PixelKo</code>)</h3>
+<ul>
+<li>말풍선·닉네임 크기가 캐릭터(2x에서 64px 높이)와 균형이 맞아요. Neo둥근모는 32px라 이름표가 캐릭터 절반 높이예요.</li>
+<li>한자 6,477자는 이 서비스에 필요 없어요. 한글·자모·라틴·문장부호만 남기면 <strong>약 170 kB</strong>가 돼요 (같은 범위의 Galmuri11 Bold가 166.6 kB라 추정 정확도 높음).</li>
+<li>OFL 예약 이름 규칙: 부분집합은 "수정본"이라 파일 내부 이름에 <code>Galmuri</code>를 쓰면 안 돼요. 내부 family를 <code>PixelKo</code>로 바꾸고 원저작권·OFL 원문·"Galmuri 기반 수정본" 표기를 동봉하면 조건을 만족해요 (OFL 1.1 §3, 정확도 높음 — 법적 자문 아님).</li>
+<li>Bold가 필요하면(닉네임 강조 등) Galmuri11 Bold를 같은 절차로 <code>PixelKo</code> weight 700으로 추가할 수 있어요.</li></ul>
+<h3>대안: Neo둥근모 원본 그대로</h3>
+<ul><li>44.6 kB에 수정 없이 쓸 수 있어 가장 간단해요. 대신 2x에서 32px라 말풍선 줄당 글자 수가 줄고 닉네임이 커요. GRAPHICS 5.2 최대 폭·5.3 닉네임 위치 수치를 다시 잡아야 해요.</li></ul>
+</div>
+
+<h2>3. 준비 절차 (추천안 기준)</h2>
+<ol>
+<li><strong>원본 확보</strong>: <code>npm pack galmuri</code> → <code>dist/Galmuri11.woff2</code>, <code>dist/LICENSE.txt</code>. (CDN 로딩은 GRAPHICS 6장 "외부 자산 없음" 원칙에 어긋나므로 동봉)</li>
+<li><strong>부분집합 + 이름 변경</strong> (개발 머신에서 1회, Python fontTools + brotli):
+<pre>python3 -m venv .fonttools &amp;&amp; .fonttools/bin/pip install fonttools brotli
+.fonttools/bin/pyftsubset Galmuri11.woff2 \
+  --unicodes="U+0020-007E,U+00A0-00FF,U+2000-206F,U+20A9,U+2190-21FF,U+2500-259F,U+25A0-25FF,U+3000-303F,U+3131-318E,U+AC00-D7A3,U+FF01-FF5E,U+FFE6" \
+  --layout-features='*' --flavor=woff2 --output-file=PixelKo.woff2
+# 내부 이름 변경 (name 테이블 1·4·6·16 → PixelKo), 저작권(0)·라이선스(13·14)는 유지
+.fonttools/bin/python - &lt;&lt;'EOF'
+from fontTools.ttLib import TTFont
+f = TTFont('PixelKo.woff2')
+for rec in f['name'].names:
+    if rec.nameID in (1, 16): rec.string = 'PixelKo'
+    if rec.nameID == 4: rec.string = 'PixelKo Regular'
+    if rec.nameID == 6: rec.string = 'PixelKo-Regular'
+f.flavor = 'woff2'; f.save('PixelKo.woff2')
+EOF</pre>
+범위 설명: ASCII, Latin-1 보충(₩ 등 기호), 일반 문장부호, 화살표·박스·도형(UI 기호), CJK 문장부호(·「」), 호환 자모(ㄱㄴㄷ·ㅏㅑ), 한글 완성형 11,172자, 전각 문장부호. 이모지는 시스템 폰트 폴백(GRAPHICS 5.1)이라 넣지 않아요.</li>
+<li><strong>파일 배치</strong> (GRAPHICS 6장):
+<pre>src/assets/fonts/
+├── PixelKo.woff2          # Galmuri11 부분집합·개명본 (~170 kB)
+├── PixelKo-Bold.woff2     # 선택. Galmuri11 Bold 동일 절차
+└── OFL-Galmuri.txt        # dist/LICENSE.txt 원문 그대로
+src/assets/LICENSES.md     # 아래 항목 추가</pre>
+<pre>## 폰트
+- PixelKo: Galmuri11 (Copyright (c) 2019–2025 Lee Minseo, quiple.dev) 의 부분집합 수정본.
+  SIL Open Font License 1.1, Reserved Font Name "Galmuri"는 수정본에 사용하지 않음.
+  원문: src/assets/fonts/OFL-Galmuri.txt · 출처: https://github.com/quiple/galmuri (npm galmuri 2.40.3)
+  변경: 한글·자모·라틴·문장부호 부분집합, 내부 family 명 PixelKo.</pre></li>
+<li><strong>CSS 등록</strong> (7단계에서 <code>src/index.css</code>):
+<pre>@font-face {
+  font-family: 'PixelKo';
+  src: url('./assets/fonts/PixelKo.woff2') format('woff2');
+  font-weight: 400;
+  font-display: block;      /* 픽셀 폰트가 시스템 폰트로 잠깐 바뀌면 배치가 튀므로 swap 대신 block */
+}
+:root { --pixel-font-em: 12px; }   /* Galmuri11 em. 표시 크기 = em × 줌 (2x → 24px) */
+.bubble, .nickname { font-family: 'PixelKo', system-ui, sans-serif; font-size: calc(var(--pixel-font-em) * var(--zoom)); line-height: 1; }</pre>
+줌 변수는 uiStore.zoom을 <code>--zoom</code>으로 내려요. <code>font-size</code>는 항상 em × 정수 줌만 써요 (GRAPHICS 5.1).</li>
+<li><strong>검수</strong> (자산 받을 때·빌드 후):
+<ul><li>fontTools로 cmap 확인: 한글 U+AC00–D7A3 11,172자, ASCII 95자 전부 존재</li>
+<li>name 테이블 family가 <code>PixelKo</code>이고 <code>Galmuri</code> 문자열이 1·4·6·16번에 없음 (0·13·14번의 저작권·라이선스 문구는 유지)</li>
+<li>파일 크기 ≤ 256 kB (GRAPHICS 6장 PNG 상한을 폰트에도 적용 제안)</li>
+<li>브라우저에서 24px(2x)·36px(3x)·48px(4x)로 "가나다 ABC 123 ·「」" 렌더 시 가장자리가 흐리지 않음 — 정수 배율만 쓰면 벡터화된 픽셀 폰트도 원본 도트로 떨어져요</li>
+<li>Playwright에서 <code>document.fonts.check("24px PixelKo")</code>가 true (7단계 E2E에 포함 예정)</li></ul></li></ol>
+
+<h2>4. 사용자가 정할 것</h2>
+<ul><li><strong>폰트 선택</strong>: 추천안(Galmuri11 부분집합·PixelKo) 또는 대안(Neo둥근모 원본). 정해지면 chat이 GRAPHICS 5.1에 기록하고(요청 파일 <code>to-chat/2026-09-30-font-choice.md</code>), Claude Code가 7단계 착수 시 위 절차로 파일을 만들어 커밋해요.</li>
+<li>직접 준비하실 필요는 없어요. 다른 폰트를 쓰고 싶다면 조건은 OFL 또는 CC0, 한글 11,172자(최소 KS X 1001 2,350자), em이 8~12px인 픽셀 폰트, woff2 ≤ 256 kB예요.</li></ul>
+
+</main></body>
+</html>
