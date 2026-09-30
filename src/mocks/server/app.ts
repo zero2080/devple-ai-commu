@@ -356,6 +356,30 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     res.status(202).json({ id: envelope.id, clients: hub.size });
   });
 
+  app.post('/__mock/place', (req, res) => {
+    // 개발·E2E용: 사용자를 (x, y) 근처 빈 타일로 옮기고 즉시 world.positions 방송. freeze: true면 랜덤 워크에서 뺀다(/__mock/reset까지)
+    const userId = field(req.body, 'userId');
+    const x = field(req.body, 'x');
+    const y = field(req.body, 'y');
+    if (typeof userId !== 'string' || typeof x !== 'number' || typeof y !== 'number') {
+      apiError(res, 400, 'VALIDATION_FAILED', 'body must be { userId, x, y }');
+      return;
+    }
+    const placed = world.placeNear(userId, x, y);
+    if (placed === null) {
+      apiError(res, 409, 'POSITION_REJECTED', 'no free tile near target');
+      return;
+    }
+    if (field(req.body, 'freeze') === true) {
+      world.setFrozen(userId, true); // E2E: 클릭할 캐릭터가 걸어가지 않게
+    }
+    hub.broadcast('world.positions', {
+      mapId: MAIN_MAP.id,
+      positions: [{ userId, x: placed.x, y: placed.y, dir: placed.dir }],
+    });
+    res.status(202).json({ position: placed });
+  });
+
   app.post('/__mock/disconnect', (_req, res) => {
     const count = hub.disconnectAll();
     log(`disconnected ${String(count)} clients by trigger`);
@@ -365,6 +389,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   app.post('/__mock/reset', (_req, res) => {
     // E2E 격리용: 월드를 초기 배치로, 위치 seq 기록·대기 중 방송을 비운다 (연결은 유지)
     world.replaceAll(createInitialPresences(MAIN_MAP));
+    world.resetFrozen([ME.id]);
     positionRecords.clear();
     pendingDeltas.clear();
     hub.broadcast('world.snapshot', {

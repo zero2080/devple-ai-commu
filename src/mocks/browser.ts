@@ -3,6 +3,7 @@
 import { setupWorker } from 'msw/browser';
 
 import { EXPRESS_MOCK_PATH_PREFIXES } from './data/config.ts';
+import { readMyMessagesBy, receiveDmFrom, seedDm } from './dmSim.ts';
 import { handlers } from './handlers/index.ts';
 
 export const worker = setupWorker(...handlers);
@@ -32,7 +33,27 @@ export function isExpressMockRequest(url: string): boolean {
   return EXPRESS_MOCK_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+/** DEV 트리거 (ARCHITECTURE 9장): 콘솔이나 E2E에서 가짜 상대의 DM·읽음을 흉내 낸다 */
+export interface DevpleMockControls {
+  dmFrom: (userId: string, content: string) => string | null;
+  readBy: (userId: string) => number;
+  seedDm: (userId: string, count: number) => number;
+}
+
+declare global {
+  interface Window {
+    __devpleMock?: DevpleMockControls;
+  }
+}
+
 export async function startMockWorker(): Promise<void> {
+  if (import.meta.env.DEV) {
+    window.__devpleMock = {
+      dmFrom: (userId, content) => receiveDmFrom(userId, content)?.id ?? null,
+      readBy: (userId) => readMyMessagesBy(userId),
+      seedDm: (userId, count) => seedDm(userId, count),
+    };
+  }
   await worker.start({
     serviceWorker: { url: '/mockServiceWorker.js' },
     onUnhandledFrame: ({ frame, defaults }) => {

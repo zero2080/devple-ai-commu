@@ -150,6 +150,23 @@ export class WorldSim {
     return null;
   }
 
+  /** 랜덤 워크에서 빼거나 넣는다 (E2E가 클릭할 캐릭터를 멈춰 둘 때) */
+  setFrozen(userId: string, frozen: boolean): void {
+    if (frozen) {
+      this.frozen.add(userId);
+    } else {
+      this.frozen.delete(userId);
+    }
+  }
+
+  /** 기본 고정 목록(생성 시 options.frozenUserIds)만 남긴다 */
+  resetFrozen(keep: readonly string[]): void {
+    this.frozen.clear();
+    for (const id of keep) {
+      this.frozen.add(id);
+    }
+  }
+
   find(userId: string): Presence | undefined {
     return this.presences.find((p) => p.userId === userId);
   }

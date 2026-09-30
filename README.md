@@ -32,7 +32,7 @@ pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 
 Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
 
-Mock SSE 서버는 기본 5174 포트를 씁니다. 다른 개발 서버가 점유하고 있으면 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 Vite 프록시와 서버가 같은 값을 읽습니다. 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `POST /__mock/reset`(월드 초기 배치로), `POST /__mock/say { userId, content, at? }`(가짜 접속자 발화, 반경 밖이면 미전달), `GET /__mock/state`. 가짜 접속자는 `MOCK_CHATTER_MS`(기본 7000, 0이면 끔)마다 근처에서 말합니다.
+Mock SSE 서버는 기본 5174 포트를 씁니다. 다른 개발 서버가 점유하고 있으면 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 Vite 프록시와 서버가 같은 값을 읽습니다. 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `POST /__mock/reset`(월드 초기 배치로), `POST /__mock/say { userId, content, at? }`(가짜 접속자 발화, 반경 밖이면 미전달), `POST /__mock/place { userId, x, y, freeze? }`(배치, freeze면 멈춤), `GET /__mock/state`. 가짜 접속자는 `MOCK_CHATTER_MS`(기본 7000, 0이면 끔)마다 근처에서 말합니다.
 
 ## 스크립트
 
@@ -65,3 +65,5 @@ src/
 ```
 
 레이어 경계는 `eslint.config.js`가 강제합니다. `game/`은 React를, `domain/`은 같은 폴더 밖의 어떤 것도 import할 수 없습니다.
+
+DM은 브라우저 콘솔의 DEV 트리거로 흉내 낼 수 있습니다: `__devpleMock.dmFrom('u_03', '안녕')`(가짜 상대가 나에게 DM), `__devpleMock.readBy('u_03')`(내 DM을 읽음), `__devpleMock.seedDm('u_05', 60)`(과거 메시지). 내가 DM을 보내면 가짜 상대 봇이 `VITE_MOCK_DM_BOT_MS`(기본 5000, 0이면 끔) 뒤 읽고 짧게 답합니다.

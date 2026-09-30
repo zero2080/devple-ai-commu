@@ -46,3 +46,24 @@ describe('WorldSim', () => {
     expect(sim.place('u_01', 0, 0, 'up')).toBe(false); // 벽
   });
 });
+
+describe('setFrozen / resetFrozen', () => {
+  it('멈춘 사용자는 틱이 지나도 움직이지 않고, resetFrozen 뒤에는 다시 움직인다', () => {
+    const presences = createInitialPresences(MAIN_MAP);
+    const sim = new WorldSim(MAIN_MAP, presences, mulberry32(3), {
+      frozenUserIds: [ME.id],
+      moveChance: 1,
+    });
+    sim.setFrozen('u_01', true);
+    const start = { ...sim.find('u_01')?.position };
+    for (let t = 0; t < 50; t += 1) sim.tick(t);
+    expect(sim.find('u_01')?.position).toMatchObject({ x: start.x, y: start.y });
+    sim.resetFrozen([ME.id]);
+    let moved = false;
+    for (let t = 0; t < 50 && !moved; t += 1) {
+      moved = sim.tick(t).some((d) => d.userId === 'u_01');
+    }
+    expect(moved).toBe(true);
+    sim.setFrozen('u_02', false); // 없는 항목 해제는 무시
+  });
+});

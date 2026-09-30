@@ -322,3 +322,30 @@ describe('/__mock/say · chatter', () => {
     expect(chunks.some((c) => c.includes('event: chat.public'))).toBe(true);
   });
 });
+
+describe('/__mock/place', () => {
+  it('근처 빈 타일로 옮기고 world.positions를 즉시 방송한다', async () => {
+    await fetch(`${base}/__mock/reset`, { method: 'POST' });
+    const chunks: string[] = [];
+    server.hub.add({ write: (c) => chunks.push(c), end: () => undefined }, ME.id);
+    const res = await fetch(`${base}/__mock/place`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'u_02', x: 22, y: 15 }),
+    });
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { position: { x: number; y: number } };
+    expect(
+      Math.max(Math.abs(body.position.x - 22), Math.abs(body.position.y - 15)),
+    ).toBeLessThanOrEqual(4);
+    expect(chunks.some((c) => c.includes('world.positions') && c.includes('"userId":"u_02"'))).toBe(
+      true,
+    );
+    const bad = await fetch(`${base}/__mock/place`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    expect(bad.status).toBe(400);
+  });
+});
