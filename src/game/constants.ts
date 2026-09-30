@@ -7,7 +7,14 @@ export const AWAY_TIMEOUT_MS = 5 * 60 * 1000; // 자리비움 판정, ARCHITECTU
 export const ZOOM_LEVELS = [2, 3, 4] as const; // 정수 배율만, ARCHITECTURE 2.1
 export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
 export const DEFAULT_ZOOM: ZoomLevel = 2;
-/** 말풍선 꼬리 끝과 캐릭터 프레임 상단 사이 (닉네임 블록, 월드 px). ARCHITECTURE 2.3 */
-export const BUBBLE_NICKNAME_CLEARANCE_PX = 12;
+/** 닉네임 블록 하단과 캐릭터 프레임 상단 사이 (월드 px, GRAPHICS 5.2 수직 배치) */
+export const NICKNAME_GAP_PX = 2;
+/** 닉네임 한 줄 높이 (월드 px). 12단계 전 Canvas 플레이스홀더 8px, PixelKo(em 12, line-height 1) 전환 후 12 */
+export const NICKNAME_LINE_HEIGHT_PX = 8;
+/** 말풍선 꼬리 끝과 닉네임 블록 상단 사이 (월드 px) */
+export const BUBBLE_TAIL_GAP_PX = 1;
+/** 꼬리 끝 = 프레임 상단 − (닉네임 간격 + 닉네임 line-height + 꼬리 간격). 플레이스홀더 11, PixelKo 15 (GRAPHICS 5.2) */
+export const BUBBLE_NICKNAME_CLEARANCE_PX =
+  NICKNAME_GAP_PX + NICKNAME_LINE_HEIGHT_PX + BUBBLE_TAIL_GAP_PX;
 /** 말풍선 픽셀 꼬리 높이 (월드 px). 몸통 아래로 3줄 */
 export const BUBBLE_TAIL_PX = 3;

@@ -1,6 +1,11 @@
 // 캐릭터 플레이스홀더 (ROADMAP 5단계): 16×32 색 사각형 + 머리 위 닉네임.
 // 닉네임은 말풍선이 아니므로 Canvas fillText 허용. 12단계에서 DOM 오버레이로 전환한다 (ARCHITECTURE 2.3, GRAPHICS 5.3).
-import { CHARACTER_HEIGHT_TILES, TILE_SIZE } from '../constants';
+import {
+  CHARACTER_HEIGHT_TILES,
+  NICKNAME_GAP_PX,
+  NICKNAME_LINE_HEIGHT_PX,
+  TILE_SIZE,
+} from '../constants';
 import type { Camera } from '../engine/camera';
 
 export interface DrawableCharacter {
@@ -26,7 +31,7 @@ const AVATAR_COLORS = [
 ];
 export const ME_OUTLINE_COLOR = '#ffffff';
 export const AWAY_ALPHA = 0.5;
-export const NICKNAME_FONT = '8px monospace';
+export const NICKNAME_FONT = `${String(NICKNAME_LINE_HEIGHT_PX)}px monospace`;
 
 export function avatarColor(avatarId: string): string {
   let hash = 0;
@@ -75,8 +80,9 @@ export function renderCharacters(
     }
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#000000';
-    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2 + 1, drawY - 1);
+    // 닉네임 블록 하단 = 프레임 상단 − 2 (GRAPHICS 5.2). 그림자는 1px 아래·오른쪽
+    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2 + 1, drawY - NICKNAME_GAP_PX + 1);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2, drawY - 2);
+    ctx.fillText(c.nickname, drawX + TILE_SIZE / 2, drawY - NICKNAME_GAP_PX);
   }
 }

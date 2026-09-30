@@ -5,7 +5,7 @@
   list-style: none;
   font-family: PixelKo, system-ui, sans-serif;
   font-size: calc(var(--pixel-font-em) * var(--zoom));
-  line-height: calc(15px * var(--zoom));
+  line-height: 1; /* GRAPHICS 5.1: em × 줌, line-height 1 */
   color: var(--panel-fg);
   overflow-wrap: anywhere;
   word-break: keep-all;

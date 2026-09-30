@@ -1,7 +1,7 @@
 .page {
   /* 1 월드 px (정수 줌) */
   --px: calc(1px * var(--zoom));
-  --chat-min-h: calc(15px * var(--zoom) + 8px + 6px * var(--zoom) + var(--px));
+  --chat-min-h: calc(var(--pixel-font-em) * var(--zoom) + 8px + 6px * var(--zoom) + var(--px));
 
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

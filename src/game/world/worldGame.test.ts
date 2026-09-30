@@ -120,3 +120,9 @@ describe('WorldGame 프레임 콜백과 말풍선 앵커', () => {
     }).not.toThrow();
   });
 });
+
+describe('말풍선 수직 배치 공식 (GRAPHICS 5.2)', () => {
+  it('플레이스홀더 닉네임(8px)에서 꼬리 끝은 프레임 상단 − 11이다', () => {
+    expect(BUBBLE_NICKNAME_CLEARANCE_PX).toBe(11);
+  });
+});
