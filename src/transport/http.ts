@@ -17,6 +17,8 @@ export interface HttpConfig {
   baseUrl: string;
   tokens: TokenProvider;
   fetchImpl?: typeof fetch;
+  /** 인증 요청이 403 USER_SUSPENDED를 받으면 호출 (세션 종료는 features/auth가, ARCHITECTURE 6장) */
+  onSuspended?: () => void;
 }
 
 /** 계약된 에러 응답 `{ code, message, details? }` (API_CONTRACT 1.3) */
@@ -205,7 +207,11 @@ export async function request(options: RequestOptions, schema?: z.ZodType): Prom
   }
 
   if (!response.ok) {
-    throw await parseError(response);
+    const error = await parseError(response);
+    if ((options.auth ?? true) && error.status === 403 && error.code === 'USER_SUSPENDED') {
+      config.onSuspended?.();
+    }
+    throw error;
   }
   if (response.status === 204 || schema === undefined) {
     return undefined;

@@ -34,10 +34,17 @@ export interface SseClientOptions {
   backoff?: Partial<BackoffOptions>;
   /** 지터용. 기본 Math.random */
   random?: () => number;
+  /** 끊긴 시각부터 다시 열릴 때까지 resyncAfterMs를 넘으면 호출 (서버 재전송 버퍼 밖, ARCHITECTURE 4.1) */
+  onResync?: () => void;
+  /** 기본 60초 (서버 재전송 버퍼, API_CONTRACT 3.5) */
+  resyncAfterMs?: number;
+  /** 시각. 기본 Date.now */
+  now?: () => number;
 }
 
 export const DEFAULT_BACKOFF: BackoffOptions = { initialMs: 1000, maxMs: 30000, jitter: 0.2 };
 export const DEFAULT_IDLE_TIMEOUT_MS = 30_000;
+export const DEFAULT_RESYNC_AFTER_MS = 60_000;
 
 /** attempt번째(0부터) 재시도 대기: 1s → 2s → 4s … 최대 30s, 지터 ±20% */
 export function computeBackoffMs(
@@ -71,6 +78,8 @@ export class SseClient {
   private closedByUser = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 열려 있던 연결이 처음 끊긴 시각. 다시 열리면 null */
+  private lostAt: number | null = null;
   private readonly backoff: BackoffOptions;
   private readonly options: SseClientOptions;
 
@@ -133,8 +142,13 @@ export class SseClient {
         return;
       }
       this.attempt = 0;
+      const gap = this.lostAt === null ? 0 : this.now() - this.lostAt;
+      this.lostAt = null;
       this.setState('open');
       this.resetIdleTimer();
+      if (gap > (this.options.resyncAfterMs ?? DEFAULT_RESYNC_AFTER_MS)) {
+        this.options.onResync?.();
+      }
     };
     source.onerror = () => {
       if (source !== this.source) {
@@ -143,6 +157,7 @@ export class SseClient {
       // 자동 재연결(같은 URL·소진된 티켓)을 막기 위해 즉시 닫고 새 티켓으로 다시 연다
       source.close();
       this.source = null;
+      this.markLost();
       this.scheduleReconnect();
     };
     for (const type of SSE_EVENT_TYPES) {
@@ -202,8 +217,18 @@ export class SseClient {
       console.warn(`[sse] no event for ${String(timeout)}ms, reconnecting`);
       this.source?.close();
       this.source = null;
+      this.markLost();
       this.scheduleReconnect();
     }, timeout);
+  }
+
+  private now(): number {
+    return (this.options.now ?? Date.now)();
+  }
+
+  /** 첫 끊김 시각만 기록한다 (재시도가 이어져도 갱신하지 않음) */
+  private markLost(): void {
+    this.lostAt ??= this.now();
   }
 
   private clearTimers(): void {

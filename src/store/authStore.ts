@@ -6,6 +6,9 @@ import type { TokenProvider } from '@/transport/http';
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'authenticated';
 
+/** 로그인 화면에 남길 안내 (세션이 강제로 끝난 이유) */
+export type AuthNotice = 'suspended';
+
 export interface AuthState {
   status: AuthStatus;
   accessToken: string | null;
@@ -13,11 +16,13 @@ export interface AuthState {
   expiresAt: number | null;
   me: Me | null;
   config: ServerConfig | null;
+  notice: AuthNotice | null;
   setSession: (session: AuthSession) => void;
   setAccessToken: (token: string, expiresInSec: number) => void;
   setMe: (me: Me, config: ServerConfig) => void;
   setAnonymous: () => void;
   clear: () => void;
+  setNotice: (notice: AuthNotice | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -26,8 +31,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
   expiresAt: null,
   me: null,
   config: null,
+  notice: null,
   setSession: (session) => {
     set({
+      notice: null,
       status: 'authenticated',
       accessToken: session.accessToken,
       expiresAt: Date.now() + session.expiresIn * 1000,
@@ -46,6 +53,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
   clear: () => {
     set({ status: 'anonymous', accessToken: null, expiresAt: null, me: null, config: null });
+  },
+  setNotice: (notice) => {
+    set({ notice });
   },
 }));
 

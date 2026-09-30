@@ -141,6 +141,38 @@ describe('request: 401 재시도', () => {
   });
 });
 
+describe('request: 정지 (403 USER_SUSPENDED)', () => {
+  it('인증 요청이 USER_SUSPENDED면 onSuspended를 부르고 던진다. auth: false(로그인)는 부르지 않는다', async () => {
+    let suspended = 0;
+    const suspendedBody = { code: 'USER_SUSPENDED', message: 'suspended' };
+    server.use(
+      http.get(`${BASE}/me`, () => HttpResponse.json(suspendedBody, { status: 403 })),
+      http.post(`${BASE}/auth/login`, () => HttpResponse.json(suspendedBody, { status: 403 })),
+      http.get(`${BASE}/groups`, () =>
+        HttpResponse.json({ code: 'FORBIDDEN', message: 'no' }, { status: 403 }),
+      ),
+    );
+    configureHttp({
+      baseUrl: BASE,
+      tokens: makeTokens('tok'),
+      onSuspended: () => {
+        suspended += 1;
+      },
+    });
+    await expect(request({ ...ENDPOINTS.me }, okSchema)).rejects.toMatchObject({
+      code: 'USER_SUSPENDED',
+    });
+    expect(suspended).toBe(1);
+    await expect(
+      request({ ...ENDPOINTS.login, body: { accessKey: 'x' }, auth: false }, okSchema),
+    ).rejects.toMatchObject({ code: 'USER_SUSPENDED' });
+    await expect(request({ ...ENDPOINTS.groups }, okSchema)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(suspended).toBe(1);
+  });
+});
+
 describe('request: 응답 매핑', () => {
   it('204는 undefined를 돌려준다', async () => {
     server.use(http.put(`${BASE}/me/presence`, () => new HttpResponse(null, { status: 204 })));

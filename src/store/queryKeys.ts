@@ -8,6 +8,8 @@ export const queryKeys = {
   dmThread: (peerId: string) => ['dm', 'threads', peerId] as const,
   /** 내가 속한 그룹 목록 (페이지네이션 없음) */
   groups: () => ['groups', 'list'] as const,
+  /** 모든 그룹 상세 (접두, 재동기화용) */
+  groupDetails: () => ['groups', 'detail'] as const,
   /** 그룹 상세 { group, members } — 멤버의 user는 사용자 캐시로 분해 */
   groupDetail: (groupId: string) => ['groups', 'detail', groupId] as const,
   /** 모든 그룹 스레드 (접두) */

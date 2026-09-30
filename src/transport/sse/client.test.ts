@@ -50,7 +50,9 @@ class FakeEventSource implements EventSourceLike {
 
 const BASE = '/api/v1';
 
-function setup(overrides: { idleTimeoutMs?: number } = { idleTimeoutMs: 0 }) {
+function setup(
+  overrides: { idleTimeoutMs?: number; onResync?: () => void } = { idleTimeoutMs: 0 },
+) {
   let ticketNo = 0;
   const requestTicket = vi.fn(() => Promise.resolve(`t${String(++ticketNo)}`));
   const onEnvelope = vi.fn<(envelope: SseEnvelope) => void>();
@@ -62,6 +64,7 @@ function setup(overrides: { idleTimeoutMs?: number } = { idleTimeoutMs: 0 }) {
     baseUrl: BASE,
     createEventSource: (url) => new FakeEventSource(url),
     random: () => 0.5, // 지터 0
+    now: () => Date.now(), // vi.useFakeTimers가 Date도 움직인다
     ...overrides,
   });
   return { client, requestTicket, onEnvelope, states };
@@ -214,5 +217,26 @@ describe('SseClient', () => {
     expect(FakeEventSource.instances[0]?.closed).toBe(true);
     await vi.advanceTimersByTimeAsync(1000);
     expect(requestTicket).toHaveBeenCalledTimes(2);
+  });
+
+  it('60초를 넘게 끊겼다가 다시 열리면 onResync, 60초 이하는 부르지 않는다 (재시도가 이어져도 첫 끊김부터)', async () => {
+    const onResync = vi.fn();
+    const { client } = setup({ idleTimeoutMs: 0, onResync });
+    await client.connect();
+    FakeEventSource.instances[0]?.open();
+    FakeEventSource.instances[0]?.fail(); // 끊김 t=0
+    await vi.advanceTimersByTimeAsync(1000);
+    FakeEventSource.instances[1]?.open(); // 1초 만에 복구
+    expect(onResync).not.toHaveBeenCalled();
+
+    FakeEventSource.instances[1]?.fail(); // 두 번째 끊김
+    for (let i = 2; i < 8; i += 1) {
+      await vi.advanceTimersByTimeAsync(30_000);
+      FakeEventSource.instances[i]?.fail(); // 계속 실패 — 첫 끊김 시각은 그대로
+    }
+    await vi.advanceTimersByTimeAsync(30_000);
+    FakeEventSource.instances.at(-1)?.open();
+    expect(onResync).toHaveBeenCalledTimes(1);
+    client.close();
   });
 });
