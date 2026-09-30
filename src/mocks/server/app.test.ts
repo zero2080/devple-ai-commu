@@ -225,6 +225,31 @@ describe('/__mock/emit 브리지', () => {
     expect(server.world.find(ME.id)).toMatchObject({ nickname: '새이름', appearance: NEW_LOOK });
     expect(chunks.some((c) => c.includes('presence.updated') && c.includes('새이름'))).toBe(true);
   });
+
+  it('presence.left는 Express 월드에서 빼고 방송한다 (정지된 사용자)', async () => {
+    expect(server.world.find('u_11')).toBeDefined();
+    const res = await fetch(`${base}/__mock/emit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'presence.left', payload: { userId: 'u_11' } }),
+    });
+    expect(res.status).toBe(202);
+    expect(server.world.find('u_11')).toBeUndefined();
+    expect(server.world.remove('u_11')).toBe(false);
+  });
+});
+
+describe('/__mock/freeze-all', () => {
+  it('모두 멈추면 틱이 지나도 아무도 움직이지 않는다', async () => {
+    const res = await fetch(`${base}/__mock/freeze-all`, { method: 'POST' });
+    expect(res.status).toBe(202);
+    const before = JSON.stringify(server.world.presences.map((p) => p.position));
+    for (let i = 0; i < 20; i += 1) {
+      clock += 200;
+      server.tick();
+    }
+    expect(JSON.stringify(server.world.presences.map((p) => p.position))).toBe(before);
+  });
 });
 
 describe('POST /api/v1/chat/public', () => {

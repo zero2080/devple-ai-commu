@@ -20,7 +20,7 @@ import {
   SEED_GROUPS,
 } from './data/chat.ts';
 import { MAIN_MAP } from './data/map.ts';
-import { FAKE_USERS, ME } from './data/users.ts';
+import { FAKE_USERS, ME, SEED_SIGNUPS } from './data/users.ts';
 import { createInitialPresences } from './data/world.ts';
 
 export interface MockSession {
@@ -52,16 +52,7 @@ export function createInitialState(): MockState {
     session: { accessToken: null, serial: 0 },
     me: clone(ME),
     users: clone(FAKE_USERS),
-    signups: [
-      {
-        id: 'sr_01',
-        email: 'newbie@example.com',
-        nickname: '신입',
-        phone: '010-1111-2222',
-        status: 'pending',
-        createdAt: Date.now() - 3_600_000,
-      },
-    ],
+    signups: clone(SEED_SIGNUPS),
     presences: createInitialPresences(MAIN_MAP),
     dmConversations: clone(SEED_DM_CONVERSATIONS),
     dmMessages: clone(SEED_DM_MESSAGES),

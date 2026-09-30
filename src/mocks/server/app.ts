@@ -352,9 +352,19 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         target.updatedAt = now();
       }
     }
+    // presence.left(정지 등): Express 월드에서도 빼서 랜덤 워크·스냅샷에 남지 않게 한다
+    if (type === 'presence.left') {
+      const userId = field(payload, 'userId');
+      if (typeof userId === 'string') world.remove(userId);
+    }
     const envelope = hub.broadcast(type, payload);
     log(`emit ${type} id=${envelope.id} → ${String(hub.size)} clients`);
     res.status(202).json({ id: envelope.id, clients: hub.size });
+  });
+
+  app.post('/__mock/freeze-all', (_req, res) => {
+    // 개발·E2E용: 가짜 접속자 전원의 랜덤 워크를 멈춘다 (/__mock/reset까지). 이동 판정이 무작위 점유에 흔들리지 않게
+    res.status(202).json({ frozen: world.freezeAll() });
   });
 
   app.post('/__mock/place', (req, res) => {

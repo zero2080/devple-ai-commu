@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import type { Notice, User } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
+import { emitViaExpress } from '../bridge.ts';
 import { defaultAppearance } from '../data/avatar.ts';
 import { SERVER_CONFIG } from '../data/config.ts';
 import { contentError } from '../data/messages.ts';
@@ -92,8 +93,13 @@ export const adminHandlers = [
     if (user === undefined) {
       return apiError(404, 'NOT_FOUND', 'user not found', { resource: 'user' });
     }
+    const wasActive = user.status === 'active';
     user.status = 'suspended';
     state.presences = state.presences.filter((p) => p.userId !== user.id);
+    if (wasActive) {
+      // 대상은 system.suspended 뒤 SSE가 끊기므로 같은 맵 접속자에게 presence.left (가짜 사용자라 연결은 없음)
+      void emitViaExpress('presence.left', { userId: user.id });
+    }
     return noContent();
   }),
 
@@ -133,6 +139,7 @@ export const adminHandlers = [
       createdAt: Date.now(),
     };
     state.notices.push(notice);
+    void emitViaExpress('system.notice', notice); // 접속자 전원 (API_CONTRACT 2.8)
     return HttpResponse.json(notice, { status: 201 });
   }),
 ];

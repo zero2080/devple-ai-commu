@@ -32,7 +32,7 @@ pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 
 Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
 
-Mock SSE 서버는 `127.0.0.1:5174`에 뜨고 Vite 프록시도 이 주소로 보냅니다(`localhost`는 `::1`로 먼저 풀려 같은 포트를 연 다른 개발 서버로 요청이 샐 수 있어서 IPv4로 고정). 이 주소가 점유돼 있으면 Mock 서버가 안내를 찍고 종료하니 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 됩니다(Vite 프록시와 서버가 같은 값을 읽음). 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `POST /__mock/reset`(월드 초기 배치로), `POST /__mock/say { userId, content, at? }`(가짜 접속자 발화, 반경 밖이면 미전달), `POST /__mock/place { userId, x, y, freeze? }`(배치, freeze면 멈춤), `GET /__mock/state`. 가짜 접속자는 `MOCK_CHATTER_MS`(기본 7000, 0이면 끔)마다 근처에서 말합니다.
+Mock SSE 서버는 `127.0.0.1:5174`에 뜨고 Vite 프록시도 이 주소로 보냅니다(`localhost`는 `::1`로 먼저 풀려 같은 포트를 연 다른 개발 서버로 요청이 샐 수 있어서 IPv4로 고정). 이 주소가 점유돼 있으면 Mock 서버가 안내를 찍고 종료하니 `MOCK_SSE_PORT=5199 pnpm dev`처럼 바꾸면 됩니다(Vite 프록시와 서버가 같은 값을 읽음). 개발용 트리거: `POST /__mock/emit { type, payload }`(임의 이벤트 주입), `POST /__mock/disconnect`(강제 끊김), `POST /__mock/reset`(월드 초기 배치로), `POST /__mock/say { userId, content, at? }`(가짜 접속자 발화, 반경 밖이면 미전달), `POST /__mock/place { userId, x, y, freeze? }`(배치, freeze면 멈춤), `POST /__mock/freeze-all`(가짜 접속자 전원 멈춤, reset이 풀어 줌), `GET /__mock/state`. 가짜 접속자는 `MOCK_CHATTER_MS`(기본 7000, 0이면 끔)마다 근처에서 말합니다.
 
 ## 스크립트
 

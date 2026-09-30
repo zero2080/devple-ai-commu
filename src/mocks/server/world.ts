@@ -159,6 +159,14 @@ export class WorldSim {
     }
   }
 
+  /** 모두 멈춘다 (E2E가 가짜 접속자의 무작위 이동 없이 결정적으로 검증할 때). /__mock/reset이 풀어 준다 */
+  freezeAll(): number {
+    for (const presence of this.presences) {
+      this.frozen.add(presence.userId);
+    }
+    return this.presences.length;
+  }
+
   /** 기본 고정 목록(생성 시 options.frozenUserIds)만 남긴다 */
   resetFrozen(keep: readonly string[]): void {
     this.frozen.clear();
@@ -169,6 +177,19 @@ export class WorldSim {
 
   find(userId: string): Presence | undefined {
     return this.presences.find((p) => p.userId === userId);
+  }
+
+  /** 월드에서 뺀다 (정지 등으로 연결이 끊긴 사용자). 없으면 false */
+  remove(userId: string): boolean {
+    const index = this.presences.findIndex((p) => p.userId === userId);
+    const presence = this.presences[index];
+    if (presence === undefined) {
+      return false;
+    }
+    this.occupied.delete(key(presence.position.x, presence.position.y));
+    this.presences.splice(index, 1);
+    this.frozen.delete(userId);
+    return true;
   }
 
   setState(userId: string, state: Presence['state'], now: number): boolean {
