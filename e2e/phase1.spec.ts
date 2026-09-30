@@ -5,7 +5,7 @@ const SSE_PORT = process.env.MOCK_SSE_PORT ?? '5199';
 
 test.beforeEach(async ({ request }) => {
   // Mock 서버는 테스트 사이에 살아 있으므로 월드를 초기 배치로 되돌린다
-  const res = await request.post(`http://localhost:${SSE_PORT}/__mock/reset`);
+  const res = await request.post(`http://127.0.0.1:${SSE_PORT}/__mock/reset`);
   if (!res.ok()) throw new Error('mock reset failed');
 });
 
@@ -122,7 +122,7 @@ test('로그인 → 월드 진입 → 가짜 접속자 이동 → 강제 끊김 
   const ticketsBefore = ticketRequests.length;
 
   // 강제 끊김 → onerror → 새 티켓 → 재연결, 연결은 여전히 1개
-  const disconnect = await page.request.post(`http://localhost:${SSE_PORT}/__mock/disconnect`);
+  const disconnect = await page.request.post(`http://127.0.0.1:${SSE_PORT}/__mock/disconnect`);
   expect(disconnect.ok()).toBe(true);
   await expect(badge).toHaveAttribute('data-state', 'reconnecting', { timeout: 5_000 });
   await expect(badge).toHaveAttribute('data-state', 'open', { timeout: 10_000 });

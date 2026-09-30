@@ -20,7 +20,7 @@ export default defineConfig({
     {
       // pnpm exec 래퍼를 거치면 종료 시 자식 프로세스가 남아 Playwright가 매달린다 → 바이너리 직접 실행
       command: 'node_modules/.bin/tsx src/mocks/sse-server.ts',
-      url: `http://localhost:${SSE_PORT}/__mock/state`,
+      url: `http://127.0.0.1:${SSE_PORT}/__mock/state`, // SSE_MOCK_HOST
       reuseExistingServer: false,
       env: { MOCK_SSE_PORT: SSE_PORT, MOCK_CHATTER_MS: '0' },
       timeout: 30_000,

@@ -2,7 +2,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const SSE_PORT = process.env.MOCK_SSE_PORT ?? '5199';
-const MOCK = `http://localhost:${SSE_PORT}`;
+const MOCK = `http://127.0.0.1:${SSE_PORT}`; // SSE_MOCK_HOST
 const TILE = 16;
 
 test.beforeEach(async ({ request }) => {

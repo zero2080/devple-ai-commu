@@ -23,6 +23,13 @@ export const SERVER_CONFIG: ServerConfig = {
 export const DEMO_ACCESS_KEY = 'DEMO-0000-0000';
 export const ACCESS_TOKEN_TTL_SEC = 900;
 export const DEFAULT_SSE_MOCK_PORT = 5174;
+/**
+ * Mock 서버가 여는 주소이자 Vite 프록시·E2E가 부르는 주소. `localhost`를 쓰지 않는다:
+ * Node는 `localhost`를 `::1`부터 풀어서, 같은 포트를 `::1`에 연 다른 개발 서버가 있으면
+ * 프록시 요청이 그쪽으로 새고(티켓 404 → SSE 미연결 → 캐릭터 없음), 서버는 `*`에 붙어 충돌도 안 난다.
+ * 양쪽을 IPv4 한 주소로 고정하면 같은 주소 점유는 기동 시 EADDRINUSE로 드러난다.
+ */
+export const SSE_MOCK_HOST = '127.0.0.1';
 
 /**
  * Express mock이 담당하는 엔드포인트 (ARCHITECTURE 9장, 2026-09-30 결정).

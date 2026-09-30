@@ -5,7 +5,7 @@ const SSE_PORT = process.env.MOCK_SSE_PORT ?? '5199';
 
 test.beforeEach(async ({ request }) => {
   // Mock 서버는 테스트 사이에 살아 있으므로 월드를 초기 배치로 되돌린다
-  const res = await request.post(`http://localhost:${SSE_PORT}/__mock/reset`);
+  const res = await request.post(`http://127.0.0.1:${SSE_PORT}/__mock/reset`);
   if (!res.ok()) throw new Error('mock reset failed');
 });
 
@@ -26,7 +26,7 @@ function myPosition(page: Page) {
 }
 
 async function serverPositionOfMe(page: Page): Promise<Tile> {
-  const res = await page.request.get(`http://localhost:${SSE_PORT}/__mock/state`);
+  const res = await page.request.get(`http://127.0.0.1:${SSE_PORT}/__mock/state`);
   const body = (await res.json()) as { presences: { userId: string; position: Tile }[] };
   const me = body.presences.find((p) => p.userId === 'u_me');
   if (me === undefined) {

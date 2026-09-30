@@ -1,11 +1,16 @@
 // Express 기반 Mock 서버 CLI (ROADMAP 4단계, ARCHITECTURE 9장). `pnpm dev:sse` → 포트 5174.
 // 담당: SSE 티켓·스트림, 월드 REST(PUT /me/position, PUT /me/presence, GET /world/:mapId/presences), POST /chat/public, 개발용 트리거.
 // 앱 본체는 server/app.ts (테스트에서 포트 0으로 띄운다).
-import { DEFAULT_CHATTER_MS, DEFAULT_SSE_MOCK_PORT, SERVER_CONFIG } from './data/config.ts';
+import {
+  DEFAULT_CHATTER_MS,
+  DEFAULT_SSE_MOCK_PORT,
+  SERVER_CONFIG,
+  SSE_MOCK_HOST,
+} from './data/config.ts';
 import { createMockServer } from './server/app.ts';
 
 const HEARTBEAT_MS = 15_000;
-// 5174가 다른 개발 서버에 점유돼 있으면 MOCK_SSE_PORT로 바꾼다 (vite.config.ts proxy도 같은 변수를 읽음)
+// 포트가 점유돼 있으면 MOCK_SSE_PORT로 바꾼다 (vite.config.ts proxy도 같은 변수를 읽음). 호스트는 SSE_MOCK_HOST 주석 참고
 const PORT = Number(process.env.MOCK_SSE_PORT ?? DEFAULT_SSE_MOCK_PORT);
 
 function log(message: string): void {
@@ -23,8 +28,14 @@ if (CHATTER_MS > 0) {
   setInterval(server.chatter, CHATTER_MS);
 }
 
-server.app.listen(PORT, () => {
+// Express 5는 listen 실패('error')도 이 콜백으로 넘긴다. 무시하면 듣지 않는 채 타이머만 돌며 "listening"을 찍는다
+server.app.listen(PORT, SSE_MOCK_HOST, (error?: Error) => {
+  if (error !== undefined) {
+    log(`cannot listen on ${SSE_MOCK_HOST}:${String(PORT)}: ${error.message}`);
+    log('another process holds this port — retry with MOCK_SSE_PORT=5199 pnpm dev');
+    process.exit(1);
+  }
   log(
-    `listening on http://localhost:${String(PORT)} (${String(server.world.presences.length)} presences)`,
+    `listening on http://${SSE_MOCK_HOST}:${String(PORT)} (${String(server.world.presences.length)} presences)`,
   );
 });
