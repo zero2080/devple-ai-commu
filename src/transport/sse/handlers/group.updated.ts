@@ -1,4 +1,6 @@
-// SSE `group.updated` (API_CONTRACT 3.3). 3단계: 파싱만. 스토어 갱신은 이후 단계에서 handle을 채운다.
+// SSE `group.updated` (API_CONTRACT 3.3) → 이름·owner·인원·멤버 교체 (9단계)
+import { applyGroupUpdated } from '@/store/groupCache';
+import { queryClient } from '@/store/queryClient';
 import { groupUpdatedPayloadSchema } from '@/transport/schemas';
 
 import { defineSseHandler } from '../registry';
@@ -6,4 +8,7 @@ import { defineSseHandler } from '../registry';
 export const groupUpdatedHandler = defineSseHandler({
   type: 'group.updated',
   schema: groupUpdatedPayloadSchema,
+  handle(payload) {
+    applyGroupUpdated(queryClient, payload);
+  },
 });

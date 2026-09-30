@@ -33,9 +33,9 @@ export function fetchGroupDetail(groupId: string): Promise<GroupDetail> {
   return request({ ...ENDPOINTS.groupDetail, params: { groupId } }, groupDetailSchema);
 }
 
-/** PATCH /groups/{groupId} { name } — owner 전용. 응답 본문은 계약 미정의라 사용하지 않는다 */
-export function renameGroup(groupId: string, name: string): Promise<void> {
-  return request({ ...ENDPOINTS.renameGroup, params: { groupId }, body: { name } });
+/** PATCH /groups/{groupId} { name } → 200 Group — owner 전용 (전 멤버에게 group.updated) */
+export function renameGroup(groupId: string, name: string): Promise<Group> {
+  return request({ ...ENDPOINTS.renameGroup, params: { groupId }, body: { name } }, groupSchema);
 }
 
 /** DELETE /groups/{groupId} — owner 전용 해산 */
