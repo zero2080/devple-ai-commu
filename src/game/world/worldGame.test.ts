@@ -126,3 +126,57 @@ describe('말풍선 수직 배치 공식 (GRAPHICS 5.2)', () => {
     expect(BUBBLE_NICKNAME_CLEARANCE_PX).toBe(11);
   });
 });
+
+describe('characterAt (ARCHITECTURE 3.1)', () => {
+  function gameWith(presences: Map<string, Presence>): WorldGame {
+    const positions = new Map([...presences].map(([id, p]) => [id, p.position]));
+    const game = new WorldGame({
+      canvas: fakeCanvas(),
+      map,
+      createTilemap: fakeTilemap,
+      source: {
+        presences: () => presences,
+        positions: () => positions,
+        myUserId: () => 'me',
+        revision: () => 1,
+        snapshotRevision: () => 1,
+        zoom: () => 2,
+      },
+    });
+    game.resize(640, 480, 1);
+    game.step(0);
+    return game;
+  }
+  const screenOf = (game: WorldGame, worldX: number, worldY: number) => ({
+    x: (worldX - game.currentCamera.originX) * game.currentCamera.zoom,
+    y: (worldY - game.currentCamera.originY) * game.currentCamera.zoom,
+  });
+
+  it('발 타일과 그 위 한 타일(머리)을 누르면 그 캐릭터다', () => {
+    const game = gameWith(
+      new Map([
+        ['me', presence('me', 20, 15)],
+        ['a', presence('a', 22, 15)],
+      ]),
+    );
+    const feet = screenOf(game, 22 * 16 + 8, 15 * 16 + 8);
+    const head = screenOf(game, 22 * 16 + 8, 14 * 16 + 2);
+    expect(game.characterAt(feet.x, feet.y)).toBe('a');
+    expect(game.characterAt(head.x, head.y)).toBe('a');
+    const empty = screenOf(game, 24 * 16 + 8, 15 * 16 + 8);
+    expect(game.characterAt(empty.x, empty.y)).toBeNull();
+  });
+
+  it('겹치면 아래쪽(앞에 그려진) 캐릭터를 고른다', () => {
+    // b(22,16)의 머리 타일 = a(22,15)의 발 타일
+    const game = gameWith(
+      new Map([
+        ['me', presence('me', 20, 15)],
+        ['a', presence('a', 22, 15)],
+        ['b', presence('b', 22, 16)],
+      ]),
+    );
+    const overlap = screenOf(game, 22 * 16 + 8, 15 * 16 + 8);
+    expect(game.characterAt(overlap.x, overlap.y)).toBe('b');
+  });
+});

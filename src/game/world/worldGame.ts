@@ -163,6 +163,32 @@ export class WorldGame {
     );
   }
 
+  /**
+   * 화면 좌표(캔버스 CSS px) 아래 캐릭터 (ARCHITECTURE 3.1). 스프라이트 16×32(발 타일 위로 2타일) 사각형으로 판정하고,
+   * 겹치면 y가 큰(앞에 그려진) 캐릭터를 고른다. 없으면 null
+   */
+  characterAt(screenX: number, screenY: number): string | null {
+    const world = screenToWorld(this.camera, { x: screenX, y: screenY });
+    let hit: string | null = null;
+    let hitY = Number.NEGATIVE_INFINITY;
+    for (const drawable of this.drawables.values()) {
+      const left = Math.round(drawable.pixelX);
+      const bottom = Math.round(drawable.pixelY) + TILE_SIZE;
+      const top = bottom - TILE_SIZE * CHARACTER_HEIGHT_TILES;
+      if (
+        world.x >= left &&
+        world.x < left + TILE_SIZE &&
+        world.y >= top &&
+        world.y < bottom &&
+        drawable.pixelY > hitY
+      ) {
+        hit = drawable.userId;
+        hitY = drawable.pixelY;
+      }
+    }
+    return hit;
+  }
+
   /** 409 보정: 서버가 인정한 위치로 즉시 스냅 + 경로 재계산 */
   snapTo(position: Position): void {
     this.player.snapTo(position, this.lastNow);
