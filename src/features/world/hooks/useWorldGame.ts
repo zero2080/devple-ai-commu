@@ -3,7 +3,7 @@ import { useEffect, type RefObject } from 'react';
 import { loadMap } from '@/game/assets/loader';
 import { InputController } from '@/game/engine/input';
 import { PositionBatcher } from '@/game/sync/positionBatcher';
-import { WorldGame } from '@/game/world/worldGame';
+import { WorldGame, type WorldFrame } from '@/game/world/worldGame';
 import { registerDebugGame } from '@/shared/debug';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
@@ -18,6 +18,7 @@ export function useWorldGame(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   containerRef: RefObject<HTMLDivElement | null>,
   mapId: string,
+  onRendered?: (frame: WorldFrame) => void,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -59,6 +60,7 @@ export function useWorldGame(
           snapshotRevision: () => world().snapshotRevision,
           zoom: () => useUiStore.getState().zoom,
         },
+        ...(onRendered === undefined ? {} : { onRendered }),
         onMyMove: (position) => {
           world().setMyPosition(position);
           batcher?.push(position);
@@ -95,5 +97,5 @@ export function useWorldGame(
       observer?.disconnect();
       game?.stop();
     };
-  }, [canvasRef, containerRef, mapId]);
+  }, [canvasRef, containerRef, mapId, onRendered]);
 }

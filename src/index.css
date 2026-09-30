@@ -11,6 +11,18 @@
 
 :root {
   --pixel-font-em: 12px; /* PixelKo(Galmuri11) em. 말풍선·닉네임 font-size = em × 줌 */
+  /* 말풍선·패널 색: Endesga 32 임시값. palette.json 확정(12단계) 때 교체 (GRAPHICS 1.1) */
+  --bubble-bg: #c0cbdc;
+  --bubble-fg: #181425;
+  --bubble-outline: #181425;
+  --link-bg: #ead4aa;
+  --link-bg-hover: #e4a672;
+  --link-fg: #181425;
+  --panel-bg: #262b44;
+  --panel-input-bg: #181425;
+  --panel-line: #3a4466;
+  --panel-fg: #c0cbdc;
+  --panel-muted: #8b9bb4;
   color-scheme: dark;
   font-family:
     system-ui,

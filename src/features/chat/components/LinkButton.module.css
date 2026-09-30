@@ -1,0 +1,26 @@
+/* GRAPHICS 5.2 링크 버튼: 같은 픽셀 폰트, 1px × 줌 외곽선 */
+.link {
+  display: inline-block;
+  margin: 0;
+  padding: 0 calc(2px * var(--zoom, 2));
+  border: 0;
+  background: var(--link-bg);
+  color: var(--link-fg);
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  box-shadow:
+    0 calc(-1 * var(--px, 2px)) 0 0 var(--bubble-outline),
+    0 var(--px, 2px) 0 0 var(--bubble-outline),
+    calc(-1 * var(--px, 2px)) 0 0 0 var(--bubble-outline),
+    var(--px, 2px) 0 0 0 var(--bubble-outline);
+}
+
+.link:hover {
+  background: var(--link-bg-hover);
+}
+
+.link:focus-visible {
+  outline: var(--px, 2px) solid #0099db;
+  outline-offset: var(--px, 2px);
+}

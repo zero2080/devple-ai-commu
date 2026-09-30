@@ -2,6 +2,7 @@
 // SSE 연결도 세션과 함께 산다: 로그인·복구 직후 연결, 로그아웃에서 종료 (2026-09-30 결정 4).
 import { connectSse, disconnectSse } from '@/features/realtime';
 import { useAuthStore } from '@/store/authStore';
+import { useChatStore } from '@/store/chatStore';
 import { useWorldStore } from '@/store/worldStore';
 import { login, logout } from '@/transport/api/auth';
 import { getMe } from '@/transport/api/me';
@@ -38,4 +39,5 @@ export async function logoutSession(): Promise<void> {
   }
   useAuthStore.getState().clear();
   useWorldStore.getState().reset();
+  useChatStore.getState().reset();
 }

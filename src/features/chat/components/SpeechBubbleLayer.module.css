@@ -1,0 +1,66 @@
+/* GRAPHICS 5.2 말풍선. 1 월드 px = var(--px) = 1px × 줌. 색은 Endesga 32 임시값 (index.css 토큰) */
+.layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden; /* 첫 프레임에 위치가 잡히기 전까지 */
+  min-width: calc(8px * var(--zoom));
+  max-width: calc(192px * var(--zoom)); /* 12타일 */
+  padding: calc(2px * var(--zoom)) calc(4px * var(--zoom));
+  background: var(--bubble-bg);
+  color: var(--bubble-fg);
+  font-family: PixelKo, system-ui, sans-serif;
+  font-size: calc(var(--pixel-font-em) * var(--zoom));
+  line-height: calc(15px * var(--zoom));
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  will-change: transform;
+  /* 1px × 줌 외곽선. 네 방향만 그려 모서리 1px이 깎인다 */
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--bubble-outline),
+    0 var(--px) 0 0 var(--bubble-outline),
+    calc(-1 * var(--px)) 0 0 0 var(--bubble-outline),
+    var(--px) 0 0 0 var(--bubble-outline);
+}
+
+/* 링크 버튼이 있는 말풍선만 포인터를 받는다 (클릭·호버 유지) */
+.interactive {
+  pointer-events: auto;
+}
+
+.text {
+  display: block;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(2px * var(--zoom));
+  margin-top: calc(2px * var(--zoom));
+}
+
+/* 픽셀 꼬리: 3칸 → 1칸 → 끝. 위치(left)는 레이어가 줌의 배수로 쓴다 */
+.tail {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: var(--px);
+  height: var(--px);
+  background: var(--bubble-bg);
+  box-shadow:
+    calc(-1 * var(--px)) 0 0 0 var(--bubble-bg),
+    var(--px) 0 0 0 var(--bubble-bg),
+    calc(-1 * var(--px)) var(--px) 0 0 var(--bubble-outline),
+    0 var(--px) 0 0 var(--bubble-bg),
+    var(--px) var(--px) 0 0 var(--bubble-outline),
+    0 calc(2 * var(--px)) 0 0 var(--bubble-outline);
+}

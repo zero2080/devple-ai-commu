@@ -14,6 +14,7 @@ const MESSAGES: Record<string, string> = {
   MESSAGE_ALREADY_READ: '상대가 이미 읽어서 회수할 수 없어요.',
   RATE_LIMITED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
   INTERNAL: '서버 오류가 발생했어요.',
+  NETWORK: '네트워크 연결을 확인해 주세요.',
 };
 
 export function messageFor(error: unknown): string {
@@ -24,4 +25,9 @@ export function messageFor(error: unknown): string {
     return '네트워크 연결을 확인해 주세요.';
   }
   return '알 수 없는 오류가 발생했어요.';
+}
+
+/** 이미 코드만 남은 경우 (예: 실패한 전송 항목의 errorCode) */
+export function messageForCode(code: string | undefined): string {
+  return (code === undefined ? undefined : MESSAGES[code]) ?? '요청을 처리하지 못했어요.';
 }

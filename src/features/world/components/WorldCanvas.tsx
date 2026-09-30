@@ -1,20 +1,40 @@
-import { useRef } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 
 import styles from './WorldCanvas.module.css';
 import { useWorldGame } from '../hooks/useWorldGame';
+import { useWorldContext } from '../worldContext';
 
 interface WorldCanvasProps {
   mapId: string;
+  /** 캔버스 위 DOM 오버레이 (말풍선) */
+  children?: ReactNode;
 }
 
-export function WorldCanvas({ mapId }: WorldCanvasProps) {
+export function WorldCanvas({ mapId, children }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  useWorldGame(canvasRef, containerRef, mapId);
+  const { emitFrame, registerCanvas } = useWorldContext();
+  useWorldGame(canvasRef, containerRef, mapId, emitFrame);
+
+  const setCanvas = useCallback(
+    (element: HTMLCanvasElement | null) => {
+      canvasRef.current = element;
+      registerCanvas(element);
+    },
+    [registerCanvas],
+  );
 
   return (
     <div ref={containerRef} className={styles.container} data-testid="world-container">
-      <canvas ref={canvasRef} className={styles.canvas} role="img" aria-label="가상공간 맵" />
+      {/* tabIndex: Esc로 입력창에서 돌아올 포커스 대상 (ARCHITECTURE 3.1) */}
+      <canvas
+        ref={setCanvas}
+        className={styles.canvas}
+        role="img"
+        aria-label="가상공간 맵"
+        tabIndex={0}
+      />
+      {children}
     </div>
   );
 }

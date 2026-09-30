@@ -1,0 +1,44 @@
+// 말풍선 배치 계산 (ARCHITECTURE 2.3). 순수 함수 — 레이어가 프레임마다 부른다
+import { BUBBLE_TAIL_PX } from '@/game/constants';
+
+export interface BubblePlacement {
+  /** 말풍선 몸통 왼쪽 위 (캔버스 기준 CSS px, 정수) */
+  x: number;
+  y: number;
+  /** 꼬리 열의 몸통 기준 left (CSS px, 줌의 배수) */
+  tailLeft: number;
+  /** 캔버스와 조금이라도 겹치면 true */
+  visible: boolean;
+}
+
+/**
+ * anchor는 꼬리 끝(닉네임 위)이다. 몸통은 꼬리 높이만큼 위에 둔다.
+ * 몸통은 캔버스 좌우 안으로 밀어 넣고(잘림 방지) 꼬리만 발화자를 가리킨다. 좌표는 줌의 배수로 내림해
+ * 꼬리와 몸통이 같은 픽셀 격자에 놓이게 한다 (GRAPHICS 1.2). 발화자가 화면 밖이면 숨긴다
+ */
+export function placeBubble(
+  anchor: { x: number; y: number },
+  width: number,
+  height: number,
+  zoom: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): BubblePlacement {
+  const snap = (value: number): number => Math.floor(value / zoom) * zoom;
+  const half = snap(width / 2);
+  const maxX = Math.max(0, snap(viewportWidth - width));
+  const x = Math.min(Math.max(snap(anchor.x - half), 0), maxX);
+  // 꼬리는 몸통 모서리 2칸 안쪽까지만 (꼬리 폭 ±2 월드 px)
+  const tailLeft = snap(
+    Math.min(Math.max(anchor.x - x, 2 * zoom), Math.max(2 * zoom, width - 3 * zoom)),
+  );
+  const y = Math.round(anchor.y - height - BUBBLE_TAIL_PX * zoom);
+  const bottom = y + height + BUBBLE_TAIL_PX * zoom;
+  const visible = anchor.x >= 0 && anchor.x <= viewportWidth && bottom > 0 && y < viewportHeight;
+  return { x, y, tailLeft, visible };
+}
+
+/** 만료 시각이 지났고 포인터가 올라가 있지 않으면 지운다 (링크 버튼이 있는 말풍선은 호버·터치 중 유지) */
+export function shouldRemoveBubble(expiresAt: number, now: number, hovered: boolean): boolean {
+  return !hovered && now >= expiresAt;
+}
