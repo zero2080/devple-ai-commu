@@ -12,7 +12,14 @@ interface DevpleDebugGlobal {
   game?: { currentCamera: { originX: number; originY: number; zoom: number } };
 }
 
+interface DevpleMockControls {
+  dmFrom: (userId: string, content: string) => string | null;
+  readBy: (userId: string) => number;
+  seedDm: (userId: string, count: number) => number;
+}
+
 interface Window {
   __devple?: DevpleDebugGlobal;
+  __devpleMock?: DevpleMockControls;
   __esStats?: () => { created: number; open: number };
 }
