@@ -24,6 +24,7 @@ const session: AuthSession = {
     maxMessageLength: 200,
     defaultMapId: 'main',
     maxGroupMembers: 10,
+    avatarIds: ['char_01'],
   },
 };
 

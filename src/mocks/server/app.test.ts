@@ -205,3 +205,21 @@ describe('/__mock/reset', () => {
     expect(again.status).toBe(204); // seq 기록이 비었으므로 작은 seq도 수락
   });
 });
+
+describe('/__mock/emit 브리지', () => {
+  it('presence.updated는 Express Presence에도 반영하고 방송한다', async () => {
+    const chunks: string[] = [];
+    server.hub.add({ write: (c) => chunks.push(c), end: () => undefined });
+    const res = await fetch(`${base}/__mock/emit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'presence.updated',
+        payload: { userId: ME.id, nickname: '새이름', avatarId: 'char_03' },
+      }),
+    });
+    expect(res.status).toBe(202);
+    expect(server.world.find(ME.id)).toMatchObject({ nickname: '새이름', avatarId: 'char_03' });
+    expect(chunks.some((c) => c.includes('presence.updated') && c.includes('새이름'))).toBe(true);
+  });
+});

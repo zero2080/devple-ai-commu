@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { ACCESS_TOKEN_TTL_SEC, DEMO_ACCESS_KEY, SERVER_CONFIG } from '../data/config.ts';
-import { nextId, state } from '../state.ts';
+import { isNicknameTaken, nextId, state } from '../state.ts';
 import { apiError, noContent, param, readJson, requireAuth, str, url } from './support.ts';
 
 const REFRESH_COOKIE = 'refreshToken';
@@ -18,14 +18,6 @@ function issueAccessToken(): string {
 /** 계약은 Path=/api/v1/auth지만 MSW는 document.cookie로 요청 쿠키를 읽으므로 mock에서는 Path=/ (새로고침 후 세션 복구용) */
 function refreshCookieHeader(value: string, maxAgeSec: number): string {
   return `${REFRESH_COOKIE}=${value}; Path=/; Max-Age=${String(maxAgeSec)}; SameSite=Strict`;
-}
-
-function isNicknameTaken(nickname: string): boolean {
-  return (
-    state.me.nickname === nickname ||
-    state.users.some((u) => u.nickname === nickname) ||
-    state.signups.some((s) => s.status === 'pending' && s.nickname === nickname)
-  );
 }
 
 export const authHandlers = [

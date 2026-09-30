@@ -65,6 +65,7 @@ export interface ServerConfig {
   maxMessageLength: number; // 기본 200
   defaultMapId: string;
   maxGroupMembers: number; // 기본 10
+  avatarIds: string[]; // 선택 가능한 아바타 목록의 원천 (GRAPHICS 2.3). 순서 있음, 비어 있지 않음
 }
 
 /* ---------- 4. 공간 · 위치 ---------- */

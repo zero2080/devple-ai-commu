@@ -10,6 +10,7 @@ export const serverConfigSchema = z.object({
   maxMessageLength: z.number().int().positive(),
   defaultMapId: z.string(),
   maxGroupMembers: z.number().int().positive(),
+  avatarIds: z.array(z.string()).min(1),
 });
 
 export const authSessionSchema = z.object({

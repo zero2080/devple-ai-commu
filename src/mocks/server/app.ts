@@ -235,7 +235,22 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       apiError(res, 400, 'VALIDATION_FAILED', 'body must be { type, payload }');
       return;
     }
-    const envelope = hub.broadcast(type, field(req.body, 'payload') ?? {});
+    const payload = field(req.body, 'payload') ?? {};
+    // MSW emit 브리지 (ARCHITECTURE 9장): presence.updated는 Express의 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다
+    if (type === 'presence.updated') {
+      const userId = field(payload, 'userId');
+      const target = typeof userId === 'string' ? world.find(userId) : undefined;
+      if (target !== undefined) {
+        const nickname = field(payload, 'nickname');
+        const avatarId = field(payload, 'avatarId');
+        const state = field(payload, 'state');
+        if (typeof nickname === 'string') target.nickname = nickname;
+        if (typeof avatarId === 'string') target.avatarId = avatarId;
+        if (state === 'online' || state === 'away') target.state = state;
+        target.updatedAt = now();
+      }
+    }
+    const envelope = hub.broadcast(type, payload);
     log(`emit ${type} id=${envelope.id} → ${String(hub.size)} clients`);
     res.status(202).json({ id: envelope.id, clients: hub.size });
   });

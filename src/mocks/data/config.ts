@@ -8,6 +8,16 @@ export const SERVER_CONFIG: ServerConfig = {
   maxMessageLength: 200,
   defaultMapId: 'main',
   maxGroupMembers: 10,
+  avatarIds: [
+    'char_01',
+    'char_02',
+    'char_03',
+    'char_04',
+    'char_05',
+    'char_06',
+    'char_07',
+    'char_08',
+  ],
 };
 
 export const DEMO_ACCESS_KEY = 'DEMO-0000-0000';
@@ -31,4 +41,5 @@ export const EXPRESS_MOCK_PATH_PREFIXES = [
   '/api/v1/me/position',
   '/api/v1/me/presence',
   '/api/v1/world',
+  '/__mock', // MSW 핸들러가 SSE 방송을 위임하는 emit 브리지 (ARCHITECTURE 9장)
 ] as const;

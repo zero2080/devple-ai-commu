@@ -112,3 +112,14 @@ export function contentError(content: string, maxLength: number): string | null 
 export function userAsMe(user: User): Me {
   return { ...user, email: `${user.id}@example.com`, phone: '010-0000-0000' };
 }
+
+/** 닉네임 중복: 본인·다른 회원·대기 중 가입 신청 (API_CONTRACT 2.1·2.2) */
+export function isNicknameTaken(nickname: string, exceptUserId?: string): boolean {
+  if (state.me.id !== exceptUserId && state.me.nickname === nickname) {
+    return true;
+  }
+  return (
+    state.users.some((u) => u.id !== exceptUserId && u.nickname === nickname) ||
+    state.signups.some((s) => s.status === 'pending' && s.nickname === nickname)
+  );
+}
