@@ -21,3 +21,27 @@ export interface RemoteCharacter {
   targetPixel: PixelPoint;
   animFrame: number; // GRAPHICS 2.1 프레임 인덱스 (0~3)
 }
+
+/**
+ * 근접 대화 로그 한 줄 (ARCHITECTURE 7). 공개 대화는 히스토리 API가 없고 발신자가 떠날 수 있어
+ * 발화 시점 닉네임을 함께 둔다. 세션 한정 휘발성 로그
+ */
+export interface PublicLogEntry {
+  id: string; // messageId
+  senderId: string;
+  senderNickname: string;
+  content: string;
+  links: string[];
+  createdAt: number;
+}
+
+export type PendingStatus = 'sending' | 'failed';
+
+/** 낙관적 전송 중인 내 공개 메시지 (CONVENTIONS 7). 서버 id가 없으므로 tempId로 식별 */
+export interface PendingPublic {
+  tempId: string;
+  content: string;
+  status: PendingStatus;
+  createdAt: number;
+  errorCode?: string;
+}

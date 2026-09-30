@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bubbleDurationMs, codePointLength } from './message';
+import { bubbleDurationMs, codePointLength, composeState, sameMessageText } from './message';
 
 describe('codePointLength', () => {
   it('빈 문자열은 0이다', () => {
@@ -31,5 +31,24 @@ describe('bubbleDurationMs', () => {
   it('8초를 넘지 않는다', () => {
     expect(bubbleDurationMs('가'.repeat(200), false)).toBe(8000);
     expect(bubbleDurationMs('가'.repeat(200), true)).toBe(8000);
+  });
+});
+
+describe('composeState', () => {
+  it('공백만이면 empty다', () => {
+    expect(composeState('', 200)).toBe('empty');
+    expect(composeState('  \n ', 200)).toBe('empty');
+  });
+
+  it('코드 포인트 기준으로 길이를 센다 (이모지 1자)', () => {
+    expect(composeState('👍'.repeat(200), 200)).toBe('ok');
+    expect(composeState('가'.repeat(201), 200)).toBe('too_long');
+  });
+});
+
+describe('sameMessageText', () => {
+  it('NFC로 정규화해 비교한다 (분리형 한글 = 완성형)', () => {
+    expect(sameMessageText('\u1100\u1161', '가')).toBe(true);
+    expect(sameMessageText('가', '나')).toBe(false);
   });
 });

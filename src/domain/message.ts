@@ -16,3 +16,21 @@ export function bubbleDurationMs(content: string, hasLinks: boolean): number {
   const withLinkFloor = hasLinks ? Math.max(raw, BUBBLE_MIN_WITH_LINKS_MS) : raw;
   return Math.min(withLinkFloor, BUBBLE_MAX_MS);
 }
+
+export type ComposeState = 'empty' | 'too_long' | 'ok';
+
+/**
+ * 입력창 전송 가능 여부 (DOMAIN 5.1의 클라이언트 쪽 사전 확인). 공백만이면 empty, 코드 포인트가 max를 넘으면 too_long.
+ * 제어 문자·NFC 등 나머지 규칙은 서버가 검증한다 (권위는 서버)
+ */
+export function composeState(content: string, maxLength: number): ComposeState {
+  if (content.trim() === '') {
+    return 'empty';
+  }
+  return codePointLength(content) > maxLength ? 'too_long' : 'ok';
+}
+
+/** 서버가 NFC로 저장하므로 내 전송분과 SSE 수신분을 비교할 때 같은 형태로 맞춘다 */
+export function sameMessageText(a: string, b: string): boolean {
+  return a.normalize('NFC') === b.normalize('NFC');
+}
