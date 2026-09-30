@@ -49,7 +49,11 @@ function screenOfTile(page: Page, tile: Tile) {
   }, tile);
 }
 
-test('방향키 이동이 예측되고 서버에 반영되며 벽에서 멈춘다', async ({ page }) => {
+test('방향키 이동이 예측되고 서버에 반영되며 벽에서 멈춘다', async ({ page, request }) => {
+  // 가짜 접속자가 이동 도중 목적 타일로 들어와 409로 되돌리거나(서버 x ≠ 예측 x), 위 타일을 막는 순간이
+  // 키 처리보다 먼저 와서 방향이 바뀌지 않는 경우가 있었다 (104회 중 2회). 이 테스트는 예측·반영·벽을 보므로 멈춰 둔다
+  const frozen = await request.post(`http://127.0.0.1:${SSE_PORT}/__mock/freeze-all`);
+  expect(frozen.ok()).toBe(true);
   await login(page);
   await expect.poll(() => myPosition(page)).toEqual({ mapId: 'main', x: 20, y: 15, dir: 'down' });
 
@@ -92,6 +96,8 @@ test('방향키 이동이 예측되고 서버에 반영되며 벽에서 멈춘�
       { timeout: 4_000 },
     )
     .toMatch(/at-wall|blocked-by-user/);
+  // 막혀도 방향은 위로 돈다 — 게임 루프가 키를 처리할 때까지 누른 채 기다린다
+  await expect.poll(async () => (await myPosition(page))?.dir).toBe('up');
   await page.keyboard.up('ArrowUp');
   const afterUp = await myPosition(page);
   expect(afterUp?.x).toBe(afterRight?.x);
