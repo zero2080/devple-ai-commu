@@ -6,6 +6,7 @@ import { DmPane, useDmUnreadTotal } from '@/features/dm';
 import { GroupPane, useGroupUnreadTotal } from '@/features/group';
 import { NoticeBanner } from '@/features/notice';
 import { ProfileCard } from '@/features/profile';
+import { WardrobeButton, WardrobeModal } from '@/features/wardrobe';
 import {
   ConnectionBadge,
   useGuaranteedCanvasHeight,
@@ -44,11 +45,16 @@ export function WorldPage() {
           <ConnectionBadge />
           <NoticeBanner placement="overlay" />
           <ProfileCard />
-          {isAdmin ? (
-            <Link to="/admin" className={styles.adminLink}>
-              운영자 콘솔
-            </Link>
-          ) : null}
+          {/* 왼쪽 아래 툴바: 옷장(12a), 운영자 콘솔(11단계) */}
+          <div className={styles.toolbar}>
+            <WardrobeButton />
+            {isAdmin ? (
+              <Link to="/admin" className={styles.adminLink}>
+                운영자 콘솔
+              </Link>
+            ) : null}
+          </div>
+          <WardrobeModal />
         </div>
         <ChatPanel
           dmPane={<DmPane />}

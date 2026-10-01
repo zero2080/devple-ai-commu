@@ -10,7 +10,7 @@ import styles from './ProfileCard.module.css';
 import { useUserProfile } from '../hooks/useUserProfile';
 
 /**
- * 캐릭터 클릭 시 프로필 카드 (PRD 5.7): 닉네임·아바타·상태 메시지·접속 여부 + "DM 보내기".
+ * 캐릭터 클릭 시 프로필 카드 (PRD 5.7): 닉네임·아바타·상태 메시지·접속 여부 + "DM 보내기"(내 카드면 "옷장", 12a).
  * 사용자가 연 일시적 오버레이라 캔버스 왼쪽 위에 겹쳐 띄운다 (ARCHITECTURE 7). 닫기·Esc
  */
 export function ProfileCard() {
@@ -92,8 +92,20 @@ export function ProfileCard() {
             DM 보내기
           </button>
         ) : null}
+        {user !== undefined && isMe ? (
+          <button
+            ref={primaryRef}
+            type="button"
+            className={styles.primary}
+            onClick={() => {
+              useUiStore.getState().openWardrobe(); // 카드는 닫힌다
+            }}
+          >
+            옷장
+          </button>
+        ) : null}
         <button
-          ref={isMe || user === undefined ? primaryRef : undefined}
+          ref={user === undefined ? primaryRef : undefined}
           type="button"
           className={styles.secondary}
           onClick={close}

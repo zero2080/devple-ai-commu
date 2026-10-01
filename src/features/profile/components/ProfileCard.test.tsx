@@ -96,6 +96,16 @@ describe('ProfileCard', () => {
     expect(screen.getByText('오프라인')).toBeInTheDocument();
   });
 
+  it('본인 프로필의 "옷장"은 옷장을 열고 카드를 닫는다 (12a)', async () => {
+    api.getUserProfile.mockResolvedValue(profile('u_me', true));
+    useUiStore.getState().openProfile('u_me');
+    renderCard();
+    const wardrobe = await screen.findByRole('button', { name: '옷장' });
+    expect(wardrobe).toHaveFocus();
+    await userEvent.click(wardrobe);
+    expect(useUiStore.getState()).toMatchObject({ wardrobeOpen: true, profileUserId: null });
+  });
+
   it('Esc와 닫기 버튼으로 닫는다', async () => {
     api.getUserProfile.mockResolvedValue(profile('u_01', true));
     useUiStore.getState().openProfile('u_01');

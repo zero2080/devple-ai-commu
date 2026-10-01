@@ -1,4 +1,4 @@
-// UI 상태 (ARCHITECTURE 7장): 줌 배율, 하단 패널 탭, 열린 DM 상대·그룹, 그룹 안내, 열린 프로필 카드
+// UI 상태 (ARCHITECTURE 7장): 줌 배율, 하단 패널 탭, 열린 DM 상대·그룹, 그룹 안내, 열린 프로필 카드·옷장
 import { create } from 'zustand';
 
 import type { Notice } from '@/domain';
@@ -21,6 +21,8 @@ export interface UiState {
   groupId: string | null;
   groupNotice: GroupNotice | null;
   profileUserId: string | null;
+  /** 옷장 모달 (12a단계, ARCHITECTURE 7장). 편집 중 외형은 모달 안 로컬 상태 */
+  wardrobeOpen: boolean;
   /** 운영자 공지 배너 (system.notice). 세션 한정, 최신 1건 */
   notice: Notice | null;
   setZoom: (zoom: ZoomLevel) => void;
@@ -39,6 +41,9 @@ export interface UiState {
   dismissNotice: () => void;
   openProfile: (userId: string) => void;
   closeProfile: () => void;
+  /** 옷장을 연다. 프로필 카드는 닫는다 */
+  openWardrobe: () => void;
+  closeWardrobe: () => void;
   resetUi: () => void;
 }
 
@@ -49,6 +54,7 @@ const initial = {
   groupId: null,
   groupNotice: null,
   profileUserId: null,
+  wardrobeOpen: false,
   notice: null,
 };
 
@@ -92,6 +98,12 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   closeProfile: () => {
     set({ profileUserId: null });
+  },
+  openWardrobe: () => {
+    set({ wardrobeOpen: true, profileUserId: null });
+  },
+  closeWardrobe: () => {
+    set({ wardrobeOpen: false });
   },
   resetUi: () => {
     set(initial);

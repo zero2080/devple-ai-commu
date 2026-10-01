@@ -18,12 +18,17 @@
   min-height: 0;
 }
 
-/* 운영자에게만: 캔버스 왼쪽 아래 작은 링크 (11단계) */
-.adminLink {
+/* 캔버스 왼쪽 아래 툴바: 옷장 버튼(12a)·운영자 링크(11단계, 운영자에게만) */
+.toolbar {
   position: absolute;
   bottom: 12px;
   left: 12px;
   z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
+.adminLink {
   padding: 4px 10px;
   border-radius: 999px;
   background: rgb(0 0 0 / 55%);

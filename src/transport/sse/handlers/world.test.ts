@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { useAuthStore } from '@/store/authStore';
 import { queryClient } from '@/store/queryClient';
 import { queryKeys } from '@/store/queryKeys';
 import { useWorldStore } from '@/store/worldStore';
@@ -104,6 +105,52 @@ describe('world.* / presence.* 핸들러', () => {
       payload: { userId: 'u_1', appearance: { skin: 'skin_1' } },
     });
     expect(useWorldStore.getState().presences.get('u_1')?.appearance).toEqual(look);
+  });
+
+  it('presence.updated가 내 것이면(다른 탭의 옷장 저장) authStore.me 외형·닉네임도 맞춘다', () => {
+    const config = {
+      proximityRadius: 5,
+      positionBatchMs: 200,
+      serverTickMs: 200,
+      maxMessageLength: 200,
+      defaultMapId: 'main',
+      maxGroupMembers: 10,
+      avatarOptions: { itemIds: [], skinRampIds: [], hairRampIds: [], itemRampIds: [] },
+    };
+    const me = {
+      id: 'me',
+      nickname: '나',
+      appearance: TEST_APPEARANCE,
+      role: 'member' as const,
+      status: 'active' as const,
+      createdAt: 1,
+      email: 'me@example.com',
+      phone: '010',
+    };
+    useAuthStore.getState().setMe(me, config);
+    const look = { ...TEST_APPEARANCE, skin: 'skin_4' };
+    registry.dispatch({
+      id: '11',
+      type: 'presence.updated',
+      ts: 1,
+      payload: { userId: 'me', appearance: look },
+    });
+    expect(useAuthStore.getState().me).toEqual({ ...me, appearance: look });
+    // 남의 변경·상태만 바뀐 경우는 건드리지 않는다
+    registry.dispatch({
+      id: '12',
+      type: 'presence.updated',
+      ts: 1,
+      payload: { userId: 'a', nickname: '남' },
+    });
+    registry.dispatch({
+      id: '13',
+      type: 'presence.updated',
+      ts: 1,
+      payload: { userId: 'me', state: 'away' },
+    });
+    expect(useAuthStore.getState().me).toEqual({ ...me, appearance: look });
+    useAuthStore.getState().clear();
   });
 
   it('좌표가 정수가 아니면 무시한다 (zod)', () => {
