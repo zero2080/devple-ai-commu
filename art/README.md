@@ -4,8 +4,8 @@
 
 | 경로 | 내용 |
 |---|---|
-| `avatar/body/body_base.pix` | 기준 몸 (GRAPHICS 2.2) |
-| `avatar/<slot>/<id>.pix` | 아바타 레이어 원본. `<id>`는 `catalog.json`의 아이템 ID |
+| `source/avatar/body/body_base.pix` | 기준 몸 (GRAPHICS 2.2) |
+| `source/avatar/<slot>/<id>.pix` | 아바타 레이어 원본. `<id>`는 `catalog.json`의 아이템 ID (GRAPHICS 6장 `art/source/`) |
 | `templates/` | 제작 템플릿 (`pnpm art:templates`, GRAPHICS 7.2) |
 | `ai/` | AI 생성 키트 — 안내 `ai/README.md`, 아이템별 지시문 `ai/briefs/`(자동 생성), 코드표 `ai/glyphs.md`(자동 생성) |
 
@@ -45,7 +45,7 @@ PNG만 고치고 원본을 안 고치면 `check:assets`가 실패한다. 언제�
 ### 걷기 파생 (GRAPHICS 2.3)
 
 - 프레임 0·2: 서기 그대로
-- 프레임 1·3: 머리·몸통(y 0–31)을 1px 아래로. 다리(y 32–39)는 프레임 1이면 화면 왼쪽 절반(x < 12), 프레임 3이면 오른쪽 절반을 1px 들어 발바닥이 y 38
+- 프레임 1·3: 머리·몸통(y 0–31)을 1px 아래로. 다리(y 32–39)는 프레임 1이면 캐릭터의 왼발, 3이면 오른발을 1px 들어 발바닥이 y 38 (GRAPHICS 2.3). 왼발은 `down`에서 화면 오른쪽 절반(x ≥ 12), `left`·`right`·`up`에서 화면 왼쪽 절반(x < 12)이다 — 기준 몸의 다리를 그 절반에 나눠 그린다
 - 모든 레이어가 같은 규칙이라 겹쳐도 어긋나지 않는다. `@dir <방향> <1–3>` 블록이 있으면 그 프레임은 파생 대신 블록을 쓴다
 
 ### 글자표

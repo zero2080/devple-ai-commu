@@ -164,7 +164,7 @@ describe('mergeFrames', () => {
 });
 
 describe('개발용 원본 왕복 (ROADMAP 12b 완료 조건)', () => {
-  it('art/avatar의 모든 .pix: 서기 4방향을 4배 띠 + 단색 배경으로 → ingest → 원본 서기 블록과 같다', () => {
+  it('art/source/avatar의 모든 .pix: 서기 4방향을 4배 띠 + 단색 배경으로 → ingest → 원본 서기 블록과 같다', () => {
     const all = glyphColors(readPalette().colors);
     const catalog = readCatalog();
     const entries = [

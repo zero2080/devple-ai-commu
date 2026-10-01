@@ -10,7 +10,7 @@
 | 바뀌는 색 (키 색) | 주색 `P Q R` (P=hi Q=base R=shadow) |
 | 기본 색 | primary = `item_charcoal` |
 | 시트 | front |
-| 원본 파일 | `art/avatar/bottom/bottom_slacks.pix` |
+| 원본 파일 | `art/source/avatar/bottom/bottom_slacks.pix` |
 
 ## 어디에 그리나
 - 다리 y 32–36 부근. 발(y 37–39)은 신발 레이어에 맡긴다
@@ -38,7 +38,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/bottom/bottom_slacks.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/bottom/bottom_slacks.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

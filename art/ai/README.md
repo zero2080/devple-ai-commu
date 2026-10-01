@@ -38,8 +38,8 @@
 
 ```text
 너는 16비트 콘솔 RPG 도트 아티스트다. art/ai/briefs/<id>.md의 아이템을 art/README.md의 .pix 형식으로
-art/avatar/<slot>/<id>.pix에 그려라. 방향마다 서기 1장(24×40), 4방향을 각각 그린다(좌우 반전 금지).
-기준 몸(art/avatar/body/body_base.pix) 위에 겹친다고 생각하고 자리를 맞춘다. 바뀌는 부분은 브리프의 키 색 글자만,
+art/source/avatar/<slot>/<id>.pix에 그려라. 방향마다 서기 1장(24×40), 4방향을 각각 그린다(좌우 반전 금지).
+기준 몸(art/source/avatar/body/body_base.pix) 위에 겹친다고 생각하고 자리를 맞춘다. 바뀌는 부분은 브리프의 키 색 글자만,
 나머지는 외곽선 o와 팔레트 코드 4색 이내. 다 쓰면 pnpm art:build를 돌리고, 실패 메시지가 없어질 때까지 고친다.
 ```
 

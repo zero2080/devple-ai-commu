@@ -1,4 +1,4 @@
-// 아바타 레이어 빌드 (ROADMAP 12b-1): art/avatar/**/*.pix → src/assets/sprites/avatar/** PNG. 사용: pnpm art:build (이어서 check:assets)
+// 아바타 레이어 빌드 (ROADMAP 12b-1): art/source/avatar/**/*.pix → src/assets/sprites/avatar/** PNG. 사용: pnpm art:build (이어서 check:assets)
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
@@ -47,7 +47,7 @@ for (const entry of entries) {
 }
 
 for (const id of missing) {
-  errors.push(`${id}: 원본 .pix가 없음 (art/avatar/, art/ai/briefs/${id}.md)`);
+  errors.push(`${id}: 원본 .pix가 없음 (art/source/avatar/, art/ai/briefs/${id}.md)`);
 }
 if (errors.length > 0) {
   console.error(

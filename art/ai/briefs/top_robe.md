@@ -11,7 +11,7 @@
 | 기본 색 | primary = `item_purple`, secondary = `item_yellow` |
 | 시트 | front |
 | 하의 덮음 | 예 (`coversBottom`) |
-| 원본 파일 | `art/avatar/top/top_robe.pix` |
+| 원본 파일 | `art/source/avatar/top/top_robe.pix` |
 
 ## 어디에 그리나
 - 몸통 y 24–31, 소매·팔 포함. 목 부분은 몸 레이어의 피부가 보이게 비워 둔다
@@ -40,7 +40,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/top/top_robe.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/top/top_robe.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

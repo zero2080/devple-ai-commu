@@ -10,7 +10,7 @@
 | 바뀌는 색 (키 색) | 피부 `H S D` (H=hi S=base D=shadow) |
 | 기본 색 | 없음 |
 | 시트 | front |
-| 원본 파일 | `art/avatar/body/body_base.pix` |
+| 원본 파일 | `art/source/avatar/body/body_base.pix` |
 
 ## 어디에 그리나
 - 머리 y 8–23(폭 약 14px, x 5–18), 몸통 y 24–31(폭 10–12px, 팔 포함), 다리 y 32–39, 발바닥 y 39
@@ -39,7 +39,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/body/body_base.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 피부 `H S D` (H=hi S=base D=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/body/body_base.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 피부 `H S D` (H=hi S=base D=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

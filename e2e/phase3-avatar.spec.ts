@@ -8,7 +8,7 @@ const TILE = 16;
 const ME = { x: 20, y: 15 };
 const FRAME = { x: ME.x * TILE + TILE / 2 - 12, y: ME.y * TILE + TILE - 40 };
 /**
- * 개발용 후드(art/avatar/top/top_hoodie.pix, down)의 윗줄 x7은 주색 hi, y28 x9는 base다.
+ * 개발용 후드(art/source/avatar/top/top_hoodie.pix, down)의 윗줄 x7은 주색 hi, y28 x9는 base다.
  * 합성 전 대체 그림(외형 색 도형)은 base 한 색이라 hi 픽셀로 합성 여부를 구분한다
  */
 const TORSO_HI = { x: FRAME.x + 7, y: FRAME.y + 24 };

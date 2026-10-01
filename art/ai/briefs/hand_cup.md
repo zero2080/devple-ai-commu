@@ -10,7 +10,7 @@
 | 바뀌는 색 (키 색) | 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow) |
 | 기본 색 | primary = `item_white`, secondary = `item_brown` |
 | 시트 | front + **back**(몸보다 뒤에 그릴 부분) |
-| 원본 파일 | `art/avatar/hand/hand_cup.pix` |
+| 원본 파일 | `art/source/avatar/hand/hand_cup.pix` |
 
 ## 어디에 그리나
 - 오른손에 든 물건. 좌우 여백(x 0–3, 20–23)을 쓸 수 있다
@@ -40,7 +40,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/hand/hand_cup.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/hand/hand_cup.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

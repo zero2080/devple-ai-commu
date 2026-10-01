@@ -94,7 +94,7 @@ if (existsSync(AVATAR_SOURCE_DIR)) {
   for (const path of walk(AVATAR_SOURCE_DIR)) {
     const file = relative(AVATAR_SOURCE_DIR, path);
     if (file.endsWith('.pix') && !sources.has(file)) {
-      failures.push(`카탈로그에 없는 원본: art/avatar/${file}`);
+      failures.push(`카탈로그에 없는 원본: art/source/avatar/${file}`);
     }
   }
 }

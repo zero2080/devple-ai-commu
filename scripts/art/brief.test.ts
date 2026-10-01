@@ -38,7 +38,7 @@ describe('briefFor (AI 생성 지시문)', () => {
     expect(text).toContain(
       'hair: #8080ff / #0000ff / #000080; secondary: #80ff80 / #00ff00 / #008000',
     );
-    expect(text).toContain('`art/avatar/hair/hair_ponytail.pix`');
+    expect(text).toContain('`art/source/avatar/hair/hair_ponytail.pix`');
     expect(text).toContain('pnpm art:ingest <파일> --id hair_ponytail [--sheet back]');
     expect(text).toContain('Also output a second strip');
     expect(text).toContain(palette.join(' '));
@@ -58,7 +58,7 @@ describe('briefFor (AI 생성 지시문)', () => {
       ctx,
     );
     expect(text).toContain('피부 `H S D`');
-    expect(text).toContain('`art/avatar/body/body_base.pix`');
+    expect(text).toContain('`art/source/avatar/body/body_base.pix`');
     expect(text).not.toContain('second strip');
   });
 

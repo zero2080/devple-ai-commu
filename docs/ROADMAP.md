@@ -322,8 +322,8 @@ GRAPHICS 2장(2.1~2.9)·5.3·7.2·8장, DOMAIN 3.7, API_CONTRACT 2.2(`PATCH /me`
 GRAPHICS 1·2·3·4·7·8장, ARCHITECTURE 2.1·2.2. **사용자 결정 (2026-10-01)**: 최종 그림은 AI로 생성할 수 있게 컨텍스트(제작 키트)를 정의하고, 개발 중에는 Claude가 코드로 찍은 **개발용 그림**을 쓴다. 키트로 만든 최종 그림 교체는 그림이 준비되면 별도 단계(12c)로 진행한다. GRAPHICS 7.1("AI는 콘셉트까지")의 변경은 chat에 요청했다 (handoff 2026-10-01-ai-art-pipeline). 팔레트 램프 확정(GRAPHICS 1.1·2.7)은 최종 그림과 함께 12c로 미룬다.
 
 **12b-1. 그림 원본 형식과 빌드**
-- `art/avatar/<slot>/<id>.pix`·`art/avatar/body/body_base.pix` — 텍스트 원본. 방향별 **서기 프레임(24×40) 1장씩**만 그리고, 행 번호 + 24글자로 픽셀이 있는 행만 적는다. 글자는 전역 표 하나(키 색 12 + 외곽선 + 팔레트 고정색 코드 + `.` 투명). `front`/`back` 블록
-- `scripts/art/pix.ts`(순수): 파서·직렬화, 오류는 파일·줄 번호와 함께. `scripts/art/walk.ts`(순수): 걷기 프레임 파생 — 1·3 프레임은 y 0–31 1px 아래, 다리(y 32–39)는 1 = 왼발, 3 = 오른발을 1px 들고(발바닥 y 38), 0·2는 서기 그대로 (GRAPHICS 2.3)
+- `art/source/avatar/<slot>/<id>.pix`·`art/source/avatar/body/body_base.pix` — 텍스트 원본. 방향별 **서기 프레임(24×40) 1장씩**만 그리고, 행 번호 + 24글자로 픽셀이 있는 행만 적는다. 글자는 전역 표 하나(키 색 12 + 외곽선 + 팔레트 고정색 코드 + `.` 투명). `front`/`back` 블록
+- `scripts/art/pix.ts`(순수): 파서·직렬화, 오류는 파일·줄 번호와 함께. `scripts/art/walk.ts`(순수): 걷기 프레임 파생 — 1·3 프레임은 y 0–31 1px 아래, 다리(y 32–39)는 1 = 캐릭터의 왼발, 3 = 오른발을 1px 들고(발바닥 y 38, 왼발은 `down`만 화면 오른쪽), 0·2는 서기 그대로 (GRAPHICS 2.2 2.3)
 - `pnpm art:build`: `.pix` → 96×160 PNG(카탈로그 경로) → `check:assets`. 카탈로그에 있는데 원본이 없으면 실패
 - 자리표시 생성기(`scripts/art/placeholders.ts`·`make-placeholders.ts`, `art:placeholders`)는 개발용 그림이 모두 들어오면 같은 변경에서 지운다. `art/templates/body_base.png`는 빌드된 몸으로
 
@@ -338,7 +338,7 @@ GRAPHICS 1·2·3·4·7·8장, ARCHITECTURE 2.1·2.2. **사용자 결정 (2026-10
 - 옷장·월드에서 겹쳐 봤을 때 어긋남 없음 (스크린샷), 기존 E2E의 픽셀 기준을 개발용 그림 기준으로 갱신
 
 **12b-4. 타일셋과 맵 레이어**
-- `art/tiles/main.pix`(16×16 타일 블록) → `src/assets/tilesets/main.png`(256×256) + `main.tileset.json`(`count`·`names`). 바닥 변형·벽 9분할+내부 모서리·가구·야외 타일 (GRAPHICS 3.2 중 맵에 쓰는 것부터)
+- `art/source/tiles/main.pix`(16×16 타일 블록) → `src/assets/tilesets/main.png`(256×256) + `main.tileset.json`(`count`·`names`). 바닥 변형·벽 9분할+내부 모서리·가구·야외 타일 (GRAPHICS 3.2 중 맵에 쓰는 것부터)
 - `game/assets/loader.ts` `loadTileset`, `tilemap.ts`: 아래 캐시(`below` 레이어 = floor·objects)와 위 캐시(`above` = overhead)를 1회 그려 두고, 위 캐시는 캐릭터 다음에 그린다 (ARCHITECTURE 2.2)
 - `main.json`에 `objects`·`overhead` 레이어 (collision 그대로 — 그림이 충돌 칸과 맞게) → 계약 자산이므로 to-server 알림
 - `check:assets` 타일셋 규칙: 256×256, 알파 0/255, 팔레트 색만(키 색 금지), `count`·`names` 범위, 맵 레이어 인덱스 < `count`, `floor`에 −1 없음

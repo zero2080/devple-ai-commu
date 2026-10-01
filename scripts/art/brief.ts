@@ -144,8 +144,8 @@ export function briefFor(item: BriefItem, ctx: BriefContext): string {
   const back = item.sheets.back !== undefined;
   const pixPath =
     item.slot === 'body'
-      ? 'art/avatar/body/body_base.pix'
-      : `art/avatar/${item.slot}/${item.id}.pix`;
+      ? 'art/source/avatar/body/body_base.pix'
+      : `art/source/avatar/${item.slot}/${item.id}.pix`;
   const colors = Object.entries(item.defaultColors)
     .map(([channel, ramp]) => `${channel} = \`${ramp}\``)
     .join(', ');

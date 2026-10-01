@@ -18,7 +18,7 @@ import { KEY_COLORS, OUTLINE_COLOR } from '../../src/game/assets/keyColors.ts';
 const PALETTE = [OUTLINE_COLOR, '#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
 const glyphs = glyphColors(readPalette().colors);
 
-/** art/avatar의 개발용 원본을 그린 시트 */
+/** art/source/avatar의 개발용 원본을 그린 시트 */
 function devSheet(sheetPath: string, side: 'front' | 'back'): Sheet {
   const source = join(AVATAR_SOURCE_DIR, sourceOf(sheetPath));
   return renderSheet(loadPix(source, source, glyphs), side, glyphs);

@@ -21,7 +21,7 @@
 ## 아바타 레이어
 
 ### 개발용 레이어 시트 (`sprites/avatar/**/*.png`)
-- **원본**: 직접 제작 — Claude가 코드로 픽셀을 찍은 텍스트 원본 `art/avatar/**/*.pix`를 `pnpm art:build`가 PNG로 만든다 (ROADMAP 12b, 사용자 결정 2026-10-01)
+- **원본**: 직접 제작 — Claude가 코드로 픽셀을 찍은 텍스트 원본 `art/source/avatar/**/*.pix`를 `pnpm art:build`가 PNG로 만든다 (ROADMAP 12b, 사용자 결정 2026-10-01)
 - **라이선스**: 프로젝트 자체 자산 (외부 출처 없음)
 - **변경 예정**: 12c에서 AI 생성 키트(`art/ai/`)로 만든 그림이 같은 경로를 덮어쓴다. 키트로 만든 그림을 넣을 때 쓴 생성 모델·서비스와 그 이용 약관을 여기에 기록한다
 - **템플릿**: `art/templates/` (avatar-guide·key-colors·body_base)는 `pnpm art:templates`로 생성, 빌드에 포함하지 않음

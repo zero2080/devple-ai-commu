@@ -10,7 +10,7 @@
 | 바뀌는 색 (키 색) | 머리 `a b c` (a=hi b=base c=shadow), 보조색 `x y z` (x=hi y=base z=shadow) |
 | 기본 색 | secondary = `item_red` |
 | 시트 | front |
-| 원본 파일 | `art/avatar/hair/hair_bun.pix` |
+| 원본 파일 | `art/source/avatar/hair/hair_bun.pix` |
 
 ## 어디에 그리나
 - 머리 영역(y 8–23) 위에 앞머리·옆머리. 좌우 여백(x 0–3, 20–23)에 머리숱이 나와도 된다. 위 여백(y 0–7)은 모자 전용이라 쓰지 않는다
@@ -40,7 +40,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/hair/hair_bun.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 머리 `a b c` (a=hi b=base c=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/hair/hair_bun.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 머리 `a b c` (a=hi b=base c=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

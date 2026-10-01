@@ -10,7 +10,7 @@
 | 바뀌는 색 (키 색) | 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow) |
 | 기본 색 | primary = `item_navy`, secondary = `item_white` |
 | 시트 | front |
-| 원본 파일 | `art/avatar/hat/hat_beanie.pix` |
+| 원본 파일 | `art/source/avatar/hat/hat_beanie.pix` |
 
 ## 어디에 그리나
 - 위 여백(y 0–7)과 좌우 여백을 쓸 수 있다. 정수리를 충분히 덮게 (모자가 머리카락 위에 그려지고, 가리는 처리는 없다)
@@ -39,7 +39,7 @@ Transparent background (or one flat background color that is not used anywhere i
 ```
 
 ## 경로 ② 텍스트 에이전트 (.pix 직접 작성)
-`art/README.md`의 형식으로 `art/avatar/hat/hat_beanie.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
+`art/README.md`의 형식으로 `art/source/avatar/hat/hat_beanie.pix`를 쓰고 `pnpm art:build`로 검수한다. 이 레이어가 쓸 글자: 외곽선 `o`, 주색 `P Q R` (P=hi Q=base R=shadow), 보조색 `x y z` (x=hi y=base z=shadow), 팔레트 코드(외곽선 빼고 4색까지):
 
 | 코드 | 색 | 이름 |
 |---|---|---|

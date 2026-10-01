@@ -7,7 +7,7 @@ import { DIRECTIONS, FRAMES, rgba, Sheet } from './sheet.ts';
 import { deriveWalkFrame } from './walk.ts';
 
 export const ART_DIR = join(import.meta.dirname, '../../art');
-export const AVATAR_SOURCE_DIR = join(ART_DIR, 'avatar');
+export const AVATAR_SOURCE_DIR = join(ART_DIR, 'source/avatar');
 
 /** 카탈로그 시트 경로('hair/hair_long.back.png') → 원본 상대 경로('hair/hair_long.pix'). front·back은 같은 원본 */
 export function sourceOf(sheetPath: string): string {
@@ -31,7 +31,7 @@ export function renderSheet(
     for (const frame of FRAMES) {
       const rows =
         blocks.find((block) => block.frame === frame)?.rows ??
-        (idle === undefined ? undefined : deriveWalkFrame(idle, frame));
+        (idle === undefined ? undefined : deriveWalkFrame(idle, frame, dir));
       if (rows === undefined) {
         continue;
       }
