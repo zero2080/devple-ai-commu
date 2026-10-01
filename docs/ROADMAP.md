@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.21 (2026-10-01, 12a단계 완료)
+> 문서 버전: 1.22 (2026-10-01, CI 워크플로 추가)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -341,6 +341,7 @@ GRAPHICS 2장(2.1~2.9)·5.3·7.2·8장, DOMAIN 3.7, API_CONTRACT 2.2(`PATCH /me`
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-10-01 | 1.22: CI 결정 A(사용자, 12a 리포트) — `.github/workflows/ci.yml`이 `main` 푸시·PR마다 lint·typecheck·format:check·test:coverage·check:assets. 단계 완료 조건의 E2E는 계속 로컬 (CONVENTIONS 1.6) |
 | 2026-10-01 | 1.21: 12a단계 완료 — 자리표시 시트 53장·`pnpm check:assets`, 합성 1회·공유 캐시, 걷기 프레임, 닉네임 DOM(꼬리 끝 −15), 옷장 모달. 단위 449건·domain 100%·E2E 33건. 옷장의 숨긴 라디오가 선택지 스크롤 영역 밖으로 넘쳐 키보드 포커스 때 페이지가 밀리던 것을 발견해 수정(E2E 회귀 검사). CI는 결정 요청(리포트) |
 | 2026-10-01 | 1.20: 12a단계 상세화 — 자리표시 PNG 레이어(코드 생성, 실제 파일)로 로더·합성·검수를 12b와 같은 경로로, 합성 1회·캐시, 걷기 프레임, 닉네임 DOM 전환(꼬리 끝 −15), 옷장 모달. `loadTileset`은 타일셋 자산과 함께 12b로. CI 워크플로는 저장소에 없어 `pnpm check:assets`까지만(CI는 결정 요청) |
 | 2026-10-01 | 1.19: Phase 3 메모 — 백엔드는 `devple-stories` Commu 영역, 로컬 프록시 `localhost:8081`/`30081`, 배포는 같은 출처(refresh 쿠키) — handoff 2026-10-01-server-repo-devple-stories |

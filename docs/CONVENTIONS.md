@@ -1,6 +1,6 @@
 # CONVENTIONS — 개발 규칙
 
-> 문서 버전: 1.5 (2026-10-01, 문서 동기화 표에 계약 자산 → to-server 추가)
+> 문서 버전: 1.6 (2026-10-01, CI 워크플로 추가)
 > 상태: 확정
 > 적용 범위: 프론트엔드 저장소 전체. AI(Claude)와 사람 모두 동일하게 따른다.
 
@@ -109,7 +109,7 @@
 - 테스트 파일은 대상 옆에 `*.test.ts(x)`
 - 테스트명은 한국어 문장: `it('반경 밖 DM은 말풍선을 만들지 않는다')`
 - 스냅샷 테스트 금지 (Canvas 렌더 포함)
-- CI에서 `pnpm lint && pnpm typecheck && pnpm test` 통과 필수
+- CI에서 `pnpm lint && pnpm typecheck && pnpm test` 통과 필수. 워크플로는 `.github/workflows/ci.yml` — `main` 푸시·PR마다 `lint` · `typecheck` · `format:check` · `test:coverage`(domain 100% 기준 포함) · `check:assets`(GRAPHICS 8장). E2E(`pnpm test:e2e`)는 CI에 없으므로 단계 완료 전에 로컬에서 돌린다
 
 ## 10. Git
 
@@ -157,4 +157,5 @@ Refs: #이슈번호
 | 2026-09-29 | 1.2: 스택을 ROADMAP 1단계 표(React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, MSW 3, ESLint 10, Node 24)에 맞춤. `domain/`은 같은 폴더 상대 import만 허용. `exactOptionalPropertyTypes` 미사용 |
 | 2026-09-29 | 1.3: 11장 문서 동기화 표에 ROADMAP.md 행 추가 |
 | 2026-09-30 | 1.4: 11장 문서 동기화 표에 GRAPHICS.md 행 추가 (담당은 chat, 요청은 handoff 인박스) |
+| 2026-10-01 | 1.6: CI 워크플로 추가(사용자 결정 A, 12a 리포트) — GitHub Actions 1개 잡, Node는 `.nvmrc`, pnpm은 `packageManager`. E2E는 로컬 |
 | 2026-10-01 | 1.5: 11장 표에 계약 자산 행 추가 — 맵·카탈로그·팔레트를 바꾸면 `to-server`로 백엔드에 알림 (API_CONTRACT 2.1 9장) |
