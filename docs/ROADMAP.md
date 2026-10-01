@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.22 (2026-10-01, CI 워크플로 추가)
+> 문서 버전: 1.23 (2026-10-01, 12b단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -317,11 +317,37 @@ GRAPHICS 2장(2.1~2.9)·5.3·7.2·8장, DOMAIN 3.7, API_CONTRACT 2.2(`PATCH /me`
 - [x] `pnpm check:assets` 통과 (자리표시 레이어 전부, 시트 53장)
 - [x] E2E: 옷장에서 바꾸고 저장 → 내 캐릭터 픽셀이 새 색으로, 같은 계정의 다른 탭 캐릭터도 바뀜(`presence.updated`), 닉네임이 DOM으로 보이고 말풍선은 그 위, 가짜 접속자 20명 걷기에서 rAF 간격 p95 ≤ 20ms(헤드리스 Chromium, 측정값 기록 — 2026-10-01 p50 16.7ms · p95 16.7~16.8ms · max 16.8ms, 240프레임)
 
-### 12b단계 (착수 전에 상세화)
+### 12b단계: 개발용 그림 + AI 생성 컨텍스트 + 타일셋 `[ ]`
 
-- 12b단계: 실제 도트 아트 교체 — 완료 조건은 GRAPHICS 8장 검수 체크리스트
-    - `body_base`와 2.10 목록의 레이어 시트, `palette.json` 램프 확정(첫 아바타 제작 시), `LICENSES.md`
-    - 타일셋: `tilemap.ts` 플레이스홀더 → 타일셋 렌더, 레이어 `floor`/`objects`(below) → 캐릭터 → `overhead`(above). `MapData.tileset`은 스키마·`main.json` 반영 완료(1.4)
+GRAPHICS 1·2·3·4·7·8장, ARCHITECTURE 2.1·2.2. **사용자 결정 (2026-10-01)**: 최종 그림은 AI로 생성할 수 있게 컨텍스트(제작 키트)를 정의하고, 개발 중에는 Claude가 코드로 찍은 **개발용 그림**을 쓴다. 키트로 만든 최종 그림 교체는 그림이 준비되면 별도 단계(12c)로 진행한다. GRAPHICS 7.1("AI는 콘셉트까지")의 변경은 chat에 요청했다 (handoff 2026-10-01-ai-art-pipeline). 팔레트 램프 확정(GRAPHICS 1.1·2.7)은 최종 그림과 함께 12c로 미룬다.
+
+**12b-1. 그림 원본 형식과 빌드**
+- `art/avatar/<slot>/<id>.pix`·`art/avatar/body/body_base.pix` — 텍스트 원본. 방향별 **서기 프레임(24×40) 1장씩**만 그리고, 행 번호 + 24글자로 픽셀이 있는 행만 적는다. 글자는 전역 표 하나(키 색 12 + 외곽선 + 팔레트 고정색 코드 + `.` 투명). `front`/`back` 블록
+- `scripts/art/pix.ts`(순수): 파서·직렬화, 오류는 파일·줄 번호와 함께. `scripts/art/walk.ts`(순수): 걷기 프레임 파생 — 1·3 프레임은 y 0–31 1px 아래, 다리(y 32–39)는 1 = 왼발, 3 = 오른발을 1px 들고(발바닥 y 38), 0·2는 서기 그대로 (GRAPHICS 2.3)
+- `pnpm art:build`: `.pix` → 96×160 PNG(카탈로그 경로) → `check:assets`. 카탈로그에 있는데 원본이 없으면 실패
+- 자리표시 생성기(`scripts/art/placeholders.ts`·`make-placeholders.ts`, `art:placeholders`)는 개발용 그림이 모두 들어오면 같은 변경에서 지운다. `art/templates/body_base.png`는 빌드된 몸으로
+
+**12b-2. AI 생성 컨텍스트 (제작 키트)**
+- `art/ai/README.md` — 생성 AI에 그대로 주는 규격 요약(GRAPHICS 1·2·7·8에서 발췌), 두 경로: ① 이미지 생성 모델이 그린 래스터를 `art:ingest`로 정리 ② 텍스트 에이전트가 `.pix`를 직접 작성. 제출·검수 절차
+- `pnpm art:brief` → `art/ai/briefs/<id>.md`: 아이템마다 이름·슬롯·색 채널·back 시트 여부·방향별로 보이는 부분(손 소품 front/back 표)·참고 그림(개발용 시트)·프롬프트 원문. 카탈로그에서 생성하므로 아이템을 더하면 다시 만든다
+- `pnpm art:ingest <image> --id <itemId> [--sheet front|back] [--scale N]`: 래스터 → 정수 배율 축소(격자 맞춤) → 레이어가 쓸 수 있는 색(키 + 팔레트)으로 양자화, 알파 0/255 → 서기 4방향을 `.pix`로 저장(사람·에이전트가 텍스트로 손봄) → `art:build`
+- GRAPHICS 7.1 변경 요청 (to-chat)
+
+**12b-3. 개발용 아바타 그림**
+- 몸 1 + 카탈로그 42종(back 시트 9) `.pix`. 4방향 따로 그림(좌우 반전 금지), 2.6 손 소품 front/back 표·긴 머리 규칙 준수
+- 옷장·월드에서 겹쳐 봤을 때 어긋남 없음 (스크린샷), 기존 E2E의 픽셀 기준을 개발용 그림 기준으로 갱신
+
+**12b-4. 타일셋과 맵 레이어**
+- `art/tiles/main.pix`(16×16 타일 블록) → `src/assets/tilesets/main.png`(256×256) + `main.tileset.json`(`count`·`names`). 바닥 변형·벽 9분할+내부 모서리·가구·야외 타일 (GRAPHICS 3.2 중 맵에 쓰는 것부터)
+- `game/assets/loader.ts` `loadTileset`, `tilemap.ts`: 아래 캐시(`below` 레이어 = floor·objects)와 위 캐시(`above` = overhead)를 1회 그려 두고, 위 캐시는 캐릭터 다음에 그린다 (ARCHITECTURE 2.2)
+- `main.json`에 `objects`·`overhead` 레이어 (collision 그대로 — 그림이 충돌 칸과 맞게) → 계약 자산이므로 to-server 알림
+- `check:assets` 타일셋 규칙: 256×256, 알파 0/255, 팔레트 색만(키 색 금지), `count`·`names` 범위, 맵 레이어 인덱스 < `count`, `floor`에 −1 없음
+
+**완료 조건** — 검증 자산: 단위(`scripts/art/pix.test.ts`·`walk.test.ts`·`ingest.test.ts`·`brief.test.ts`·`checks.test.ts`, `src/game/render/tilemap.test.ts`), `pnpm art:build`·`pnpm check:assets`, E2E(`e2e/phase3-avatar.spec.ts`·`e2e/phase3-tiles.spec.ts`)
+- [ ] 단위: `.pix` 파싱 오류(길이·글자·행 범위), 걷기 파생(흔들림·다리), 양자화·격자 축소, 브리프 생성, 타일셋 검수 규칙(위반 사례별), 타일 레이어 순서
+- [ ] `pnpm art:build && pnpm check:assets` 통과 (몸 + 42종 + 타일셋, 자리표시 생성기 제거)
+- [ ] 키트: 브리프 42+1개 생성, 개발용 시트를 래스터로 확대한 이미지를 `art:ingest`로 되돌리면 원본 `.pix`와 같음 (왕복 검사)
+- [ ] E2E: 옷장 저장 → 개발용 그림의 픽셀 색 변경(두 탭), 캐릭터가 overhead 타일 아래에 그려짐, 기존 E2E 전부 통과
 
 ## Phase 3 — 백엔드 연동
 - `VITE_MOCK=false` 전환, 실서버 계약 검증, E2E(Playwright)
@@ -341,6 +367,7 @@ GRAPHICS 2장(2.1~2.9)·5.3·7.2·8장, DOMAIN 3.7, API_CONTRACT 2.2(`PATCH /me`
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-10-01 | 1.23: 12b단계 상세화 — 사용자 결정: 최종 그림은 AI 생성용 컨텍스트(제작 키트)로, 개발 중에는 Claude가 코드로 찍은 개발용 그림. 12b-1 `.pix` 원본·빌드·걷기 파생, 12b-2 키트(브리프·ingest), 12b-3 개발용 아바타, 12b-4 타일셋·맵 레이어. 최종 그림 교체와 램프 확정은 12c |
 | 2026-10-01 | 1.22: CI 결정 A(사용자, 12a 리포트) — `.github/workflows/ci.yml`이 `main` 푸시·PR마다 lint·typecheck·format:check·test:coverage·check:assets. 단계 완료 조건의 E2E는 계속 로컬 (CONVENTIONS 1.6) |
 | 2026-10-01 | 1.21: 12a단계 완료 — 자리표시 시트 53장·`pnpm check:assets`, 합성 1회·공유 캐시, 걷기 프레임, 닉네임 DOM(꼬리 끝 −15), 옷장 모달. 단위 449건·domain 100%·E2E 33건. 옷장의 숨긴 라디오가 선택지 스크롤 영역 밖으로 넘쳐 키보드 포커스 때 페이지가 밀리던 것을 발견해 수정(E2E 회귀 검사). CI는 결정 요청(리포트) |
 | 2026-10-01 | 1.20: 12a단계 상세화 — 자리표시 PNG 레이어(코드 생성, 실제 파일)로 로더·합성·검수를 12b와 같은 경로로, 합성 1회·캐시, 걷기 프레임, 닉네임 DOM 전환(꼬리 끝 −15), 옷장 모달. `loadTileset`은 타일셋 자산과 함께 12b로. CI 워크플로는 저장소에 없어 `pnpm check:assets`까지만(CI는 결정 요청) |
