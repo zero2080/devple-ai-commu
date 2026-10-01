@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.19 (2026-10-01, Phase 3 백엔드·인프라 메모)
+> 문서 버전: 1.20 (2026-10-01, 12a단계 상세화)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -296,19 +296,29 @@ PRD 5.1(1·2), DOMAIN 3.4·8장, API_CONTRACT 2.1(2.1판 검증 매핑). 11단�
 - [x] 단위: 가입 사전 검증·비교 키, 폼(사전 검증·서버 사유·409 필드 표시·성공 이동), 상태 화면(대기·승인·거절·404), Mock 가입 검증·정규화·나에게 DM·위치 필드 사유
 - [x] E2E: 신청 → 상태(대기) → 운영자가 콘솔에서 승인 → 상태(승인), 중복 닉네임(대소문자만 다름)·이메일 409, 거절된 신청 번호로 사유 확인, 로그인 화면에서 소문자·하이픈 없는 접근 키로 입장
 
-### 12a~12b단계 (각 단계 착수 전에 3~11b단계 형식으로 상세화)
+### 12a단계: 아바타 파이프라인 + 옷장 `[ ]`
 
-- 12a단계: 아바타 파이프라인 + 옷장 — 실제 그림 없이 코드가 만든 자리표시 레이어로 끝까지 동작 (GRAPHICS 2장·7.2·8장)
-    - 선행 완료(아바타 v2 마이그레이션, 2026-09-30): `Appearance` 타입·검증(`domain/appearance.ts`), zod, Mock `avatarOptions`·시드 외형·`PATCH /me` 검증, 프레임 24×40·몸 박스 판정, 외형 색 플레이스홀더, `palette.json`·`catalog.json` 골격
-    - `game/assets/loader.ts`: 카탈로그 시트 로더(front/back), `loadTileset`
-    - `game/render/avatarCompositor.ts`: 2.6 순서로 레이어를 겹치고 2.7 키 색을 램프로 치환한 96×160 합성 시트를 외형당 1회 생성·캐시(키 = `normalizeAppearance`, 사용자 간 공유, 2.9). 매 프레임 합성 금지
-    - `game/render/sprite.ts`: 합성 시트에서 `(frame*24, rowOf(dir)*40)` 잘라 그리기, 걷기 `1→2→3→0` 75ms/프레임, away는 idle + 알파 0.5, `top.coversBottom`이면 하의 생략
-    - 자리표시 레이어 생성기(키 색으로 칠한 단순 도형, 슬롯별)로 모든 카탈로그 시트를 채워 파이프라인 검증
-    - `scripts/art/make-template.ts`: `art/templates/avatar-guide.png`·`key-colors.png` (7.2)
-    - `scripts/check-assets.ts`: 8장 캐릭터 레이어 규칙(96×160·알파 0/255·레이어별 키 채널·고정색 4색·여백·`catalog.json` 일치) + CI
-    - 닉네임 Canvas `fillText` → DOM 오버레이 (5.3, 화면 밖 캐릭터 노드 생성 금지)
-    - 옷장 UI(ARCHITECTURE 7장, 추천 A): 내 프로필 카드·툴바 버튼의 모달. 슬롯별 아이템·램프(서버 목록 ∩ 자산), 미리보기(down/0 3x), `PATCH /me` 전체 교체와 필드별 오류 표시
-    - 완료 조건(초안): 같은 외형은 1회만 합성(단위), 가짜 접속자 20명 걷기에서 rAF 프레임 간격 p95 ≤ 20ms, 옷장 E2E(바꾸면 월드 캐릭터·다른 탭이 바뀜), `check-assets` 통과
+GRAPHICS 2장(2.1~2.9)·5.3·7.2·8장, DOMAIN 3.7, API_CONTRACT 2.2(`PATCH /me`), ARCHITECTURE 2.1·7장. 실제 그림 없이 **코드가 만든 자리표시 PNG 레이어**로 로더 → 합성 → 그리기 → 옷장 → 검수까지 12b와 같은 경로로 끝까지 동작시킨다.
+
+선행 완료(아바타 v2 마이그레이션, 2026-09-30): `Appearance` 타입·검증, zod, Mock `avatarOptions`·시드 외형·`PATCH /me` 검증, 프레임 24×40·몸 박스 판정, 외형 색 플레이스홀더, `palette.json`·`catalog.json` 골격.
+
+**만들 것**
+- `scripts/art/` — 자리표시 레이어 생성기(`make-placeholders.ts`): 키 색(2.7)으로 칠한 단순 도형으로 `body_base`와 카탈로그 42종(+back 시트)의 96×160 시트를 만든다. 2.2 체형, 2.3 걷기 흔들림(1·3 프레임 머리·몸통 1px 아래), 2.6 front/back·손 소품 방향, 좌우가 단순 반전이 아니게. 템플릿(`make-template.ts`): `art/templates/avatar-guide.png`(격자·몸 박스·여백·앵커)·`key-colors.png`(키 색 12칸)·`body_base.png`. PNG 입출력은 `pngjs`(개발 의존성)
+- `scripts/check-assets.ts` — 8장 캐릭터 레이어 규칙: 96×160, 알파 0/255, 레이어별 허용 키 채널(body=skin, hair=hair·secondary, 나머지=primary·secondary), 키·팔레트 밖 색 없음, 고정색 4색 이하(외곽선 제외), `catalog.channels`와 실제 키 채널 일치, 모자 여백·좌우 여백 규칙, body 발바닥 y39, left ≠ 좌우반전(right), 카탈로그의 시트 파일 존재·256 KB 이하. `pnpm check:assets`. 규칙은 순수 함수로 단위 테스트
+- `game/assets/loader.ts` — 아바타 시트 이미지 로더(`import.meta.glob` URL → `Image`, 캐시). `new Image()`는 여기서만
+- `game/render/avatarCompose.ts`(순수) — 2.6 그리기 순서로 레이어 계획(`coversBottom`이면 하의 생략, 카탈로그에 없는 아이템은 슬롯 비움·필수면 슬롯 첫 아이템 + 경고), 채널별 램프 결정(고른 램프 → `defaultColors` → 그룹 첫 램프), 키 색 → 램프 색 치환(RGB 완전 일치·알파 255)
+- `game/render/avatarCompositor.ts` — 외형당 96×160 합성 시트를 **한 번** 만들고 캐시(키 = `normalizeAppearance`, 사용자 간 공유). 준비 전에는 기존 색 플레이스홀더로 그린다. 매 프레임 합성·치환 금지
+- `game/render/sprite.ts` — 합성 시트에서 `(frame×24, rowOf(dir)×40)` 잘라 그리기. 걷기 `1→2→3→0` 75ms/프레임(이동 중일 때만), 멈추면 0, 자리비움은 0 + 알파 0.5. 원격은 보간 중이면 이동 중
+- 닉네임 DOM 오버레이(5.3) — Canvas `fillText` 제거. 말풍선과 같은 오버레이·PixelKo(em × 줌), 4방향 외곽선, 화면 밖 캐릭터는 노드를 만들지 않고 위치는 프레임 콜백에서 직접 쓴다(React 리렌더 없음). 닉네임 줄 높이 12 → 말풍선 꼬리 끝 = 프레임 상단 − 15 (5.2)
+- `src/features/wardrobe/` — 옷장 모달(추천 A): 내 프로필 카드의 "옷장"과 월드 왼쪽 아래 툴바 버튼에서 연다. 피부색·머리색, 슬롯 7개(선택 슬롯은 "없음"), 아이템마다 카탈로그 `channels`에 있는 주색·보조색. 선택지 = `ServerConfig.avatarOptions` ∩ `catalog.json`·`palette.json`, 프리셋 램프만. 미리보기 = 합성 시트 down/0 3x. 저장 = `PATCH /me { appearance }` 전체 교체 → 성공 시 내 정보 갱신, 실패 시 `appearance.<경로>` 사유를 해당 선택지 옆에. 램프 표시 이름은 화면 문구(코드)로 둔다 — `palette.json`(계약 자산)은 바꾸지 않는다
+
+**완료 조건** — 검증 자산: `e2e/phase3-avatar.spec.ts`, 단위(`scripts/art/*.test.ts`, `src/game/render/avatarCompose.test.ts`, `src/game/render/avatarCompositor.test.ts`, `src/game/render/sprite.test.ts`, `src/features/wardrobe/**/*.test.tsx`), `pnpm check:assets`
+- [ ] 단위: 레이어 계획·채널 램프·키 색 치환, 같은 외형은 1회만 합성(사용자 간 공유), 걷기 프레임, 검수 규칙(위반 사례별), 옷장(선택지 교집합·없음·채널별 색·저장·필드 오류)
+- [ ] `pnpm check:assets` 통과 (자리표시 레이어 전부)
+- [ ] E2E: 옷장에서 바꾸고 저장 → 내 캐릭터 픽셀이 새 색으로, 같은 계정의 다른 탭 캐릭터도 바뀜(`presence.updated`), 닉네임이 DOM으로 보이고 말풍선은 그 위, 가짜 접속자 20명 걷기에서 rAF 간격 p95 ≤ 20ms(헤드리스 Chromium, 측정값 기록)
+
+### 12b단계 (착수 전에 상세화)
+
 - 12b단계: 실제 도트 아트 교체 — 완료 조건은 GRAPHICS 8장 검수 체크리스트
     - `body_base`와 2.10 목록의 레이어 시트, `palette.json` 램프 확정(첫 아바타 제작 시), `LICENSES.md`
     - 타일셋: `tilemap.ts` 플레이스홀더 → 타일셋 렌더, 레이어 `floor`/`objects`(below) → 캐릭터 → `overhead`(above). `MapData.tileset`은 스키마·`main.json` 반영 완료(1.4)
@@ -331,6 +341,7 @@ PRD 5.1(1·2), DOMAIN 3.4·8장, API_CONTRACT 2.1(2.1판 검증 매핑). 11단�
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-10-01 | 1.20: 12a단계 상세화 — 자리표시 PNG 레이어(코드 생성, 실제 파일)로 로더·합성·검수를 12b와 같은 경로로, 합성 1회·캐시, 걷기 프레임, 닉네임 DOM 전환(꼬리 끝 −15), 옷장 모달. `loadTileset`은 타일셋 자산과 함께 12b로. CI 워크플로는 저장소에 없어 `pnpm check:assets`까지만(CI는 결정 요청) |
 | 2026-10-01 | 1.19: Phase 3 메모 — 백엔드는 `devple-stories` Commu 영역, 로컬 프록시 `localhost:8081`/`30081`, 배포는 같은 출처(refresh 쿠키) — handoff 2026-10-01-server-repo-devple-stories |
 | 2026-10-01 | 1.18: 11b단계 완료 — 단위 384건·domain 100%·E2E 29건(2회 연속, 반복 87회 무실패). 상태 화면이 공유 캐시 staleTime(30초) 때문에 승인 뒤에도 대기로 보이던 것을 E2E로 발견해 열 때마다 다시 받게 수정 |
 | 2026-10-01 | 1.17: 가입 신청 화면은 사용자 결정 A로 11b단계 신설(12a 전). 인박스 API_CONTRACT 2.1 반영(가입 검증 사유·`EMAIL_TAKEN`·닉네임 비교·접근 키 정규화)을 함께 진행 |

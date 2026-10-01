@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.19 (2026-10-01, 실서버 연동 프록시·같은 출처 메모)
+> 문서 버전: 1.20 (2026-10-01, 12a단계 설계 — 합성 구조·걷기·닉네임 DOM·옷장)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -41,8 +41,10 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 줌은 **정수 배율만** 허용 (2x, 3x, 4x). **기본 2x**. 비정수 배율은 픽셀이 뭉개진다
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
-- 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps). 합성기는 12a단계
-- 12a단계 전 플레이스홀더: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드 미리보기도 같은 도형을 3x로 (`AvatarPreview`)
+- 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps)
+- 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 12a의 시트는 `scripts/art/make-placeholders.ts`가 만든 자리표시 PNG이고 12b에서 같은 경로의 실제 그림으로 바뀐다
+- 걷기 애니메이션: 이동 중(내 캐릭터 `LocalPlayer.isMoving`, 원격은 보간 중)이면 `1→2→3→0`을 75ms씩, 멈추면 0. 방향은 내 캐릭터는 예측 방향, 원격은 `Presence.position.dir` (`game/render/sprite.ts`)
+- 합성 전 대체 그림: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드·옷장 미리보기도 합성 시트의 down/0을 3x로, 준비 전엔 같은 도형으로 (`AvatarPreview`)
 - 자산 데이터 `src/assets/palette.json`·`sprites/avatar/catalog.json`은 `game/assets/avatarAssets.ts`에서만 읽고 zod로 검증한다. 타일셋은 시트 1장 + JSON
 - 캐릭터·닉네임을 그리는 좌표는 **정수 월드 px로 반올림**한다 (보간 중 소수 좌표 금지, GRAPHICS 1.2). 월드 px가 정수면 화면 px는 줌의 배수가 된다
 - 자산 규격·시트 배치는 **GRAPHICS.md 2~3장**이 기준 (캐릭터 레이어 24×40 4방향×4프레임 96×160 시트, 7슬롯·front/back·키 색 4채널, 타일셋 256×256 16열, 32색 단일 팔레트). 스프라이트를 좌우 미러로 재사용하지 않는다
@@ -67,7 +69,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 본문은 **항상 plain text**로 렌더 (`textContent`, HTML 해석 없음)
 - `links`가 있으면 말풍선 하단에 링크 열기 버튼(도메인만 표시, 예: `↗ example.com`). 버튼이 있는 말풍선은 마우스 호버/터치 중 사라지지 않음
 - 폰트·크기·테두리·최대 폭·꼬리 위치는 **GRAPHICS 5.1~5.2** 참조 (픽셀 웹폰트, 폰트 기본 px × 줌 배율만, 최대 폭 12타일, `box-shadow` 픽셀 외곽선)
-- **닉네임**: 5단계 플레이스홀더는 Canvas `fillText`. **12a단계에서 DOM 오버레이로 전환**한다 (GRAPHICS 5.3 — 말풍선과 같은 레이어·폰트, 화면 밖 캐릭터의 노드는 만들지 않음). 확정
+- **닉네임** (12a단계): Canvas `fillText`를 없애고 DOM 오버레이로 그린다 (GRAPHICS 5.3). `features/world`의 닉네임 레이어가 프레임 콜백에서 화면 안 캐릭터만 노드를 만들고·지우고 `transform`을 직접 쓴다(React 리렌더 없음). PixelKo em × 줌, `line-height: 1`, 4방향 1px × 줌 외곽선(`text-shadow`), 겹침은 y가 큰 캐릭터가 위(`z-index`). 말풍선 레이어가 닉네임 레이어 위. 줄 높이 12 → 꼬리 끝 = 프레임 상단 − 15
 
 ### 2.4 링크 처리 (말풍선 · 채팅 목록 공통)
 - 본문 내 URL 텍스트는 클릭 불가, 서버가 준 `links[]`로만 버튼 생성
@@ -220,7 +222,7 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - `presence.updated`: 월드 접속자(상태·닉네임·외형)와 사용자 캐시(`userCache.patchUser`)에 함께 반영한다. 외형은 바뀔 때 **전체**가 온다(부분 객체는 스키마에서 거른다, DOMAIN 3.7)
 - **운영자 콘솔** (11단계): 라우트 `/admin`, `RequireAuth role="admin"`(비운영자는 월드로). 목록은 Query 무한 쿼리 `admin.signups(status)`·`admin.users(status)`(커서 "더 보기"), 변경 후에는 영향받는 목록을 무효화한다(승인 → 신청·회원, 정지·해제 → 회원). 되돌리기 어려운 동작(거절·정지·키 재발급)은 한 번 더 확인하고, 거절 사유는 `domain/admin.ts`로 사전 검증(권위는 서버)
 - **공지 배너** (11단계): `system.notice` → `uiStore.notice`(세션 한정, 최신 1건 — 새 공지가 이전 공지를 대체). 월드·콘솔 상단에 plain text로 표시하고 닫을 수 있다. `Notice`에는 `links[]`가 없어 링크 버튼을 만들지 않는다. 캔버스 위 오버레이지만 사용자가 닫는 일시적 요소라 보장 영역 규칙의 예외(프로필 카드와 같음)
-- **옷장** (외형 편집, 12a단계): 내 프로필 카드와 툴바 버튼에서 여는 모달 (handoff 2026-09-30-avatar-v2의 추천 A 채택 — 별도 라우트 없음). 선택지는 `ServerConfig.avatarOptions` ∩ `palette.json`·`catalog.json`, 색은 프리셋 램프만(자유 색상 입력 없음). 저장은 `PATCH /me { appearance }` 전체 교체, 오류는 `details.fields['appearance.<경로>']`를 해당 선택지 옆에 표시. 사전 검증은 서버와 같은 `domain/appearance.ts` `validateAppearance`
+- **옷장** (외형 편집, 12a단계, `features/wardrobe`): 내 프로필 카드의 "옷장"과 월드 왼쪽 아래 툴바 버튼에서 여는 모달 (handoff 2026-09-30-avatar-v2의 추천 A 채택 — 별도 라우트 없음). 편집 중 외형은 모달 안 로컬 상태이고 저장 성공 시 `authStore.me`를 갱신한다(월드 캐릭터는 `presence.updated`로 바뀐다). 선택지는 `ServerConfig.avatarOptions` ∩ `palette.json`·`catalog.json`, 색은 프리셋 램프만(자유 색상 입력 없음). 저장은 `PATCH /me { appearance }` 전체 교체, 오류는 `details.fields['appearance.<경로>']`를 해당 선택지 옆에 표시. 사전 검증은 서버와 같은 `domain/appearance.ts` `validateAppearance`
 - DM 식별: 서버 이벤트는 `conversationId`, REST 경로는 상대 `userId`를 쓴다. 매핑은 `DmConversation.participantIds`로 하며 `domain/dm.ts: peerIdOf(conv, myId)`
 
 ## 8. 디렉토리 구조
@@ -288,3 +290,4 @@ src/
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
 | 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |
+| 2026-10-01 | 1.20: 12a단계 설계 — 합성 계획(순수)·실행(캐시) 분리, 합성 전 플레이스홀더, 시트 로드는 loader만, 자리표시 PNG(12b에서 같은 경로로 교체), 걷기 프레임 규칙, 닉네임 DOM 레이어(프레임 콜백, 꼬리 끝 −15), 옷장 상태·저장 흐름 |
