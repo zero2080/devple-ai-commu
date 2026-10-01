@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.16 (2026-09-30, 11단계 설계 — 운영자 콘솔·공지 배너)
+> 문서 버전: 1.17 (2026-10-01, 11b단계 설계 — 가입 신청 화면, 백엔드 저장소·계약 자산)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -195,6 +195,7 @@ Access 만료 ──▶ POST /auth/refresh (쿠키 자동 첨부) ──▶ 새 
 - 로그인 전(쿠키 없음) 새로고침의 refresh 401은 **정상 동작**이며 브라우저가 리소스 로그로 남긴다. 앱 에러가 아니므로 완료 조건의 "콘솔 에러 0건"에서 제외한다. 세션 힌트 쿠키는 두지 않는다 (2026-09-30 결정 3)
 - Refresh 토큰: httpOnly + Secure + SameSite 쿠키 — 백엔드 구현 필수 사항
 - 로그아웃: `POST /auth/logout` → 쿠키 삭제, SSE 종료, 스토어 초기화
+- **가입 신청** (11b단계): 로그인 없이 `/signup`(폼 + 신청 번호로 상태 확인)과 `/signup/:requestId`(상태). 신청 번호는 URL에만 두고 브라우저 저장소에 넣지 않는다. 대기 중이면 30초마다 다시 확인한다. 사전 검증은 `domain/signup.ts`(Mock과 같은 규칙, 권위는 서버), 서버의 `details.fields` 사유는 `messageForFieldReason`으로 필드 옆에. 접근 키는 앞뒤 공백만 지우고 보낸다 — 정규화(대소문자·하이픈·혼동 문자)는 서버 몫 (API_CONTRACT 2.1)
 - **정지** (10단계): SSE `system.suspended` 또는 어떤 REST든 `403 USER_SUSPENDED` → `endSession('suspended')`: SSE를 재연결 없이 닫고 자리비움 추적을 멈춘 뒤 스토어·Query 캐시를 비우고 `authStore.notice = 'suspended'`로 로그인 화면에 안내한다. 서버가 이미 refresh를 무효화했으므로 `POST /auth/logout`은 보내지 않는다. transport는 features를 모르므로 `configureHttp({ onSuspended })`·`connectSse({ onSuspended })`로 주입한다
 
 ## 7. 상태 관리
@@ -247,6 +248,7 @@ src/
 - **emit 브리지**: 상태는 MSW에 있지만 SSE 방송이 필요한 엔드포인트(`PATCH /me` → `presence.updated`, 이후 DM·그룹 메시지·공지)는 MSW 핸들러가 Express의 `POST /__mock/emit`으로 방송을 위임한다 (`src/mocks/bridge.ts`, `/__mock` 접두도 proxy·통과 목록에 포함). Express는 `presence.updated` 페이로드를 자기 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다. 따라서 **`PATCH /me`는 MSW에 남긴다** (2026-09-30 판단, 8단계 프로필 카드에서도 유지)
 - **Mock DM** (8단계): 상태는 MSW. 전송 → `chat.dm`(발신자 에코, `peerId` = 상대), 회수 → `chat.dm.recalled`를 emit 브리지로 방송한다. 상대가 가짜 사용자라 `chat.dm.read`는 상대가 내 메시지를 읽을 때만 생긴다. DEV 전용 `window.__devpleMock`: `dmFrom(userId, content)`(가짜 상대가 나에게 DM), `readBy(userId)`(가짜 상대가 내 DM을 읽음), `seedDm(userId, count)`(무한 스크롤 확인용). 가짜 상대 봇은 `VITE_MOCK_BOT_MS`(기본 5000, 0이면 끔 — E2E) 뒤 내 DM을 읽고 짧게 답한다. 스레드 히스토리는 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id). 대화 목록은 `updatedAt` 내림차순, 안 읽음은 저장하지 않고 메시지에서 계산한다(상대가 보낸 것 중 `readAt` 없음, DOMAIN 5.3). 위치 배치용 Express `POST /__mock/place { userId, x, y }`
 - **Mock 그룹** (9단계): 상태는 MSW. 전송 → `chat.group`(내 에코), 이름 변경·초대·강퇴·나가기 → `group.updated`(남은 멤버 기준), 해산 → `group.removed { reason: 'dissolved' }`, 나가기 → `group.removed { reason: 'left' }`를 emit 브리지로 방송한다. 전송하면 내 `lastReadMessageId`를 그 메시지로 올린다(내 메시지는 안 읽음에 세지 않음, API_CONTRACT 2.7·DOMAIN 5.4). `GET /groups`는 최근 활동 먼저. 히스토리는 DM과 같은 커서 페이지네이션 헬퍼. DEV 트리거 `window.__devpleMock`: `groupFrom(groupId, userId, content)`(가짜 멤버 발화), `inviteMe(name)`(가짜 사용자가 그룹을 만들고 나를 초대 → `group.joined`), `kickMe(groupId)`(→ `group.removed kicked`), `seedGroup(groupId, count)`. 봇은 DM과 같은 지연 변수 `VITE_MOCK_BOT_MS`(이전 이름 `VITE_MOCK_DM_BOT_MS`, 기본 5000, 0이면 끔 — E2E) 뒤 다른 멤버가 짧게 답한다
+- **백엔드 저장소** (2026-10-01): 실제 서버는 별도 저장소 `../devple-ai-commu-server`(Spring Boot)가 이 저장소의 계약 문서를 읽어 구현한다. 계약 자산(API_CONTRACT 9장 — `src/assets/maps/*.json`, `sprites/avatar/catalog.json`, `palette.json`)의 원본은 이 저장소이며, 바꾸면 `docs/handoff/to-server/`로 알린다. 실서버 연동(Vite proxy 대상 `https://devple.localhost`)은 서버가 `to-code`로 준비를 알린 뒤에 한다
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -283,3 +285,4 @@ src/
 | 2026-09-30 | 1.14: 아바타 v2 반영(DOMAIN 2.0·API_CONTRACT 2.0·GRAPHICS 2.0, handoff 2026-09-30-avatar-v2) — 프레임 24×40·말풍선 `top` = 앵커 − 40, 클릭 판정 = 몸 박스, 레이어 합성 1회·캐시(12a단계), 그 전까지 외형 색 플레이스홀더, 자산 JSON은 `game/assets/avatarAssets.ts`만, `presence.updated` 반영, 옷장 = 프로필 카드·툴바 모달(A) |
 | 2026-09-30 | 1.15: 10단계 설계 — 자리비움은 마지막 입력 시각 + 타이머 1개(입력마다 재설정 금지)·실패 시 재시도, 재동기화(`sync.required`·60초 초과 재연결, 월드는 스냅샷 경로, 스레드는 최신 페이지만, single-flight), 정지(`endSession('suspended')`, 훅 주입, logout 호출 없음) |
 | 2026-09-30 | 1.16: 11단계 설계 — `/admin` 운영자 가드, 운영자 목록 무한 쿼리·변경 후 무효화, 위험 동작 재확인, 공지 배너(`uiStore.notice`, 최신 1건, 링크 버튼 없음, 보장 영역 예외) |
+| 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |

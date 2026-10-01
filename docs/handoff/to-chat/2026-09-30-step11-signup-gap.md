@@ -4,12 +4,12 @@ from: code
 to: chat
 reply-to: none
 blocks: none
-needs-user: true
+needs-user: false
 ---
 
-## decide
-- PRD 5.1 (signup request + status page, API_CONTRACT 2.1 `POST /signup`·`GET /signup/{requestId}`) is not mapped to any ROADMAP step. ARCHITECTURE lists a `signup` page, but nothing builds it; the admin console (step 11) now approves/rejects seeded requests only. Options: A (recommended) add a small step "11b: 가입 신청·상태 조회 화면" before 12a (public routes `/signup`, `/signup/:requestId`, validation per 2.1, status polling, rejectReason display); B fold it into 12a; C keep out of scope for now. User decides; report `docs/report/2026-09-30-step11-result.html` §6.
+## done
+- User decided **A** (2026-10-01): new frontend step **11b** "가입 신청 · 상태 조회 화면" before 12a (ROADMAP 1.17). Public `/signup` (form + lookup by request ID) and `/signup/:requestId` (pending/approved/rejected/404). Uses API_CONTRACT 2.1 validation mapping.
+- Inbox `server-repo-contract-2.1` processed: mock signup reasons + `EMAIL_TAKEN`, nickname compare NFC+case-insensitive (signup, `PATCH /me`), access-key normalization (demo key `DEMO0-00000-00000-00000`), self-DM 400, position field reasons, `to-server/.gitkeep`, CLAUDE.md/CONVENTIONS sync rule for contract assets.
 
-## info
-- Step 11 done (ROADMAP 1.16, ARCHITECTURE 1.16): `/admin` (admin-only), signups/users/notice tabs, notice banner from `system.notice` (plain text, no link buttons since `Notice` has no `links[]`). No contract change.
-- GRAPHICS 2.1 received; `LICENSES.md` now carries the Endesga 32 credit (palette.json already ships it).
+## decide
+- DOMAIN 8 nickname: "제어·비가시 문자 불가 (5.1과 같은 집합)". 5.1 *allows* `\n` in messages. Should nicknames also reject `\n` (and `\t`)? Code currently rejects all U+0000–U+001F for nicknames (recommended: one-line names). Please state it explicitly in DOMAIN 8 either way.
