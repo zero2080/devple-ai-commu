@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.24 (2026-10-01, 운영 빌드 — Mock 배제·zod jitless)
+> 문서 버전: 1.25 (2026-10-01, refresh 재시도·텍스트 사전 검사)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -42,7 +42,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
 - 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps)
-- 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 시트는 텍스트 원본 `art/avatar/**/*.pix`를 `pnpm art:build`가 만든 PNG다 — 12b는 Claude가 코드로 찍은 개발용 그림, 12c에서 AI 생성 키트(`art/ai/`)로 만든 그림이 같은 경로를 덮어쓴다. 걷기 프레임 1–3은 빌드가 서기 프레임에서 파생한다
+- 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 시트는 텍스트 원본 `art/source/avatar/**/*.pix`를 `pnpm art:build`가 만든 PNG다 — 12b는 Claude가 코드로 찍은 개발용 그림, 12c에서 AI 생성 키트(`art/ai/`)로 만든 그림이 같은 경로를 덮어쓴다. 걷기 프레임 1–3은 빌드가 서기 프레임에서 파생한다
 - 걷기 애니메이션: 이동 중(내 캐릭터 `LocalPlayer.isMoving`, 원격은 보간 중)이면 `1→2→3→0`을 75ms씩, 멈추면 0. 방향은 내 캐릭터는 예측 방향, 원격은 `Presence.position.dir` (`game/render/sprite.ts`). 멈춘 지 75ms 이하면 주기를 이어간다 — 원격 보간 구간(200ms) 경계에서 한두 프레임 멈출 때마다 1부터 다시 시작하지 않게. 걷기 상태는 화면 밖 캐릭터도 진행한다
 - 합성 전 대체 그림: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드·옷장 미리보기도 합성 시트의 down/0을 3x로, 준비 전엔 같은 도형으로 (`AvatarPreview`)
 - 자산 데이터 `src/assets/palette.json`·`sprites/avatar/catalog.json`은 `game/assets/avatarAssets.ts`에서만 읽고 zod로 검증한다. 타일셋은 시트 1장 + JSON
@@ -179,6 +179,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 
 - `fetch` 래퍼 1개 (`transport/http.ts`): base URL, JSON 직렬화, Access 토큰 첨부, 401 시 Refresh 후 1회 재시도
 - Refresh는 **단일 진행**: 동시에 여러 요청이 401을 받아도 `POST /auth/refresh`는 1회만 호출하고 나머지는 같은 promise를 기다린다. 쿠키가 회전되므로 두 번째 refresh는 실패한다
+- 단일 진행은 탭 안에서만 보장된다. 탭들은 쿠키를 함께 쓰므로 다른 탭이 방금 쿠키를 회전시키면 이 탭의 refresh는 옛 쿠키로 401을 받는다. 서버는 회전 15초 안의 옛 토큰에는 세션을 유지하므로(서버 handoff 2026-10-01-server-session-fyi), refresh 401이면 **300ms 뒤 한 번만** 다시 보낸다(`REFRESH_RETRY_DELAY_MS`). 그래도 401이면 세션 종료. 로그인 전 부팅 refresh는 이 때문에 300ms 늦게 익명으로 판정된다
 - 에러 응답은 계약된 형식 `{ code, message, details? }`로 통일, `ApiError` 클래스로 throw
 - 서버 상태 캐싱/재조회는 **TanStack Query** (DM 대화 목록, 그룹 목록, 메시지 히스토리, 사용자 프로필)
 - 실시간 이벤트 수신 시 해당 Query 캐시를 직접 갱신 (`setQueryData`), 재요청하지 않음
@@ -252,6 +253,7 @@ src/
 - **Mock 그룹** (9단계): 상태는 MSW. 전송 → `chat.group`(내 에코), 이름 변경·초대·강퇴·나가기 → `group.updated`(남은 멤버 기준), 해산 → `group.removed { reason: 'dissolved' }`, 나가기 → `group.removed { reason: 'left' }`를 emit 브리지로 방송한다. 전송하면 내 `lastReadMessageId`를 그 메시지로 올린다(내 메시지는 안 읽음에 세지 않음, API_CONTRACT 2.7·DOMAIN 5.4). `GET /groups`는 최근 활동 먼저. 히스토리는 DM과 같은 커서 페이지네이션 헬퍼. DEV 트리거 `window.__devpleMock`: `groupFrom(groupId, userId, content)`(가짜 멤버 발화), `inviteMe(name)`(가짜 사용자가 그룹을 만들고 나를 초대 → `group.joined`), `kickMe(groupId)`(→ `group.removed kicked`), `seedGroup(groupId, count)`. 봇은 DM과 같은 지연 변수 `VITE_MOCK_BOT_MS`(이전 이름 `VITE_MOCK_DM_BOT_MS`, 기본 5000, 0이면 끔 — E2E) 뒤 다른 멤버가 짧게 답한다
 - **백엔드 저장소** (2026-10-01, API_CONTRACT 2.2): 실제 서버는 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 전용 Deployment)이 이 저장소의 계약 문서를 읽어 구현한다. ID는 정수 문자열이지만 프론트는 계속 불투명 문자열로만 다룬다(파싱·비교 금지). 계약 자산(API_CONTRACT 9장 — `src/assets/maps/*.json`, `sprites/avatar/catalog.json`, `palette.json`)의 원본은 이 저장소이며, 바꾸면 `docs/handoff/to-server/`로 알린다. 실서버 연동은 서버가 `to-code`로 준비를 알린 뒤(서버 S11)에 한다 — 로컬 프록시 `/api/v1` → `http://localhost:8081`(docker-compose) 또는 `:30081`(k8s NodePort), 배포는 API와 같은 출처(refresh 쿠키 `SameSite=Strict`·`Path=/api/v1/auth`) (ROADMAP Phase 3)
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
+- **텍스트 사전 검사** (DOMAIN 2.3): 내용·닉네임 금지 문자 집합과 NFC 길이는 `domain/text.ts` 한 곳에 두고, 입력창(`composeState` → `invalid`)·가입 신청(`nicknameError`)·Mock 서버(`contentError`)가 같은 판정을 쓴다. 보이지 않는 문자는 소스에 그대로 넣지 않고 이스케이프(`\u…`)나 `String.fromCodePoint`로 쓴다
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 - **운영 빌드** (D1단계, DEPLOYMENT 3장): `VITE_MOCK=false`·`VITE_API_BASE_URL=/api/v1`, 화면 기준 경로 `/commu/`(`vite build`만 `base: '/commu/'`, Router `basename`은 `BASE_URL`에서). **개발 서버·E2E는 `/`** — 개발 URL(`localhost:5173/`)과 운영 URL(`stories.devple.net/commu/`)이 다르다. 경로를 절대 경로 문자열로 쓰지 말고 라우터·`import.meta.env.BASE_URL`·import한 자산을 쓴다. API·SSE는 오리진 절대 경로 그대로. Mock은 `main.tsx`의 조건부 동적 import라 빌드 상수로 번들에서 빠지고, `public/mockServiceWorker.js`는 `vite.config.ts` 플러그인이 `dist`에서 지운다. `pnpm check:dist`가 확인한다. DEV 전용 훅(`window.__devple`·`__devpleMock`)은 `import.meta.env.DEV` 조건이라 운영 번들에 없다
 - zod `jitless`를 앱 진입점에서 가장 먼저 켠다(`src/shared/zodConfig.ts`): zod 4의 eval 가능 여부 시험(`new Function`)이 CSP `script-src 'self'` 위반으로 보고되기 때문이다. 모듈 로드 때 도는 검증(`avatarAssets`의 palette·catalog)보다 앞서야 한다
@@ -292,8 +294,9 @@ src/
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
 | 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |
+| 2026-10-01 | 1.25: refresh 401이면 300ms 뒤 1회 재시도(병렬 탭, 서버 FYI), 텍스트 금지 문자·NFC 길이는 `domain/text.ts`(DOMAIN 2.3) |
 | 2026-10-01 | 1.24: 운영 빌드에서 Mock 배제(빌드 상수·워커 삭제 플러그인·check:dist), zod jitless(CSP) — D1단계 |
-| 2026-10-01 | 1.23: 아바타 시트의 원본은 `art/avatar/**/*.pix`(art:build), 12b 개발용 그림 → 12c AI 생성 그림. 자리표시 생성기 제거 |
+| 2026-10-01 | 1.23: 아바타 시트의 원본은 `art/source/avatar/**/*.pix`(art:build), 12b 개발용 그림 → 12c AI 생성 그림. 자리표시 생성기 제거 |
 | 2026-10-01 | 1.22: 옷장 저장 흐름 구현 반영 — 내 `presence.updated`는 `authStore.me`도 갱신(다른 탭 동기화), 옷장은 월드 무대 위 모달(선택지만 스크롤) |
 | 2026-10-01 | 1.21: 12a단계 구현 반영 — 걷기 주기는 75ms 이하 정지에서 이어감, 닉네임 레이어는 `WorldFrame.forEachVisible`로 앵커를 받음, 폭 재측정 조건 |
 | 2026-10-01 | 1.20: 12a단계 설계 — 합성 계획(순수)·실행(캐시) 분리, 합성 전 플레이스홀더, 시트 로드는 loader만, 자리표시 PNG(12b에서 같은 경로로 교체), 걷기 프레임 규칙, 닉네임 DOM 레이어(프레임 콜백, 꼬리 끝 −15), 옷장 상태·저장 흐름 |

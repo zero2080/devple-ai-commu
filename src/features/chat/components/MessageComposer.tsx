@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type SubmitEvent } from 'react';
 
-import { codePointLength, composeState } from '@/domain';
+import { composeState, nfcLength } from '@/domain';
 import { useWorldContext } from '@/features/world';
 import { useAuthStore } from '@/store/authStore';
 
@@ -35,7 +35,7 @@ export function MessageComposer({
   useEnterToFocus(inputRef);
 
   const state = composeState(draft, maxLength);
-  const count = codePointLength(draft);
+  const count = nfcLength(draft);
   const counterId = `${inputId}-counter`;
 
   const submit = (): void => {
@@ -89,10 +89,18 @@ export function MessageComposer({
         // DM 보내기로 스레드를 열면 바로 입력하도록 (사용자 동작의 결과로만 true)
         autoFocus={autoFocus}
         aria-describedby={counterId}
-        aria-invalid={state === 'too_long'}
+        aria-invalid={state === 'too_long' || state === 'invalid'}
       />
-      <span id={counterId} className={state === 'too_long' ? styles.counterOver : styles.counter}>
-        {count}/{maxLength}
+      <span
+        id={counterId}
+        className={
+          state === 'too_long' || state === 'invalid' ? styles.counterOver : styles.counter
+        }
+      >
+        {/* 보이지 않는 제어·방향 문자 등 (DOMAIN 2.3 5.1) — 서버가 거부하므로 보내기 전에 알린다 */}
+        {state === 'invalid'
+          ? '보낼 수 없는 문자가 있어요'
+          : `${String(count)}/${String(maxLength)}`}
       </span>
       <button type="submit" className={styles.send} disabled={state !== 'ok'}>
         보내기

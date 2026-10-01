@@ -9,7 +9,18 @@ import { defaultAppearance } from '../data/avatar.ts';
 import { SERVER_CONFIG } from '../data/config.ts';
 import { contentError } from '../data/messages.ts';
 import { nextId, state, userAsMe } from '../state.ts';
-import { apiError, noContent, page, param, readJson, requireAdmin, str, url } from './support.ts';
+import {
+  apiError,
+  noContent,
+  offsetPage,
+  page,
+  param,
+  readJson,
+  requireAdmin,
+  SIGNUP_PAGE_SIZE,
+  str,
+  url,
+} from './support.ts';
 
 function findUser(id: string): User | undefined {
   return state.users.find((u) => u.id === id);
@@ -19,9 +30,14 @@ export const adminHandlers = [
   http.get(url(ENDPOINTS.adminSignups), ({ request }) => {
     const denied = requireAdmin(request);
     if (denied !== null) return denied;
-    const status = new URL(request.url).searchParams.get('status');
-    const items = state.signups.filter((s) => status === null || s.status === status);
-    return HttpResponse.json(page(items));
+    const query = new URL(request.url).searchParams;
+    const status = query.get('status');
+    // API_CONTRACT 2.3 2.8: 대기는 오래된 순(먼저 온 신청부터 심사), 그 밖·미지정은 최신순. 50건씩, 불투명 커서
+    const oldestFirst = status === 'pending';
+    const items = state.signups
+      .filter((s) => status === null || s.status === status)
+      .sort((a, b) => (oldestFirst ? a.createdAt - b.createdAt : b.createdAt - a.createdAt));
+    return HttpResponse.json(offsetPage(items, query.get('cursor'), SIGNUP_PAGE_SIZE));
   }),
 
   http.post(url(ENDPOINTS.approveSignup), ({ request, params }) => {
@@ -60,10 +76,16 @@ export const adminHandlers = [
     if (signup.status !== 'pending') {
       return apiError(409, 'SIGNUP_ALREADY_REVIEWED', 'already reviewed');
     }
-    const reason = str(await readJson(request), 'reason') ?? '';
-    const reasonLength = Array.from(reason.trim()).length;
+    // API_CONTRACT 2.3 2.8: 없음 → required, 공백뿐이거나 앞뒤 공백 제거 후 200자 초과 → length, 공백 제거한 값을 저장
+    const raw = str(await readJson(request), 'reason');
+    if (raw === undefined) {
+      return apiError(400, 'VALIDATION_FAILED', 'invalid fields', {
+        fields: { reason: 'required' },
+      });
+    }
+    const reason = raw.trim();
+    const reasonLength = Array.from(reason).length;
     if (reasonLength < 1 || reasonLength > 200) {
-      // API_CONTRACT 1.5: reason 필수 1~200자
       return apiError(400, 'VALIDATION_FAILED', 'invalid fields', { fields: { reason: 'length' } });
     }
     signup.status = 'rejected';

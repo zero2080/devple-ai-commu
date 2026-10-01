@@ -44,6 +44,7 @@ describe('POST /signup (API_CONTRACT 2.1)', () => {
     expect(created.status).toBe(201);
     const { requestId } = (await created.json()) as { requestId: string };
     expect(state.signups.find((s) => s.id === requestId)?.nickname).toBe('Pixelart');
+    expect(requestId).toMatch(/^[A-Za-z0-9_-]{22}$/); // 128비트 난수 Base64URL (API_CONTRACT 2.3 8장)
     const dup = await signup('other@example.com', 'pixelART');
     expect(dup.status).toBe(409);
     expect(await dup.json()).toMatchObject({ code: 'NICKNAME_TAKEN' });
@@ -54,7 +55,7 @@ describe('POST /signup (API_CONTRACT 2.1)', () => {
     const member = await signup('U_01@Example.com', '새사람');
     expect(member.status).toBe(409);
     expect(await member.json()).toMatchObject({ code: 'EMAIL_TAKEN' });
-    expect((await signup('newbie@example.com', '새사람2')).status).toBe(409); // sr_01 대기 중
+    expect((await signup('newbie@example.com', '새사람2')).status).toBe(409); // 시드 대기 신청(newbie)
     expect((await signup('spam@example.com', '새사람3')).status).toBe(201); // 거절된 신청 이메일은 다시 가능
   });
 });

@@ -5,7 +5,7 @@ import { validateSignup } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { ACCESS_TOKEN_TTL_SEC, DEMO_ACCESS_KEY, SERVER_CONFIG } from '../data/config.ts';
-import { isEmailTaken, isNicknameTaken, nextId, state } from '../state.ts';
+import { isEmailTaken, isNicknameTaken, randomRequestId, state } from '../state.ts';
 import { apiError, noContent, param, readJson, requireAuth, str, url } from './support.ts';
 
 const REFRESH_COOKIE = 'refreshToken';
@@ -46,7 +46,7 @@ export const authHandlers = [
     if (isEmailTaken(email)) {
       return apiError(409, 'EMAIL_TAKEN', 'email already registered or pending');
     }
-    const id = nextId('sr');
+    const id = randomRequestId(); // 공개 조회 경로라 순번이 아닌 난수 (API_CONTRACT 2.3 8장)
     state.signups.push({
       id,
       email: email.trim(),

@@ -52,3 +52,17 @@ describe('sameMessageText', () => {
     expect(sameMessageText('가', '나')).toBe(false);
   });
 });
+
+describe('composeState — DOMAIN 2.3 5.1 사전 검사', () => {
+  it('금지 문자가 있으면 invalid, ZWJ 결합 이모지는 ok', () => {
+    expect(composeState('안녕\u200B', 200)).toBe('invalid');
+    expect(composeState('a\u202Eb', 200)).toBe('invalid');
+    expect(composeState('가족 \u{1F468}\u200D\u{1F469}\u200D\u{1F467}', 200)).toBe('ok');
+  });
+
+  it('길이는 NFC 값으로 센다 (분해형 한글 100자 = 원문 300 코드 포인트)', () => {
+    const nfd = '\u1112\u1161\u11AB'.repeat(100);
+    expect(composeState(nfd, 200)).toBe('ok');
+    expect(composeState(nfd, 99)).toBe('too_long');
+  });
+});

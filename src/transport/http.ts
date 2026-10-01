@@ -150,21 +150,36 @@ async function rawFetch(options: RequestOptions, accessToken: string | null): Pr
 let refreshInFlight: Promise<string> | null = null;
 
 /**
+ * refresh 401 뒤 다시 시도하기 전 대기 (서버 handoff 2026-10-01-server-session-fyi). 탭들은 쿠키를 함께 쓰는데
+ * 단일 진행은 탭 안에서만 보장된다. 다른 탭이 방금 쿠키를 회전시켰으면 이 탭의 refresh는 옛 쿠키로 401을 받지만,
+ * 서버는 회전 15초 안의 옛 토큰에는 세션을 유지하므로 잠시 뒤 새 쿠키로 한 번 더 보내면 성공한다
+ */
+export const REFRESH_RETRY_DELAY_MS = 300;
+
+const postRefresh = (): Promise<Response> =>
+  rawFetch(
+    {
+      method: ENDPOINTS.refresh.method,
+      path: ENDPOINTS.refresh.path,
+      auth: false,
+      credentials: true,
+    },
+    null,
+  );
+
+/**
  * POST /auth/refresh (쿠키 자동 첨부). 동시에 여러 401이 나도 요청은 1회만 보내고
  * 나머지는 같은 promise를 기다린다. 쿠키가 회전되므로 두 번째 refresh는 실패한다.
+ * 401이면 REFRESH_RETRY_DELAY_MS 뒤 한 번만 다시 시도한다 (병렬 탭)
  */
 export function refreshAccessToken(): Promise<string> {
   refreshInFlight ??= (async () => {
     try {
-      const response = await rawFetch(
-        {
-          method: ENDPOINTS.refresh.method,
-          path: ENDPOINTS.refresh.path,
-          auth: false,
-          credentials: true,
-        },
-        null,
-      );
+      let response = await postRefresh();
+      if (response.status === 401) {
+        await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
+        response = await postRefresh();
+      }
       if (!response.ok) {
         config.tokens.clear();
         throw await parseError(response);

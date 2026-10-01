@@ -9,6 +9,7 @@ import {
   ApiError,
   configureHttp,
   NetworkError,
+  REFRESH_RETRY_DELAY_MS,
   request,
   resetHttpStateForTests,
   type TokenProvider,
@@ -102,12 +103,39 @@ describe('request: 401 재시도', () => {
     expect(refreshCalls).toBe(1);
   });
 
-  it('refresh가 실패하면 토큰을 지우고 ApiError를 던진다', async () => {
+  it('refresh가 401이면 잠시 뒤 한 번 더 시도한다 — 다른 탭이 방금 쿠키를 회전시킨 경우 (서버 FYI)', async () => {
+    let refreshCalls = 0;
     server.use(
       meRequiresFresh(),
-      http.post(`${BASE}/auth/refresh`, () =>
-        HttpResponse.json({ code: 'AUTH_REQUIRED', message: 'refresh expired' }, { status: 401 }),
-      ),
+      http.post(`${BASE}/auth/refresh`, () => {
+        refreshCalls += 1;
+        return refreshCalls === 1
+          ? HttpResponse.json({ code: 'AUTH_REQUIRED', message: 'rotated' }, { status: 401 })
+          : HttpResponse.json({ accessToken: 'fresh', expiresIn: 900 });
+      }),
+    );
+    const tokens = makeTokens('stale');
+    configureHttp({ baseUrl: BASE, tokens });
+    const started = Date.now();
+
+    await expect(request({ ...ENDPOINTS.me }, okSchema)).resolves.toEqual({ ok: true });
+    expect(refreshCalls).toBe(2);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(REFRESH_RETRY_DELAY_MS - 20);
+    expect(tokens.cleared).toBe(0);
+    expect(tokens.token).toBe('fresh');
+  });
+
+  it('refresh가 다시 시도해도 실패하면 토큰을 지우고 ApiError를 던진다', async () => {
+    let refreshCalls = 0;
+    server.use(
+      meRequiresFresh(),
+      http.post(`${BASE}/auth/refresh`, () => {
+        refreshCalls += 1;
+        return HttpResponse.json(
+          { code: 'AUTH_REQUIRED', message: 'refresh expired' },
+          { status: 401 },
+        );
+      }),
     );
     const tokens = makeTokens('stale');
     configureHttp({ baseUrl: BASE, tokens });
@@ -117,6 +145,7 @@ describe('request: 401 재시도', () => {
       code: 'AUTH_REQUIRED',
       status: 401,
     });
+    expect(refreshCalls).toBe(2); // 한 번만 다시 시도
     expect(tokens.cleared).toBe(1);
     expect(tokens.token).toBeNull();
   });

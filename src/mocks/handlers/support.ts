@@ -81,6 +81,24 @@ export function page<T>(items: T[]): { items: T[]; nextCursor: null } {
   return { items, nextCursor: null };
 }
 
+/** 운영자 가입 목록 한 페이지 크기 (API_CONTRACT 2.8) */
+export const SIGNUP_PAGE_SIZE = 50;
+
+/**
+ * 정렬된 목록의 커서 페이지. 커서는 불투명 문자열(여기서는 다음 시작 위치) — 클라이언트는 그대로 돌려보내기만 한다.
+ * 모르는 커서면 첫 페이지
+ */
+export function offsetPage<T>(
+  items: readonly T[],
+  cursor: string | null,
+  size: number,
+): { items: T[]; nextCursor: string | null } {
+  const parsed = cursor === null ? 0 : Number.parseInt(cursor, 10);
+  const start = Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+  const end = start + size;
+  return { items: items.slice(start, end), nextCursor: end < items.length ? String(end) : null };
+}
+
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 100;
 

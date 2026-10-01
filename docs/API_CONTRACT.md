@@ -1,8 +1,8 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 2.2 (2026-10-01, 백엔드 구현 저장소 확정: devple-stories)
+> 문서 버전: 2.3 (2026-10-01, 서버 구현 중 결정 요청 5건 반영)
 > 상태: 확정
-> 기준: DOMAIN.md 2.2, ARCHITECTURE.md 1.15
+> 기준: DOMAIN.md 2.3, ARCHITECTURE.md 1.15
 > 구현: 백엔드는 기존 API 저장소 `devple-stories`의 Commu 영역 (`net.devple.core.commu`, 문서 `docs/commu/ARCHITECTURE.md`가 구현 방식을 정한다)
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
@@ -48,6 +48,15 @@
 
 - `details.fields` 사유 어휘 (이 목록 밖의 값은 쓰지 않는다): `'required'` 필수 누락 · `'length'` 길이 위반(코드 포인트) · `'format'` 형식 위반(이메일·전화번호) · `'invalid'` 허용되지 않는 값·문자(제어 문자, 자기 자신에게 DM 등) · `'unknown'` 목록에 없는 ID · `'slot_mismatch'` 외형 슬롯 불일치
 - 필드 경로는 요청 본문 기준 점 표기 (`nickname`, `appearance.top.primary`). 경로 파라미터는 이름 그대로 (`userId`)
+- **프레임워크 단계 오류**도 위 표의 코드만 쓴다 (새 코드 없음):
+  | 상황 | 응답 |
+  |---|---|
+  | 없는 경로 | `404 NOT_FOUND` (`details` 없음) |
+  | 경로는 있고 메서드가 다름 (HTTP 405 상황) | `404 NOT_FOUND` |
+  | 필수 쿼리 파라미터 누락 | `400 VALIDATION_FAILED`, `details.fields.<이름>: 'required'` |
+  | 경로·쿼리 타입 불일치 | `400 VALIDATION_FAILED`, `details.fields.<이름>: 'invalid'` |
+  | 잘못된 JSON 본문, 415, 406, 그 밖의 프레임워크 4xx | `400 VALIDATION_FAILED` (`details` 없음) |
+  | 예상 못한 예외 | `500 INTERNAL` |
 
 ### 1.4 레이트 리밋 (권장값)
 | 대상 | 제한 |
@@ -82,6 +91,11 @@
 - 검증: email 형식, nickname 2~12자 유니크(대기 중 신청 포함), phone 숫자·하이픈 8~20자
 - 실패: 형식·길이 → `400 VALIDATION_FAILED` (`fields.email: 'format'`, `fields.nickname: 'length' | 'invalid'`, `fields.phone: 'format'`), 닉네임 중복 → `409 NICKNAME_TAKEN`, 이메일 중복 → `409 EMAIL_TAKEN`
 - 닉네임은 앞뒤 공백을 제거하고 저장한다. 중복 비교 규칙은 DOMAIN 8장
+- 검사 순서: 필드 오류 `400`(모든 필드를 모아서) → `409 NICKNAME_TAKEN` → `409 EMAIL_TAKEN`. 이메일은 대소문자 무시
+- `requestId`는 **추측할 수 없는 난수**다 (8장) — 인증 없는 조회 경로라 순번이면 다른 신청자의 상태와 거절 사유를 볼 수 있다
+- 레이트 리밋(3회/시간/IP)은 `400`·`409`를 포함한 **모든 호출**을 센다 (어떤 닉네임·이메일이 있는지 더듬어 보는 것을 막음). `429`로 거부된 호출은 세지 않는다
+
+**GET /signup/{requestId}**에서 없는 신청은 `404 NOT_FOUND`, `details.resource: 'signup'`
 
 **GET /signup/{requestId}** → `200 { "status": "pending" | "approved" | "rejected", "rejectReason"?: string }`
 
@@ -96,6 +110,9 @@
 - 불일치·형식 오류 모두 `401 AUTH_INVALID_KEY` (구분하지 않음). 정지 회원은 `403 USER_SUSPENDED`
 
 **POST /auth/refresh** → `200 { "accessToken", "expiresIn" }` (쿠키 회전: 새 refreshToken 발급)
+- 폐기된 refresh를 다시 쓰면 `401 AUTH_REQUIRED` + 그 토큰 계열 전체 폐기 (도난 대응). **예외**: 회전된 지 **15초 안**인 토큰은 `401`만 주고 계열은 유지한다 — 같은 쿠키를 쓰는 여러 탭이 동시에 refresh해도 모두 로그아웃되지 않게
+- 정지 회원의 refresh는 `401 AUTH_REQUIRED` + 계열 폐기
+- `Origin` 헤더가 없거나 Commu 화면의 오리진(DEPLOYMENT 1.1)과 다르면 `403 FORBIDDEN` (`/auth/logout`도 같음)
 
 **POST /auth/logout** → `204` + `Set-Cookie: refreshToken=; Max-Age=0` (같은 `Path`). 서버는 해당 Refresh를 무효화한다. 열린 SSE 연결은 클라이언트가 닫는다
 
@@ -230,6 +247,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 **DELETE /groups/{id}** → `204`. 멤버 전원(owner 포함)에게 `group.removed { reason: 'dissolved' }`. owner가 아니면 `403 FORBIDDEN`
 **POST /groups/{id}/members** — body `{ "userId" }` → `201 GroupMember` / `409 GROUP_FULL`
 - 초대는 즉시 가입 (수락 절차 없음). 초대된 사용자에게 `group.joined`, 기존 멤버에게 `group.updated`
+- 초대된 멤버의 `lastReadMessageId`는 그 시점 마지막 메시지 → 안 읽음 0에서 시작. 가입 전 메시지도 히스토리로 읽을 수 있다 (DOMAIN 5.4). `POST /groups`의 owner도 같은 규칙
 **DELETE /groups/{id}/members/{userId}** → `204`
 - owner가 타인을 지정: **강퇴**. 대상에게 `group.removed { reason: 'kicked' }`, 남은 멤버에게 `group.updated`
 - 본인을 지정: **나가기**. 본인(모든 탭)에게 `group.removed { reason: 'left' }`, 남은 멤버에게 `group.updated`. owner가 나가면 가장 오래된 `joinedAt` 멤버가 owner를 승계하고 같은 `group.updated`에 반영. 마지막 멤버가 나가면 그룹 삭제 (남은 멤버 없으므로 `group.updated` 없음)
@@ -253,8 +271,11 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 | POST | `/admin/notices` | 🔒👑 | 공지 `{ content }` → 전체 `system.notice` |
 
 **GET /admin/signups** → `200 { "items": SignupRequest[], "nextCursor" }`
+- 정렬: `status=pending`이면 **오래된 순**(먼저 온 신청부터 심사), 그 밖(`approved`·`rejected`·미지정)은 **최신순**. 한 페이지 50건, `cursor` = 이전 응답의 `nextCursor`
+- 심사(`approve`·`reject`) 검사 순서: 없는 신청 `404 NOT_FOUND details.resource: 'signup'` → 이미 처리됨 `409 SIGNUP_ALREADY_REVIEWED` → 필드 검사
 **POST /admin/signups/{id}/approve** → `200 { "userId": string }` / `409 SIGNUP_ALREADY_REVIEWED`
 **POST /admin/signups/{id}/reject** — body `{ "reason" }` (1~200자, 필수) → `204` / `409 SIGNUP_ALREADY_REVIEWED`. 신청자는 `GET /signup/{requestId}`의 `rejectReason`으로 확인
+- `reason` 없음 → `fields.reason: 'required'`, 공백뿐이거나 앞뒤 공백 제거 후 200자 초과 → `'length'`. 공백을 제거한 값을 저장
 **GET /admin/users** → `200 { "items": Me[], "nextCursor" }` (email/phone 포함)
 **POST /admin/users/{id}/suspend** → `204`. 대상의 Refresh 전부 무효, 접속 중이면 `system.suspended` 전송 후 SSE 종료. 이미 정지 상태여도 `204` (멱등). 자기 자신은 `403 FORBIDDEN`
 **POST /admin/users/{id}/unsuspend** → `204` (멱등). 대상은 기존 접근 키로 다시 로그인한다
@@ -369,6 +390,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-30 | **2.0 (호환 깨짐, DOMAIN 2.0)**: `avatarId` → `appearance`. `PATCH /me`는 `appearance` 전체 교체 + 검증 실패 4종(`required`·`unknown`·`slot_mismatch`, 필드 경로 `appearance.<경로>`), `presence.updated`는 `appearance` 전체. `User`·`Presence`를 싣는 모든 응답·이벤트(`world.snapshot`, `presence.joined`, `GET /users/*`, DM·그룹의 `User`)가 함께 바뀐다. `chat.public`의 sender는 nickname만 |
 | 2026-09-30 | 2.1 (서버 설계 중 발견): `409 EMAIL_TAKEN` 추가, `details.fields` 사유 어휘 고정(`required`·`length`·`format`·`invalid`·`unknown`·`slot_mismatch`), 가입 검증 실패 매핑, 접근 키 형식(Crockford 20자)과 서버 정규화, Presence 없을 때 위치·공개 대화 `404 resource: 'presence'`, 자기 자신에게 DM `400 invalid`. 8장 백엔드 결정 기록, 9장 계약 자산 신설 |
 | 2026-10-01 | 2.2: 백엔드 구현 저장소를 기존 `devple-stories`로 확정(사용자). 8장: 전용 Deployment(Pod 1), Stories와 회원·인증 분리, ID는 IDENTITY 문자열(기존 저장소 관례). 엔드포인트·필드 변경 없음 |
+| 2026-10-01 | 2.3 (서버 결정 요청 5건): 1.3 프레임워크 오류 매핑(새 코드 없음), 2.1 가입 검사 순서·`404 resource: 'signup'`·레이트 리밋은 모든 호출 집계, refresh 15초 다중 탭 유예·정지 회원 401·`Origin` 불일치 `403 FORBIDDEN`, 2.7 초대 멤버 안 읽음 0 시작·이전 대화 열람, 2.8 심사 목록 정렬(대기는 오래된 순, 그 밖 최신순, 50건)·거절 사유 규칙, 8장 가입 신청 ID는 128비트 난수 예외. 요청·응답 모양 변경 없음 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
@@ -383,6 +405,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 - 이메일 발송: outbox + 재시도. 발송 실패는 승인을 **되돌리지 않는다** (관리자가 키 재발급으로 다시 보냄)
 - 근접 공개 대화: DB에 저장하지 않는다 (재전송 버퍼 60초에만)
 - ID: DB IDENTITY 정수를 문자열로 (예: `"1234"`). 값이 커지는 순서가 생성 순서와 같다. 프론트는 계속 불투명 문자열로 취급한다 (파싱·비교 금지)
+  - **예외**: 가입 신청 ID(`requestId`, `SignupRequest.id`)는 128비트 난수 Base64URL 22자 (예: `Xq3f0Y2kR8m1Zp7vT4aW9A`). 인증 없는 조회 경로(`GET /signup/{requestId}`)라 순번을 쓰지 않는다
 - 접근 키: 2.1 형식, HMAC 해시로만 저장
 - 첫 관리자: 서버 기동 시 설정값으로 1명 생성 (API 없음)
 - SSE 이벤트 `id`: 기동 시각 기반 단조 증가 — 재시작 후에도 이전 값보다 크다. 프론트는 문자열 그대로 돌려보낸다

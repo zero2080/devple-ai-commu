@@ -67,10 +67,21 @@ export function findUser(userId: string): User | undefined {
   return ALL_USERS.find((u) => u.id === userId);
 }
 
+/**
+ * 시드 가입 신청 ID. 서버처럼 128비트 난수 Base64URL 22자 모양 (API_CONTRACT 2.3 8장) — 순서·모양에 기대지 않게
+ * 고정값을 쓴다 (테스트·E2E가 참조)
+ */
+export const SEED_SIGNUP_IDS = {
+  newbie: 'Kx3vQ8mZpL2wN7tR5yB9dA',
+  visitor: 'b4HjW1sYe6Uq0cVn8gTk3w',
+  dot: 'Zr7Fp2LmXa9Dq4Sv1Hc6Nw',
+  spam: 'tM5yG8kQwE2rB7nJ0vXu4g',
+} as const;
+
 /** 가입 신청 시드 (운영자 콘솔 11단계): 대기 2 · 승인 1(도트) · 거절 1 */
 export const SEED_SIGNUPS: SignupRequest[] = [
   {
-    id: 'sr_01',
+    id: SEED_SIGNUP_IDS.newbie,
     email: 'newbie@example.com',
     nickname: '신입',
     phone: '010-1111-2222',
@@ -78,7 +89,7 @@ export const SEED_SIGNUPS: SignupRequest[] = [
     createdAt: SEED_TIME - 3_600_000,
   },
   {
-    id: 'sr_02',
+    id: SEED_SIGNUP_IDS.visitor,
     email: 'visitor@example.com',
     nickname: '방문자',
     phone: '010-3333-4444',
@@ -86,7 +97,7 @@ export const SEED_SIGNUPS: SignupRequest[] = [
     createdAt: SEED_TIME - 1_800_000,
   },
   {
-    id: 'sr_03',
+    id: SEED_SIGNUP_IDS.dot,
     email: 'dot@example.com',
     nickname: '도트',
     phone: '010-5555-6666',
@@ -96,7 +107,7 @@ export const SEED_SIGNUPS: SignupRequest[] = [
     reviewedBy: ME.id,
   },
   {
-    id: 'sr_04',
+    id: SEED_SIGNUP_IDS.spam,
     email: 'spam@example.com',
     nickname: '스팸봇',
     phone: '000-0000-0000',

@@ -17,7 +17,7 @@ describe('닉네임 (DOMAIN 8장 2.1)', () => {
 
   it('유일성 비교 키: 앞뒤 공백 제거 + NFC + 대소문자 무시', () => {
     expect(nicknameKey(' Dot ')).toBe(nicknameKey('dot'));
-    expect(nicknameKey('가')).toBe(nicknameKey('가'));
+    expect(nicknameKey('\u1100\u1161')).toBe(nicknameKey('가'));
     expect(nicknameKey('도트')).not.toBe(nicknameKey('도트2'));
   });
 });
@@ -56,5 +56,15 @@ describe('validateSignup', () => {
     expect(validateSignup({ email: 'a@b.com', nickname: '도트', phone: '010-1111-2222' })).toEqual(
       {},
     );
+  });
+});
+
+describe('닉네임 금지 문자·길이 (DOMAIN 2.3 8장)', () => {
+  it('내용 금지 집합 + 줄바꿈 + ZWJ는 invalid, 길이는 NFC 값으로', () => {
+    expect(nicknameError('도\u202E트')).toBe('invalid');
+    expect(nicknameError('도\u200D트')).toBe('invalid');
+    expect(nicknameError('도\uFEFF트')).toBe('invalid');
+    expect(nicknameError('\u1112\u1161\u11AB\u1112\u1161\u11AB')).toBeNull(); // NFD '한한' = NFC 2자
+    expect(nicknameError('\u1112\u1161\u11AB')).toBe('length'); // NFC 1자
   });
 });

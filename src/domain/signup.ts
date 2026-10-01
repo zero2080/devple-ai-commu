@@ -1,10 +1,8 @@
 // 가입 신청·닉네임 규칙 (PRD 5.1, DOMAIN 8장, API_CONTRACT 2.1). 순수 함수 — Mock 서버와 신청 화면이 함께 쓴다
+import { hasForbiddenNicknameChar, nfcLength } from './text';
 
 const NICKNAME_MIN = 2;
 const NICKNAME_MAX = 12;
-// 닉네임은 한 줄 (DOMAIN 2.2 8장): C0 제어 문자 전부(줄바꿈·탭 포함) + U+007F + 비가시 U+200B–U+200F
-// eslint-disable-next-line no-control-regex -- 제어 문자 검출이 목적
-const CONTROL_OR_INVISIBLE = /[\u0000-\u001F\u007F\u200B-\u200F]/;
 const EMAIL = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/;
 const PHONE = /^[0-9-]{8,20}$/;
 
@@ -13,13 +11,13 @@ export type SignupField = 'email' | 'nickname' | 'phone';
 export type SignupFieldReason = 'required' | 'length' | 'format' | 'invalid';
 export type SignupFieldErrors = Partial<Record<SignupField, SignupFieldReason>>;
 
-/** 앞뒤 공백 뺀 코드 포인트 2~12, 제어·비가시 문자 불가. 문제없으면 null */
+/** 앞뒤 공백 뺀 NFC 값의 코드 포인트 2~12, 닉네임 금지 문자(DOMAIN 2.3 8장 — 내용 금지 집합 + 줄바꿈 + ZWJ) 불가. 문제없으면 null */
 export function nicknameError(nickname: string): 'length' | 'invalid' | null {
   const trimmed = nickname.trim();
-  if (CONTROL_OR_INVISIBLE.test(trimmed)) {
+  if (hasForbiddenNicknameChar(trimmed)) {
     return 'invalid';
   }
-  const length = Array.from(trimmed).length;
+  const length = nfcLength(trimmed);
   return length < NICKNAME_MIN || length > NICKNAME_MAX ? 'length' : null;
 }
 

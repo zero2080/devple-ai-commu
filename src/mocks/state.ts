@@ -71,6 +71,13 @@ export function resetMockState(): void {
   Object.assign(state, createInitialState());
 }
 
+/** 가입 신청 ID: 128비트 난수 Base64URL 22자 (API_CONTRACT 2.3 8장 — 서버와 같은 모양) */
+export function randomRequestId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export function nextId(prefix: string): string {
   state.idCounter += 1;
   return `${prefix}_${String(state.idCounter)}`;

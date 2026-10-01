@@ -14,3 +14,4 @@ export * from './movement';
 export * from './pathfinding';
 export * from './viewport';
 export * from './link';
+export * from './text';

@@ -30,6 +30,12 @@ import {
   url,
 } from './support.ts';
 
+/** 가입 시점의 읽음 시작점 (DOMAIN 2.3 5.4): 마지막 메시지 ID, 메시지가 없으면 비움 */
+function joinBaseline(groupId: string): { lastReadMessageId?: string } {
+  const latest = groupMessagesOf(groupId)[0]; // 최신순
+  return latest === undefined ? {} : { lastReadMessageId: latest.id };
+}
+
 function listItem(group: Group): GroupListItem {
   const membership = myMembership(group.id);
   const messages = groupMessagesOf(group.id); // 최신순
@@ -93,11 +99,13 @@ export const groupsHandlers = [
       createdAt: now,
     };
     state.groups.push(group);
+    // 만든 사람의 읽음 시작점 = 그 시점 마지막 메시지 (DOMAIN 2.3 5.4 — 새 그룹이라 없음 → 비움)
     state.groupMembers.push({
       groupId: group.id,
       userId: state.me.id,
       role: 'owner',
       joinedAt: now,
+      ...joinBaseline(group.id),
     });
     return HttpResponse.json(group, { status: 201 });
   }),
@@ -158,7 +166,14 @@ export const groupsHandlers = [
     if (group.memberCount >= SERVER_CONFIG.maxGroupMembers) {
       return apiError(409, 'GROUP_FULL', `max ${String(SERVER_CONFIG.maxGroupMembers)} members`);
     }
-    const member: GroupMember = { groupId: group.id, userId, role: 'member', joinedAt: Date.now() };
+    // 초대된 멤버의 읽음 시작점 = 그 시점 마지막 메시지 → 가입 직후 안 읽음 0, 이전 대화는 볼 수 있음 (DOMAIN 2.3 5.4)
+    const member: GroupMember = {
+      groupId: group.id,
+      userId,
+      role: 'member',
+      joinedAt: Date.now(),
+      ...joinBaseline(group.id),
+    };
     state.groupMembers.push(member);
     group.memberCount += 1;
     // 초대된 사용자에게 group.joined(가짜라 연결 없음), 기존 멤버(나 포함)에게 group.updated

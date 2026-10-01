@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { codePointLength, composeState } from '@/domain';
+import { composeState, nfcLength } from '@/domain';
 import { useAuthStore } from '@/store/authStore';
 
 import styles from './AdminConsole.module.css';
@@ -51,8 +51,12 @@ export function NoticePanel() {
           }}
         />
         <div className={styles.actions}>
-          <span className={state === 'too_long' ? styles.error : styles.muted}>
-            {codePointLength(content)}/{maxLength}
+          <span
+            className={state === 'too_long' || state === 'invalid' ? styles.error : styles.muted}
+          >
+            {state === 'invalid'
+              ? '보낼 수 없는 문자가 있어요'
+              : `${String(nfcLength(content))}/${String(maxLength)}`}
           </span>
           <button
             type="submit"

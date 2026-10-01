@@ -78,4 +78,22 @@ describe('ChatComposer', () => {
     await userEvent.keyboard('{Enter}');
     expect(screen.getByRole('button', { name: '다른 버튼' })).toHaveFocus();
   });
+
+  it('보이지 않는 금지 문자가 있으면 보내지 않고 이유를 보여 준다 (DOMAIN 2.3 5.1)', () => {
+    render(withWorld(<ChatComposer />));
+    const rtlOverride = String.fromCodePoint(0x202e);
+    fireEvent.change(input(), { target: { value: `안녕${rtlOverride}` } });
+    expect(input()).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('보낼 수 없는 문자가 있어요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '보내기' })).toBeDisabled();
+    fireEvent.submit(input());
+    expect(actions.sendPublic).not.toHaveBeenCalled();
+    // 결합 이모지(ZWJ로 이은 가족 이모지)는 보낼 수 있다 — 길이는 NFC 코드 포인트 5
+    const family = [0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f467]
+      .map((cp) => String.fromCodePoint(cp))
+      .join('');
+    fireEvent.change(input(), { target: { value: family } });
+    expect(screen.getByText('5/10')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '보내기' })).toBeEnabled();
+  });
 });

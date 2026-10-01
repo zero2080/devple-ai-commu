@@ -63,7 +63,7 @@ test('닉네임은 대소문자만 달라도, 이메일은 대기 중 신청과 
   await expect(page.getByText('이미 사용 중인 닉네임이에요.')).toBeVisible();
 
   await page.getByLabel('닉네임').fill('레트로팬');
-  await page.getByLabel('이메일').fill('NEWBIE@example.com'); // 시드 대기 신청(sr_01)과 같은 이메일
+  await page.getByLabel('이메일').fill('NEWBIE@example.com'); // 시드 대기 신청(newbie)과 같은 이메일
   await page.getByRole('button', { name: '신청하기' }).click();
   await expect(page.getByText('이미 가입했거나 심사 중인 이메일이에요.')).toBeVisible();
   await expect(page).toHaveURL(/\/signup$/);
@@ -71,7 +71,7 @@ test('닉네임은 대소문자만 달라도, 이메일은 대기 중 신청과 
 
 test('신청 번호로 상태를 찾는다 — 거절이면 사유, 없는 번호면 안내', async ({ page }) => {
   await page.goto('/signup');
-  await page.getByRole('textbox', { name: '신청 번호' }).fill('sr_04');
+  await page.getByRole('textbox', { name: '신청 번호' }).fill('tM5yG8kQwE2rB7nJ0vXu4g'); // 시드 거절 신청 (src/mocks/data/users.ts SEED_SIGNUP_IDS.spam)
   await page.getByRole('button', { name: '상태 보기' }).click();
   await expect(page.getByRole('status')).toHaveText('신청이 거절됐어요');
   await expect(page.getByText('사유: 연락처 확인 불가')).toBeVisible();
