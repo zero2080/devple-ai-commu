@@ -2,6 +2,7 @@
 export * from './types';
 export * from './appearance';
 export * from './admin';
+export * from './signup';
 export * from './view';
 export * from './proximity';
 export * from './occupancy';
