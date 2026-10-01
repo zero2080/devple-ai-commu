@@ -16,6 +16,8 @@ export const queryKeys = {
   groupThreads: () => ['groups', 'threads'] as const,
   /** 그룹 스레드 (무한 쿼리, 페이지는 최신순) */
   groupThread: (groupId: string) => ['groups', 'threads', groupId] as const,
+  /** 가입 신청 상태 (로그인 불필요, 11b단계) */
+  signupStatus: (requestId: string) => ['signup', requestId] as const,
   /** 운영자 콘솔 전체 (접두) */
   admin: () => ['admin'] as const,
   /** 모든 가입 신청 목록 (접두) */

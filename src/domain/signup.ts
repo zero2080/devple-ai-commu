@@ -2,7 +2,7 @@
 
 const NICKNAME_MIN = 2;
 const NICKNAME_MAX = 12;
-// 제어·비가시 문자 (DOMAIN 5.1 집합). 닉네임은 한 줄이므로 줄바꿈도 막는다 (to-chat 확인 요청)
+// 닉네임은 한 줄 (DOMAIN 2.2 8장): C0 제어 문자 전부(줄바꿈·탭 포함) + U+007F + 비가시 U+200B–U+200F
 // eslint-disable-next-line no-control-regex -- 제어 문자 검출이 목적
 const CONTROL_OR_INVISIBLE = /[\u0000-\u001F\u007F\u200B-\u200F]/;
 const EMAIL = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/;

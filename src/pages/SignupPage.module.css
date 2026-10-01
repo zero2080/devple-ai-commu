@@ -1,0 +1,15 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100%;
+  padding: 24px 0;
+  overflow-y: auto;
+}
+
+.link {
+  color: #9a9ab0;
+  font-size: 13px;
+}

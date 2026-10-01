@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 
 import { LoginForm } from '@/features/auth';
 import { messageForCode } from '@/shared/errorMessages';
@@ -25,6 +25,9 @@ export function LoginPage() {
           void navigate('/', { replace: true });
         }}
       />
+      <Link to="/signup" className={styles.link}>
+        처음이라면 가입 신청 · 신청 상태 확인
+      </Link>
     </main>
   );
 }
