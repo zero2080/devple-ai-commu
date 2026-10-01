@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.18 (2026-10-01, 백엔드 저장소를 devple-stories로 정정)
+> 문서 버전: 1.19 (2026-10-01, 실서버 연동 프록시·같은 출처 메모)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -248,7 +248,7 @@ src/
 - **emit 브리지**: 상태는 MSW에 있지만 SSE 방송이 필요한 엔드포인트(`PATCH /me` → `presence.updated`, 이후 DM·그룹 메시지·공지)는 MSW 핸들러가 Express의 `POST /__mock/emit`으로 방송을 위임한다 (`src/mocks/bridge.ts`, `/__mock` 접두도 proxy·통과 목록에 포함). Express는 `presence.updated` 페이로드를 자기 Presence 저장소에도 반영해 재연결 스냅샷과 맞춘다. 따라서 **`PATCH /me`는 MSW에 남긴다** (2026-09-30 판단, 8단계 프로필 카드에서도 유지)
 - **Mock DM** (8단계): 상태는 MSW. 전송 → `chat.dm`(발신자 에코, `peerId` = 상대), 회수 → `chat.dm.recalled`를 emit 브리지로 방송한다. 상대가 가짜 사용자라 `chat.dm.read`는 상대가 내 메시지를 읽을 때만 생긴다. DEV 전용 `window.__devpleMock`: `dmFrom(userId, content)`(가짜 상대가 나에게 DM), `readBy(userId)`(가짜 상대가 내 DM을 읽음), `seedDm(userId, count)`(무한 스크롤 확인용). 가짜 상대 봇은 `VITE_MOCK_BOT_MS`(기본 5000, 0이면 끔 — E2E) 뒤 내 DM을 읽고 짧게 답한다. 스레드 히스토리는 커서 페이지네이션(`limit`, `cursor` = 이전 페이지의 가장 오래된 id). 대화 목록은 `updatedAt` 내림차순, 안 읽음은 저장하지 않고 메시지에서 계산한다(상대가 보낸 것 중 `readAt` 없음, DOMAIN 5.3). 위치 배치용 Express `POST /__mock/place { userId, x, y }`
 - **Mock 그룹** (9단계): 상태는 MSW. 전송 → `chat.group`(내 에코), 이름 변경·초대·강퇴·나가기 → `group.updated`(남은 멤버 기준), 해산 → `group.removed { reason: 'dissolved' }`, 나가기 → `group.removed { reason: 'left' }`를 emit 브리지로 방송한다. 전송하면 내 `lastReadMessageId`를 그 메시지로 올린다(내 메시지는 안 읽음에 세지 않음, API_CONTRACT 2.7·DOMAIN 5.4). `GET /groups`는 최근 활동 먼저. 히스토리는 DM과 같은 커서 페이지네이션 헬퍼. DEV 트리거 `window.__devpleMock`: `groupFrom(groupId, userId, content)`(가짜 멤버 발화), `inviteMe(name)`(가짜 사용자가 그룹을 만들고 나를 초대 → `group.joined`), `kickMe(groupId)`(→ `group.removed kicked`), `seedGroup(groupId, count)`. 봇은 DM과 같은 지연 변수 `VITE_MOCK_BOT_MS`(이전 이름 `VITE_MOCK_DM_BOT_MS`, 기본 5000, 0이면 끔 — E2E) 뒤 다른 멤버가 짧게 답한다
-- **백엔드 저장소** (2026-10-01, API_CONTRACT 2.2): 실제 서버는 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 전용 Deployment)이 이 저장소의 계약 문서를 읽어 구현한다. ID는 정수 문자열이지만 프론트는 계속 불투명 문자열로만 다룬다(파싱·비교 금지). 계약 자산(API_CONTRACT 9장 — `src/assets/maps/*.json`, `sprites/avatar/catalog.json`, `palette.json`)의 원본은 이 저장소이며, 바꾸면 `docs/handoff/to-server/`로 알린다. 실서버 연동(Vite proxy 대상은 서버가 정함)은 서버가 `to-code`로 준비를 알린 뒤에 한다
+- **백엔드 저장소** (2026-10-01, API_CONTRACT 2.2): 실제 서버는 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 전용 Deployment)이 이 저장소의 계약 문서를 읽어 구현한다. ID는 정수 문자열이지만 프론트는 계속 불투명 문자열로만 다룬다(파싱·비교 금지). 계약 자산(API_CONTRACT 9장 — `src/assets/maps/*.json`, `sprites/avatar/catalog.json`, `palette.json`)의 원본은 이 저장소이며, 바꾸면 `docs/handoff/to-server/`로 알린다. 실서버 연동은 서버가 `to-code`로 준비를 알린 뒤(서버 S11)에 한다 — 로컬 프록시 `/api/v1` → `http://localhost:8081`(docker-compose) 또는 `:30081`(k8s NodePort), 배포는 API와 같은 출처(refresh 쿠키 `SameSite=Strict`·`Path=/api/v1/auth`) (ROADMAP Phase 3)
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
 
@@ -287,3 +287,4 @@ src/
 | 2026-09-30 | 1.16: 11단계 설계 — `/admin` 운영자 가드, 운영자 목록 무한 쿼리·변경 후 무효화, 위험 동작 재확인, 공지 배너(`uiStore.notice`, 최신 1건, 링크 버튼 없음, 보장 영역 예외) |
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
+| 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |

@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.18 (2026-10-01, 11b단계 완료)
+> 문서 버전: 1.19 (2026-10-01, Phase 3 백엔드·인프라 메모)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -315,6 +315,9 @@ PRD 5.1(1·2), DOMAIN 3.4·8장, API_CONTRACT 2.1(2.1판 검증 매핑). 11단�
 
 ## Phase 3 — 백엔드 연동
 - `VITE_MOCK=false` 전환, 실서버 계약 검증, E2E(Playwright)
+- 백엔드: 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 문서 `docs/commu/`). 서버가 `to-code`로 실서버 E2E 준비를 알리면(서버 S11) 시작한다
+- 로컬 프록시: `/api/v1` → `http://localhost:8081`(docker-compose `devple-commu`) 또는 `http://localhost:30081`(k8s NodePort). SSE 경로는 그대로
+- 배포: API와 **같은 출처**여야 한다(refresh 쿠키 `SameSite=Strict`, `Path=/api/v1/auth`). 프론트 이미지 `devple-commu-web`(nginx로 SPA, `index.html` 폴백), 공개 호스트는 서버 제안 `commu.devple.net`(경로 `^/api/` → 서버, 나머지 → 프론트) — 확정은 그때
 
 ---
 
@@ -328,6 +331,7 @@ PRD 5.1(1·2), DOMAIN 3.4·8장, API_CONTRACT 2.1(2.1판 검증 매핑). 11단�
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-10-01 | 1.19: Phase 3 메모 — 백엔드는 `devple-stories` Commu 영역, 로컬 프록시 `localhost:8081`/`30081`, 배포는 같은 출처(refresh 쿠키) — handoff 2026-10-01-server-repo-devple-stories |
 | 2026-10-01 | 1.18: 11b단계 완료 — 단위 384건·domain 100%·E2E 29건(2회 연속, 반복 87회 무실패). 상태 화면이 공유 캐시 staleTime(30초) 때문에 승인 뒤에도 대기로 보이던 것을 E2E로 발견해 열 때마다 다시 받게 수정 |
 | 2026-10-01 | 1.17: 가입 신청 화면은 사용자 결정 A로 11b단계 신설(12a 전). 인박스 API_CONTRACT 2.1 반영(가입 검증 사유·`EMAIL_TAKEN`·닉네임 비교·접근 키 정규화)을 함께 진행 |
 | 2026-09-30 | 1.16: 11단계 완료 — 단위 363건·domain 100%·E2E 26건(반복 130회 무실패). 6단계 이동 E2E가 가짜 접속자 무작위 이동으로 가끔 실패(104회 중 2회)하던 것을 `/__mock/freeze-all`로 결정적으로. 가입 신청 화면은 결정 대기 |
