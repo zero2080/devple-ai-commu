@@ -74,8 +74,12 @@ export function signIn(): void {
   useAuthStore.getState().setSession(TEST_SESSION);
 }
 
-/** anchorOf가 userId → 좌표를 돌려주는 가짜 프레임 */
-export function fakeFrame(anchors: Record<string, { x: number; y: number }>, zoom = 2): WorldFrame {
+/** anchorOf가 userId → 좌표를 돌려주는 가짜 프레임. visible = forEachVisible이 그리기 순서로 넘길 닉네임 앵커 */
+export function fakeFrame(
+  anchors: Record<string, { x: number; y: number }>,
+  zoom = 2,
+  visible: readonly { userId: string; nickname: string; x: number; y: number }[] = [],
+): WorldFrame {
   return {
     camera: { originX: 0, originY: 0, zoom },
     viewportWidthPx: 800,
@@ -89,6 +93,11 @@ export function fakeFrame(anchors: Record<string, { x: number; y: number }>, zoo
       out.x = a.x;
       out.y = a.y;
       return true;
+    },
+    forEachVisible: (visit) => {
+      for (const v of visible) {
+        visit(v.userId, v.nickname, v.x, v.y);
+      }
     },
   };
 }

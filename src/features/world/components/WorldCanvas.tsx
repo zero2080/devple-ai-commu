@@ -1,12 +1,13 @@
 import { useCallback, useRef, type ReactNode } from 'react';
 
+import { NicknameLayer } from './NicknameLayer';
 import styles from './WorldCanvas.module.css';
 import { useWorldGame } from '../hooks/useWorldGame';
 import { useWorldContext } from '../worldContext';
 
 interface WorldCanvasProps {
   mapId: string;
-  /** 캔버스 위 DOM 오버레이 (말풍선) */
+  /** 캔버스 위 DOM 오버레이 (말풍선). 닉네임 레이어보다 위에 놓인다 */
   children?: ReactNode;
 }
 
@@ -34,6 +35,7 @@ export function WorldCanvas({ mapId, children }: WorldCanvasProps) {
         aria-label="가상공간 맵"
         tabIndex={0}
       />
+      <NicknameLayer />
       {children}
     </div>
   );

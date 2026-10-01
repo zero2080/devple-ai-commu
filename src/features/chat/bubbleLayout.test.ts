@@ -47,8 +47,9 @@ describe('placeBubble', () => {
   it('발화자 프레임이 화면 밖이면 숨긴다', () => {
     expect(placeBubble({ x: -200, y: 300 }, 100, 40, 2, 800, 600).visible).toBe(false);
     expect(placeBubble({ x: 1000, y: 300 }, 100, 40, 2, 800, 600).visible).toBe(false);
-    // 프레임 하단 = -102 + 102 = 0 → 한 줄도 안 보임
-    expect(placeBubble({ x: 400, y: -102 }, 100, 40, 2, 800, 600).visible).toBe(false);
+    // 꼬리 끝 → 프레임 하단 = (15 + 40) × 2 = 110. 프레임 하단 = -110 + 110 = 0 → 한 줄도 안 보임
+    expect(placeBubble({ x: 400, y: -110 }, 100, 40, 2, 800, 600).visible).toBe(false);
+    expect(placeBubble({ x: 400, y: -108 }, 100, 40, 2, 800, 600).visible).toBe(true);
     expect(placeBubble({ x: 400, y: 700 }, 100, 40, 2, 800, 600).visible).toBe(false);
   });
 });

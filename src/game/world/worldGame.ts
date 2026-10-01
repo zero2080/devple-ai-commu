@@ -6,14 +6,22 @@ import {
   AVATAR_BODY_BOX,
   AVATAR_FRAME_WIDTH,
   BUBBLE_NICKNAME_CLEARANCE_PX,
+  NICKNAME_GAP_PX,
   TILE_SIZE,
 } from '../constants';
 import { LocalPlayer } from './localPlayer';
 import { computeCamera, screenToWorld, type Camera } from '../engine/camera';
 import { GameLoop, type LoopOptions } from '../engine/loop';
+import { sharedAvatarCompositor, type AvatarCompositor } from '../render/avatarCompositor';
 import { placeholderColors } from '../render/avatarPlaceholder';
 import { backingStoreSize } from '../render/backingStore';
-import { frameOrigin, renderCharacters, type DrawableCharacter } from '../render/characters';
+import {
+  frameOrigin,
+  renderCharacters,
+  type DrawableCharacter,
+  type WorldViewport,
+} from '../render/characters';
+import { createWalkState } from '../render/sprite';
 import { createTilemapCache, renderTilemap, type TilemapCache } from '../render/tilemap';
 import { RemoteInterpolator, tileToPixel } from '../sync/interpolation';
 
@@ -38,6 +46,11 @@ export interface WorldFrame {
    * 그 캐릭터가 없으면 false. 좌표는 정수 (월드 px 정수 × 정수 줌)
    */
   anchorOf(userId: string, out: { x: number; y: number }): boolean;
+  /**
+   * 이번 프레임에 화면에 걸친 캐릭터마다 그리기 순서(y 오름차순)로 visit을 부른다 (닉네임 DOM 레이어, GRAPHICS 5.3).
+   * (x, y) = 닉네임 블록 하단 중앙의 캔버스 기준 CSS px — 프레임 상단 − NICKNAME_GAP_PX (5.2). 정수
+   */
+  forEachVisible(visit: (userId: string, nickname: string, x: number, y: number) => void): void;
 }
 
 export interface WorldGameOptions {
@@ -51,6 +64,8 @@ export interface WorldGameOptions {
   now?: () => number;
   loop?: LoopOptions;
   createTilemap?: (map: MapData) => TilemapCache;
+  /** 아바타 합성기. 기본은 앱 공유 합성기 (테스트는 가짜를 넣는다) */
+  compositor?: AvatarCompositor;
 }
 
 export class WorldGame {
@@ -64,6 +79,9 @@ export class WorldGame {
   private readonly interpolator = new RemoteInterpolator();
   private readonly player: LocalPlayer;
   private readonly drawables = new Map<string, DrawableCharacter>();
+  private readonly visible: DrawableCharacter[] = [];
+  private readonly viewport: WorldViewport = { width: 0, height: 0 };
+  private readonly compositor: AvatarCompositor;
   private lastRevision = -1;
   private lastSnapshotRevision = -1;
   private camera: Camera = { originX: 0, originY: 0, zoom: 2 };
@@ -91,14 +109,19 @@ export class WorldGame {
     this.now = options.now ?? (() => performance.now());
     this.tilemap = (options.createTilemap ?? createTilemapCache)(options.map);
     this.onRendered = options.onRendered;
+    this.compositor = options.compositor ?? sharedAvatarCompositor();
     const anchorOf = (userId: string, out: { x: number; y: number }): boolean =>
       this.anchorOf(userId, out);
+    const forEachVisible: WorldFrame['forEachVisible'] = (visit) => {
+      this.forEachVisible(visit);
+    };
     this.frame = {
       camera: this.camera,
       viewportWidthPx: 0,
       viewportHeightPx: 0,
       nowMs: 0,
       anchorOf,
+      forEachVisible,
     };
     this.player = new LocalPlayer({
       map: options.map,
@@ -254,7 +277,9 @@ export class WorldGame {
     ctx.imageSmoothingEnabled = false;
     renderTilemap(ctx, this.tilemap, this.camera);
     this.collectDrawables(nowMs);
-    renderCharacters(ctx, this.drawables.values(), this.camera);
+    this.viewport.width = this.widthPx / zoom;
+    this.viewport.height = this.heightPx / zoom;
+    renderCharacters(ctx, this.drawables.values(), this.camera, this.viewport, nowMs, this.visible);
     if (this.onRendered !== undefined) {
       this.frame.camera = this.camera;
       this.frame.viewportWidthPx = this.widthPx;
@@ -278,6 +303,21 @@ export class WorldGame {
     return true;
   }
 
+  private forEachVisible(
+    visit: (userId: string, nickname: string, x: number, y: number) => void,
+  ): void {
+    const { originX, originY, zoom } = this.camera;
+    for (const drawable of this.visible) {
+      const frame = frameOrigin(Math.round(drawable.pixelX), Math.round(drawable.pixelY));
+      visit(
+        drawable.userId,
+        drawable.nickname,
+        (frame.x + AVATAR_FRAME_WIDTH / 2 - originX) * zoom,
+        (frame.y - NICKNAME_GAP_PX - originY) * zoom,
+      );
+    }
+  }
+
   private collectDrawables(nowMs: number): void {
     const presences = this.source.presences();
     const myUserId = this.source.myUserId();
@@ -288,12 +328,18 @@ export class WorldGame {
     }
     for (const [userId, presence] of presences) {
       const isMe = userId === myUserId;
-      const pixel = isMe
-        ? this.player.isSpawned
-          ? this.player.renderPixel(nowMs)
-          : tileToPixel(presence.position.x, presence.position.y)
-        : (this.interpolator.get(userId)?.renderPixel ??
-          tileToPixel(presence.position.x, presence.position.y));
+      const local = isMe && this.player.isSpawned;
+      const remote = isMe ? undefined : this.interpolator.get(userId);
+      const pixel = local
+        ? this.player.renderPixel(nowMs)
+        : (remote?.renderPixel ?? tileToPixel(presence.position.x, presence.position.y));
+      // 걷기 (ARCHITECTURE 2.1): 내 캐릭터는 예측 이동·방향, 원격은 보간 중이면 이동 중이고 방향은 Presence
+      const dir = local ? this.player.direction : presence.position.dir;
+      const moving = local
+        ? this.player.isMoving
+        : remote !== undefined &&
+          (remote.renderPixel.x !== remote.targetPixel.x ||
+            remote.renderPixel.y !== remote.targetPixel.y);
       const existing = this.drawables.get(userId);
       if (existing === undefined) {
         this.drawables.set(userId, {
@@ -301,7 +347,11 @@ export class WorldGame {
           nickname: presence.nickname,
           appearance: presence.appearance,
           colors: placeholderColors(presence.appearance),
+          sheet: this.compositor.request(presence.appearance),
           state: presence.state,
+          dir,
+          moving,
+          walk: createWalkState(),
           pixelX: pixel.x,
           pixelY: pixel.y,
           isMe,
@@ -309,10 +359,14 @@ export class WorldGame {
       } else {
         existing.nickname = presence.nickname;
         if (existing.appearance !== presence.appearance) {
+          // 외형이 바뀔 때만 색·합성 시트를 다시 구한다 (매 프레임 합성 금지, GRAPHICS 2.9)
           existing.appearance = presence.appearance;
           existing.colors = placeholderColors(presence.appearance);
+          existing.sheet = this.compositor.request(presence.appearance);
         }
         existing.state = presence.state;
+        existing.dir = dir;
+        existing.moving = moving;
         existing.pixelX = pixel.x;
         existing.pixelY = pixel.y;
         existing.isMe = isMe;

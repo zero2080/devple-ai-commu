@@ -13,11 +13,11 @@ export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
 export const DEFAULT_ZOOM: ZoomLevel = 2;
 /** 닉네임 블록 하단과 캐릭터 프레임 상단(앵커 − 40) 사이 (월드 px, GRAPHICS 5.2 수직 배치) */
 export const NICKNAME_GAP_PX = 2;
-/** 닉네임 한 줄 높이 (월드 px). 12a단계 전 Canvas 플레이스홀더 8px, PixelKo(em 12, line-height 1) 전환 후 12 */
-export const NICKNAME_LINE_HEIGHT_PX = 8;
+/** 닉네임 한 줄 높이 (월드 px) = PixelKo em 12 × line-height 1 (12a단계 DOM 닉네임, GRAPHICS 5.1·5.3) */
+export const NICKNAME_LINE_HEIGHT_PX = 12;
 /** 말풍선 꼬리 끝과 닉네임 블록 상단 사이 (월드 px) */
 export const BUBBLE_TAIL_GAP_PX = 1;
-/** 꼬리 끝 = 프레임 상단 − (닉네임 간격 + 닉네임 line-height + 꼬리 간격). 플레이스홀더 11, PixelKo 15 (GRAPHICS 5.2) */
+/** 꼬리 끝 = 프레임 상단 − (닉네임 간격 + 닉네임 line-height + 꼬리 간격) = 15 (GRAPHICS 5.2) */
 export const BUBBLE_NICKNAME_CLEARANCE_PX =
   NICKNAME_GAP_PX + NICKNAME_LINE_HEIGHT_PX + BUBBLE_TAIL_GAP_PX;
 /** 말풍선 픽셀 꼬리 높이 (월드 px). 몸통 아래로 3줄 */

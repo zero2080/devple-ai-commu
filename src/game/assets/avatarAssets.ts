@@ -1,5 +1,5 @@
 // 아바타 자산 데이터 (GRAPHICS 1.1 palette.json, 2.8 catalog.json). JSON은 여기서만 읽고 zod로 검증한다.
-// 그림(시트) 로딩·합성은 12a단계 — 지금은 플레이스홀더 색을 정하는 데만 쓴다
+// 합성 계획(render/avatarCompose.ts)과 합성 전 대체 그림의 색(render/avatarPlaceholder.ts)이 쓴다. 시트 이미지는 loader.ts
 import { z } from 'zod';
 
 import paletteJson from '@/assets/palette.json';

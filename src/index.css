@@ -24,6 +24,8 @@
   --panel-line: #3a4466;
   --panel-fg: #c0cbdc;
   --panel-muted: #8b9bb4;
+  --nickname-fg: #ffffff; /* 닉네임 (GRAPHICS 5.3): 배경 없이 어두운 외곽선 */
+  --nickname-outline: #181425;
   color-scheme: dark;
   font-family:
     system-ui,

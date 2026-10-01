@@ -70,6 +70,11 @@ export class LocalPlayer {
     return { mapId: this.options.mapId, x: this.tile.x, y: this.tile.y, dir: this.dir };
   }
 
+  /** 예측 방향 (걷기 애니메이션의 행). position과 달리 객체를 만들지 않는다 */
+  get direction(): Direction {
+    return this.dir;
+  }
+
   get isMoving(): boolean {
     return this.moving !== null;
   }

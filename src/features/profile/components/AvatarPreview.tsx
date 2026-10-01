@@ -4,8 +4,10 @@ import type { Appearance } from '@/domain';
 import {
   AVATAR_FRAME_HEIGHT,
   AVATAR_FRAME_WIDTH,
+  drawAvatarFrame,
   drawPlaceholderAvatar,
   placeholderColors,
+  sharedAvatarCompositor,
 } from '@/game';
 
 interface AvatarPreviewProps {
@@ -13,7 +15,8 @@ interface AvatarPreviewProps {
 }
 
 /**
- * 외형 미리보기 (GRAPHICS 2.9: down/0을 3x). 12a단계 합성기 전까지는 월드와 같은 플레이스홀더를 그린다.
+ * 외형 미리보기 (GRAPHICS 2.9: 합성 시트의 down/0을 3x). 합성이 끝나기 전에는 월드와 같은 플레이스홀더를 그린다.
+ * 합성 시트는 월드와 같은 공유 합성기에서 받는다(같은 외형이면 다시 합성하지 않음).
  * 캔버스는 1x(24×40)로 그리고 CSS로 정수 배율 확대 (image-rendering: pixelated)
  */
 export function AvatarPreview({ appearance }: AvatarPreviewProps) {
@@ -24,8 +27,27 @@ export function AvatarPreview({ appearance }: AvatarPreviewProps) {
     if (ctx === null) {
       return;
     }
-    ctx.clearRect(0, 0, AVATAR_FRAME_WIDTH, AVATAR_FRAME_HEIGHT);
-    drawPlaceholderAvatar(ctx, 0, 0, placeholderColors(appearance));
+    const sheet = sharedAvatarCompositor().request(appearance);
+    const draw = (): void => {
+      ctx.clearRect(0, 0, AVATAR_FRAME_WIDTH, AVATAR_FRAME_HEIGHT);
+      if (sheet.image === null) {
+        drawPlaceholderAvatar(ctx, 0, 0, placeholderColors(appearance));
+      } else {
+        drawAvatarFrame(ctx, sheet.image, 'down', 0, 0, 0);
+      }
+    };
+    draw();
+    let cancelled = false;
+    if (sheet.image === null) {
+      void sheet.ready.then(() => {
+        if (!cancelled) {
+          draw();
+        }
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [appearance]);
   return (
     <canvas

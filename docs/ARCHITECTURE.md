@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.20 (2026-10-01, 12a단계 설계 — 합성 구조·걷기·닉네임 DOM·옷장)
+> 문서 버전: 1.21 (2026-10-01, 12a단계 구현 반영 — 걷기 주기 유지·닉네임 앵커 콜백)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -43,7 +43,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
 - 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps)
 - 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 12a의 시트는 `scripts/art/make-placeholders.ts`가 만든 자리표시 PNG이고 12b에서 같은 경로의 실제 그림으로 바뀐다
-- 걷기 애니메이션: 이동 중(내 캐릭터 `LocalPlayer.isMoving`, 원격은 보간 중)이면 `1→2→3→0`을 75ms씩, 멈추면 0. 방향은 내 캐릭터는 예측 방향, 원격은 `Presence.position.dir` (`game/render/sprite.ts`)
+- 걷기 애니메이션: 이동 중(내 캐릭터 `LocalPlayer.isMoving`, 원격은 보간 중)이면 `1→2→3→0`을 75ms씩, 멈추면 0. 방향은 내 캐릭터는 예측 방향, 원격은 `Presence.position.dir` (`game/render/sprite.ts`). 멈춘 지 75ms 이하면 주기를 이어간다 — 원격 보간 구간(200ms) 경계에서 한두 프레임 멈출 때마다 1부터 다시 시작하지 않게. 걷기 상태는 화면 밖 캐릭터도 진행한다
 - 합성 전 대체 그림: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드·옷장 미리보기도 합성 시트의 down/0을 3x로, 준비 전엔 같은 도형으로 (`AvatarPreview`)
 - 자산 데이터 `src/assets/palette.json`·`sprites/avatar/catalog.json`은 `game/assets/avatarAssets.ts`에서만 읽고 zod로 검증한다. 타일셋은 시트 1장 + JSON
 - 캐릭터·닉네임을 그리는 좌표는 **정수 월드 px로 반올림**한다 (보간 중 소수 좌표 금지, GRAPHICS 1.2). 월드 px가 정수면 화면 px는 줌의 배수가 된다
@@ -69,7 +69,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - 본문은 **항상 plain text**로 렌더 (`textContent`, HTML 해석 없음)
 - `links`가 있으면 말풍선 하단에 링크 열기 버튼(도메인만 표시, 예: `↗ example.com`). 버튼이 있는 말풍선은 마우스 호버/터치 중 사라지지 않음
 - 폰트·크기·테두리·최대 폭·꼬리 위치는 **GRAPHICS 5.1~5.2** 참조 (픽셀 웹폰트, 폰트 기본 px × 줌 배율만, 최대 폭 12타일, `box-shadow` 픽셀 외곽선)
-- **닉네임** (12a단계): Canvas `fillText`를 없애고 DOM 오버레이로 그린다 (GRAPHICS 5.3). `features/world`의 닉네임 레이어가 프레임 콜백에서 화면 안 캐릭터만 노드를 만들고·지우고 `transform`을 직접 쓴다(React 리렌더 없음). PixelKo em × 줌, `line-height: 1`, 4방향 1px × 줌 외곽선(`text-shadow`), 겹침은 y가 큰 캐릭터가 위(`z-index`). 말풍선 레이어가 닉네임 레이어 위. 줄 높이 12 → 꼬리 끝 = 프레임 상단 − 15
+- **닉네임** (12a단계): Canvas `fillText`를 없애고 DOM 오버레이로 그린다 (GRAPHICS 5.3). `features/world`의 닉네임 레이어가 프레임 콜백(`WorldFrame.forEachVisible` — 그리기 순서로 화면에 걸친 캐릭터의 닉네임 블록 하단 중앙)에서 화면 안 캐릭터만 노드를 만들고·지우고 `transform`을 직접 쓴다(React 리렌더 없음). 폭은 글자·줌이 바뀌거나 웹폰트가 도착할 때만 다시 재고, 가운데 정렬도 줌의 배수로 맞춘다. PixelKo em × 줌, `line-height: 1`, 4방향 1px × 줌 외곽선(`text-shadow`), 겹침은 y가 큰 캐릭터가 위(`z-index`). 말풍선 레이어가 닉네임 레이어 위. 줄 높이 12 → 꼬리 끝 = 프레임 상단 − 15
 
 ### 2.4 링크 처리 (말풍선 · 채팅 목록 공통)
 - 본문 내 URL 텍스트는 클릭 불가, 서버가 준 `links[]`로만 버튼 생성
@@ -290,4 +290,5 @@ src/
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
 | 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |
+| 2026-10-01 | 1.21: 12a단계 구현 반영 — 걷기 주기는 75ms 이하 정지에서 이어감, 닉네임 레이어는 `WorldFrame.forEachVisible`로 앵커를 받음, 폭 재측정 조건 |
 | 2026-10-01 | 1.20: 12a단계 설계 — 합성 계획(순수)·실행(캐시) 분리, 합성 전 플레이스홀더, 시트 로드는 loader만, 자리표시 PNG(12b에서 같은 경로로 교체), 걷기 프레임 규칙, 닉네임 DOM 레이어(프레임 콜백, 꼬리 끝 −15), 옷장 상태·저장 흐름 |

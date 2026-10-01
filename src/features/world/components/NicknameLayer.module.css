@@ -1,0 +1,26 @@
+/* GRAPHICS 5.3 닉네임. 1 월드 px = var(--px) = 1px × 줌. 폰트 PixelKo em × 줌, line-height 1 (5.1) */
+.layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate; /* 닉네임끼리의 z-index가 말풍선 레이어 위로 새지 않게 */
+}
+
+.nickname {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--nickname-fg);
+  font-family: PixelKo, system-ui, sans-serif;
+  font-size: calc(var(--pixel-font-em) * var(--zoom));
+  line-height: 1;
+  white-space: pre;
+  will-change: transform;
+  /* 배경 없이 4방향 1px × 줌 어두운 외곽선 */
+  text-shadow:
+    0 calc(-1 * var(--px)) 0 var(--nickname-outline),
+    0 var(--px) 0 var(--nickname-outline),
+    calc(-1 * var(--px)) 0 0 var(--nickname-outline),
+    var(--px) 0 0 var(--nickname-outline);
+}

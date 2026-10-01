@@ -1,4 +1,4 @@
-// 스프라이트·맵 로딩은 여기 한 곳에서 (CONVENTIONS 6장). 컴포넌트에서 new Image()·JSON import 금지.
+// 스프라이트·맵 로딩은 여기 한 곳에서 (CONVENTIONS 6장). 컴포넌트에서 new Image()·JSON import 금지 (new Image()는 이 파일만).
 import type { MapData } from '@/domain';
 import { mapDataSchema } from '@/transport/schemas';
 
@@ -20,5 +20,48 @@ export function loadMap(mapId: string): Promise<MapData> {
   }
   const promise = loader().then((mod) => mapDataSchema.parse(mod.default));
   mapCache.set(mapId, promise);
+  return promise;
+}
+
+// 아바타 레이어 시트 (GRAPHICS 2.4·6장). URL은 빌드가 수집하고, catalog.json의 상대 경로('hair/hair_long.back.png')로 찾는다
+const AVATAR_SHEET_PREFIX = '../../assets/sprites/avatar/';
+const AVATAR_SHEET_URLS = import.meta.glob<string>('../../assets/sprites/avatar/**/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+const avatarSheetUrls = new Map(
+  Object.entries(AVATAR_SHEET_URLS).map(([key, url]) => [
+    key.slice(AVATAR_SHEET_PREFIX.length),
+    url,
+  ]),
+);
+const avatarSheetCache = new Map<string, Promise<HTMLImageElement>>();
+
+/** catalog.json 기준 경로 → 번들 URL. 없는 시트면 undefined */
+export function avatarSheetUrl(path: string): string | undefined {
+  return avatarSheetUrls.get(path);
+}
+
+/** 레이어 시트 이미지를 읽어 디코드한다. 같은 경로는 한 번만 읽고, 실패하면 캐시에서 빼서 다시 시도할 수 있게 한다 */
+export function loadAvatarSheet(path: string): Promise<HTMLImageElement> {
+  const cached = avatarSheetCache.get(path);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const url = avatarSheetUrls.get(path);
+  if (url === undefined) {
+    return Promise.reject(new Error(`unknown avatar sheet "${path}"`));
+  }
+  const image = new Image();
+  image.src = url;
+  const promise = image.decode().then(
+    () => image,
+    (error: unknown) => {
+      avatarSheetCache.delete(path);
+      throw error;
+    },
+  );
+  avatarSheetCache.set(path, promise);
   return promise;
 }
