@@ -8,11 +8,11 @@ const TILE = 16;
 const ME = { x: 20, y: 15 };
 const FRAME = { x: ME.x * TILE + TILE / 2 - 12, y: ME.y * TILE + TILE - 40 };
 /**
- * 자리표시 상의(x 5–18, y 24–31)는 윗줄 hi·가운데 base·아랫줄 shadow 키 색이다. 합성 시트에서는 윗줄이 램프 hi로,
- * 합성 전 대체 그림(외형 색 도형)에서는 base 한 색이라 윗줄 픽셀로 합성 여부를 구분한다
+ * 개발용 후드(art/avatar/top/top_hoodie.pix, down)의 윗줄 x7은 주색 hi, y28 x9는 base다.
+ * 합성 전 대체 그림(외형 색 도형)은 base 한 색이라 hi 픽셀로 합성 여부를 구분한다
  */
 const TORSO_HI = { x: FRAME.x + 7, y: FRAME.y + 24 };
-const TORSO_BASE = { x: FRAME.x + 7, y: FRAME.y + 28 };
+const TORSO_BASE = { x: FRAME.x + 9, y: FRAME.y + 28 };
 // Mock 내 외형: top_hoodie primary item_green → item_purple로 바꾼다 (palette.json 램프)
 const GREEN = { hi: '#63c74d', base: '#3e8948' };
 const PURPLE = { hi: '#b55088', base: '#68386c' };

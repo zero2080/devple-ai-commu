@@ -21,7 +21,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:e2e": "playwright test",
-    "art:placeholders": "tsx scripts/art/make-placeholders.ts",
     "art:templates": "tsx scripts/art/make-template.ts",
     "check:assets": "tsx scripts/check-assets.ts",
     "art:build": "tsx scripts/art/build-avatars.ts && tsx scripts/check-assets.ts",

@@ -46,6 +46,9 @@ for (const entry of entries) {
   }
 }
 
+for (const id of missing) {
+  errors.push(`${id}: 원본 .pix가 없음 (art/avatar/, art/ai/briefs/${id}.md)`);
+}
 if (errors.length > 0) {
   console.error(
     `art:build: ${String(errors.length)}건 실패\n${errors.map((e) => `  - ${e}`).join('\n')}`,
@@ -53,9 +56,3 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(`art:build: 시트 ${String(written)}장 생성`);
-if (missing.length > 0) {
-  // 12b-3 진행 중: 원본이 아직 없는 레이어는 자리표시 PNG를 그대로 둔다 (모두 들어오면 실패로 바꾼다)
-  console.warn(
-    `art:build: 원본 없음 ${String(missing.length)}종 — 자리표시 유지: ${missing.join(', ')}`,
-  );
-}

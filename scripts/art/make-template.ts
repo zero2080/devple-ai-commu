@@ -3,7 +3,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { bodySheet } from './placeholders.ts';
+import { AVATAR_DIR, readCatalog } from './catalog.ts';
 import { DIRECTIONS, FRAME_H, FRAME_W, FRAMES, rgba, Sheet } from './sheet.ts';
 import { KEY_CHANNELS, KEY_COLORS, SHADES } from '../../src/game/assets/keyColors.ts';
 
@@ -56,5 +56,6 @@ function keySwatches(): Sheet {
 
 guide().save(join(OUT, 'avatar-guide.png'));
 keySwatches().save(join(OUT, 'key-colors.png'));
-bodySheet().save(join(OUT, 'body_base.png'));
+// 기준 몸 = 지금 쓰는 몸 레이어 (pnpm art:build 결과, GRAPHICS 7.2)
+Sheet.load(join(AVATAR_DIR, readCatalog().body.front)).save(join(OUT, 'body_base.png'));
 console.log(`templates → ${OUT}`);

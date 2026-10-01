@@ -1,5 +1,9 @@
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
+import { AVATAR_SOURCE_DIR, loadPix, renderSheet, sourceOf } from './build.ts';
+import { readCatalog, readPalette } from './catalog.ts';
 import {
   channelMismatch,
   checkLayer,
@@ -7,11 +11,18 @@ import {
   namingProblems,
   pngMetadataChunks,
 } from './checks.ts';
-import { bodySheet, itemSheets, type CatalogItemLike } from './placeholders.ts';
+import { glyphColors } from './pix.ts';
 import { DIRECTIONS, FRAMES, rgba, Sheet } from './sheet.ts';
 import { KEY_COLORS, OUTLINE_COLOR } from '../../src/game/assets/keyColors.ts';
 
 const PALETTE = [OUTLINE_COLOR, '#262b44', '#3a4466', '#5a6988', '#8b9bb4', '#c0cbdc'];
+const glyphs = glyphColors(readPalette().colors);
+
+/** art/avatar의 개발용 원본을 그린 시트 */
+function devSheet(sheetPath: string, side: 'front' | 'back'): Sheet {
+  const source = join(AVATAR_SOURCE_DIR, sourceOf(sheetPath));
+  return renderSheet(loadPix(source, source, glyphs), side, glyphs);
+}
 const primary = rgba(KEY_COLORS.primary.base);
 
 /** 모든 프레임에 같은 도형 + right 행에만 표식 1px (미러 판정에 걸리지 않게) */
@@ -88,9 +99,9 @@ describe('checkLayer (GRAPHICS 8장)', () => {
   });
 
   it('body 발바닥이 y39에 닿지 않는 프레임을 하나하나 짚는다', () => {
-    const sheet = bodySheet();
+    const sheet = devSheet(readCatalog().body.front, 'front');
     for (let x = 0; x < 24; x += 1) sheet.set(24 * 2 + x, 40 * 3 + 39, [0, 0, 0, 0]);
-    expect(checkLayer('body', sheet, PALETTE).problems).toEqual([
+    expect(checkLayer('body', sheet, readPalette().colors).problems).toEqual([
       '발바닥이 y39에 없음 (행 3, 프레임 2)',
     ]);
   });
@@ -152,65 +163,23 @@ describe('pngMetadataChunks', () => {
   });
 });
 
-describe('자리표시 생성기는 자기 검수를 통과한다', () => {
-  const items: CatalogItemLike[] = [
-    { id: 'hair_buzz', slot: 'hair', sheets: { front: 'hair/hair_buzz.png' }, channels: [] },
-    {
-      id: 'hair_long',
-      slot: 'hair',
-      sheets: { front: 'hair/hair_long.png', back: 'hair/hair_long.back.png' },
-      channels: ['secondary'],
-    },
-    {
-      id: 'hat_cap',
-      slot: 'hat',
-      sheets: { front: 'hat/hat_cap.png', back: 'hat/hat_cap.back.png' },
-      channels: ['primary', 'secondary'],
-    },
-    {
-      id: 'face_mask',
-      slot: 'face',
-      sheets: { front: 'face/face_mask.png' },
-      channels: ['primary'],
-    },
-    {
-      id: 'top_robe',
-      slot: 'top',
-      sheets: { front: 'top/top_robe.png' },
-      channels: ['primary'],
-      coversBottom: true,
-    },
-    {
-      id: 'bottom_jeans',
-      slot: 'bottom',
-      sheets: { front: 'bottom/bottom_jeans.png' },
-      channels: ['primary', 'secondary'],
-    },
-    {
-      id: 'shoes_boots',
-      slot: 'shoes',
-      sheets: { front: 'shoes/shoes_boots.png' },
-      channels: ['primary'],
-    },
-    {
-      id: 'hand_sword',
-      slot: 'hand',
-      sheets: { front: 'hand/hand_sword.png', back: 'hand/hand_sword.back.png' },
-      channels: ['primary', 'secondary'],
-    },
-  ];
+describe('개발용 원본(.pix)은 자기 검수를 통과한다 (ROADMAP 12b-3)', () => {
+  const catalog = readCatalog();
+  const realPalette = readPalette().colors;
 
   it('body', () => {
-    const sheet = bodySheet();
-    expect(checkLayer('body', sheet, PALETTE).problems).toEqual([]);
+    const sheet = devSheet(catalog.body.front, 'front');
+    expect(checkLayer('body', sheet, realPalette).problems).toEqual([]);
     expect(isMirrorOfRight(sheet)).toBe(false);
   });
 
-  it.each(items)('$id', (item) => {
-    const { front, back } = itemSheets(item);
+  it.each(catalog.items)('$id', (item) => {
     const used = new Set<'skin' | 'hair' | 'primary' | 'secondary'>();
-    for (const sheet of back === undefined ? [front] : [front, back]) {
-      const report = checkLayer(item.slot, sheet, PALETTE);
+    const sides: ('front' | 'back')[] =
+      item.sheets.back === undefined ? ['front'] : ['front', 'back'];
+    for (const side of sides) {
+      const sheet = devSheet(item.sheets.front, side);
+      const report = checkLayer(item.slot, sheet, realPalette);
       expect(report.problems).toEqual([]);
       expect(isMirrorOfRight(sheet)).toBe(false);
       report.usedKeys.forEach((key) => used.add(key));

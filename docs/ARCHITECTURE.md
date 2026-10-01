@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.22 (2026-10-01, 12a단계 — 옷장 저장 흐름·다른 탭 동기화)
+> 문서 버전: 1.23 (2026-10-01, 12b — 그림 원본 .pix·개발용 그림)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -42,7 +42,7 @@ React SPA 안에 **게임 레이어(Canvas)** 와 **UI 레이어(React DOM)** �
 - `ctx.imageSmoothingEnabled = false`, CSS `image-rendering: pixelated`
 - 캔버스 **백킹 스토어 = CSS px × devicePixelRatio**(반올림), `style.width/height`는 CSS px. 줌 배율은 월드 px → CSS px에만 쓰고 DPR은 CSS px → 장치 px에만 곱한다 (`setTransform(zoom × dpr)`). Retina에서 CSS 확대 대신 장치 픽셀로 그려 닉네임·텍스트가 거칠어지지 않는다 (`game/render/backingStore.ts`)
 - 캐릭터는 **레이어 합성 + 팔레트 스왑** (GRAPHICS 2장): 외형(`Appearance`)마다 오프스크린 96×160 합성 시트를 **1회** 만들어 캐시하고(키 = `normalizeAppearance` 결과, 같은 외형은 사용자끼리 공유), 매 프레임은 프레임만 잘라 그린다. 매 프레임 합성·색 치환 금지 (60fps)
-- 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 12a의 시트는 `scripts/art/make-placeholders.ts`가 만든 자리표시 PNG이고 12b에서 같은 경로의 실제 그림으로 바뀐다
+- 합성 구조 (12a단계): 순수 계획 `game/render/avatarCompose.ts`(2.6 순서의 레이어 목록, 채널별 램프, 키 색 → 램프 치환 함수)와 실행 `avatarCompositor.ts`(시트 이미지 로드 → 레이어마다 `getImageData`로 치환 → 오프스크린 캔버스에 겹침 → 캐시). 합성이 끝나기 전 프레임은 외형 색 플레이스홀더로 그린다. 시트 이미지는 `game/assets/loader.ts`만 로드한다(`import.meta.glob`으로 URL 수집). 시트는 텍스트 원본 `art/avatar/**/*.pix`를 `pnpm art:build`가 만든 PNG다 — 12b는 Claude가 코드로 찍은 개발용 그림, 12c에서 AI 생성 키트(`art/ai/`)로 만든 그림이 같은 경로를 덮어쓴다. 걷기 프레임 1–3은 빌드가 서기 프레임에서 파생한다
 - 걷기 애니메이션: 이동 중(내 캐릭터 `LocalPlayer.isMoving`, 원격은 보간 중)이면 `1→2→3→0`을 75ms씩, 멈추면 0. 방향은 내 캐릭터는 예측 방향, 원격은 `Presence.position.dir` (`game/render/sprite.ts`). 멈춘 지 75ms 이하면 주기를 이어간다 — 원격 보간 구간(200ms) 경계에서 한두 프레임 멈출 때마다 1부터 다시 시작하지 않게. 걷기 상태는 화면 밖 캐릭터도 진행한다
 - 합성 전 대체 그림: 외형 색(GRAPHICS 2.9 기본색 규칙 — 고른 램프 → 아이템 `defaultColors` → 그룹 첫 램프)으로 칠한 도형을 같은 24×40 프레임에 그린다 (`game/render/avatarPlaceholder.ts`). 색은 외형 객체가 바뀔 때만 계산해 `DrawableCharacter.colors`에 둔다. 프로필 카드·옷장 미리보기도 합성 시트의 down/0을 3x로, 준비 전엔 같은 도형으로 (`AvatarPreview`)
 - 자산 데이터 `src/assets/palette.json`·`sprites/avatar/catalog.json`은 `game/assets/avatarAssets.ts`에서만 읽고 zod로 검증한다. 타일셋은 시트 1장 + JSON
@@ -290,6 +290,7 @@ src/
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
 | 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |
+| 2026-10-01 | 1.23: 아바타 시트의 원본은 `art/avatar/**/*.pix`(art:build), 12b 개발용 그림 → 12c AI 생성 그림. 자리표시 생성기 제거 |
 | 2026-10-01 | 1.22: 옷장 저장 흐름 구현 반영 — 내 `presence.updated`는 `authStore.me`도 갱신(다른 탭 동기화), 옷장은 월드 무대 위 모달(선택지만 스크롤) |
 | 2026-10-01 | 1.21: 12a단계 구현 반영 — 걷기 주기는 75ms 이하 정지에서 이어감, 닉네임 레이어는 `WorldFrame.forEachVisible`로 앵커를 받음, 폭 재측정 조건 |
 | 2026-10-01 | 1.20: 12a단계 설계 — 합성 계획(순수)·실행(캐시) 분리, 합성 전 플레이스홀더, 시트 로드는 loader만, 자리표시 PNG(12b에서 같은 경로로 교체), 걷기 프레임 규칙, 닉네임 DOM 레이어(프레임 콜백, 꼬리 끝 −15), 옷장 상태·저장 흐름 |

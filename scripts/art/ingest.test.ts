@@ -1,6 +1,10 @@
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { renderSheet } from './build.ts';
+import { allowedKeys } from './brief.ts';
+import { AVATAR_SOURCE_DIR, loadPix, renderSheet, sourceOf } from './build.ts';
+import { readCatalog, readPalette } from './catalog.ts';
 import {
   detectBackground,
   detectGeometry,
@@ -10,7 +14,7 @@ import {
   nearestGlyph,
   type Raster,
 } from './ingest.ts';
-import { glyphColors, parsePix, type PixFrame } from './pix.ts';
+import { glyphColors, KEY_GLYPHS, parsePix, type PixFrame } from './pix.ts';
 
 const colors = glyphColors(['#181425', '#ffffff', '#262b44', '#3e8948']);
 const ROW = (s: string) => s.padEnd(24, '.');
@@ -156,5 +160,53 @@ describe('mergeFrames', () => {
       'back:down:keep',
       'front:up:new',
     ]);
+  });
+});
+
+describe('개발용 원본 왕복 (ROADMAP 12b 완료 조건)', () => {
+  it('art/avatar의 모든 .pix: 서기 4방향을 4배 띠 + 단색 배경으로 → ingest → 원본 서기 블록과 같다', () => {
+    const all = glyphColors(readPalette().colors);
+    const catalog = readCatalog();
+    const entries = [
+      { slot: 'body' as const, front: catalog.body.front, back: false },
+      ...catalog.items.map((item) => ({
+        slot: item.slot,
+        front: item.sheets.front,
+        back: item.sheets.back !== undefined,
+      })),
+    ];
+    for (const entry of entries) {
+      const keys = new Set(allowedKeys(entry.slot));
+      const allowed = new Map(
+        [...all].filter(([glyph]) => {
+          const key = KEY_GLYPHS[glyph];
+          return key === undefined || keys.has(key[0]);
+        }),
+      );
+      const source = join(AVATAR_SOURCE_DIR, sourceOf(entry.front));
+      const doc = loadPix(source, source, all);
+      for (const side of entry.back ? (['front', 'back'] as const) : (['front'] as const)) {
+        const sheet = renderSheet(doc, side, all);
+        const strip = raster(
+          96,
+          40,
+          (x, y) => {
+            const [r, g, b, a] = sheet.get(x % 24, Math.floor(x / 24) * 40 + y);
+            return a === 0 ? 0x00ff01 : (r << 16) | (g << 8) | b;
+          },
+          4,
+        );
+        const back = ingestRaster(strip, allowed, { sheet: side });
+        const original = ['down', 'left', 'right', 'up'].map(
+          (dir) =>
+            doc.frames.find((f) => f.sheet === side && f.dir === dir && f.frame === 0)?.rows ??
+            Array<string>(40).fill('.'.repeat(24)),
+        );
+        expect(
+          back.map((f) => f.rows),
+          `${source} ${side}`,
+        ).toEqual(original);
+      }
+    }
   });
 });
