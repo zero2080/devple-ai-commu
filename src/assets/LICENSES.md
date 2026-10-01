@@ -17,3 +17,11 @@
 - **원본**: Palette: Endesga 32 by ENDESGA, https://lospec.com/palette-list/endesga-32
 - **라이선스**: Lospec 페이지에 명시된 라이선스 문구 없음. 크레딧을 항상 표기한다 (GRAPHICS 1.1, 정확도 중간 — 공식 라이선스 아님)
 - **변경 내용**: 32색 그대로 사용. 램프(`ramps`)·선택 그룹(`rampGroups`)은 GRAPHICS 2.7 초안으로 구성 — 12b에서 첫 아바타 제작 때 확정하며, 색을 대부분 바꾸면 "Endesga 32 기반"으로 표기를 유지한다
+
+## 아바타 레이어
+
+### 자리표시 시트 (`sprites/avatar/**/*.png`)
+- **원본**: 직접 제작 — `scripts/art/placeholders.ts`가 키 색(GRAPHICS 2.7)으로 단순 도형을 그려 만든다 (`pnpm art:placeholders`)
+- **라이선스**: 프로젝트 자체 자산 (외부 출처 없음)
+- **변경 예정**: 12b에서 같은 경로의 실제 그림으로 교체한다. 교체 뒤에는 `art:placeholders`를 다시 실행하지 않는다
+- **템플릿**: `art/templates/` (avatar-guide·key-colors·body_base)는 `pnpm art:templates`로 생성, 빌드에 포함하지 않음
