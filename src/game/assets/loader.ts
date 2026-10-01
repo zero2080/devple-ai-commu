@@ -1,4 +1,6 @@
 // 스프라이트·맵 로딩은 여기 한 곳에서 (CONVENTIONS 6장). 컴포넌트에서 new Image()·JSON import 금지 (new Image()는 이 파일만).
+import { z } from 'zod';
+
 import type { MapData } from '@/domain';
 import { mapDataSchema } from '@/transport/schemas';
 
@@ -63,5 +65,57 @@ export function loadAvatarSheet(path: string): Promise<HTMLImageElement> {
     },
   );
   avatarSheetCache.set(path, promise);
+  return promise;
+}
+
+// 타일셋 (GRAPHICS 3장): src/assets/tilesets/<id>.png + <id>.tileset.json. art:build가 .tiles 원본에서 만든다
+const TILESET_PREFIX = '../../assets/tilesets/';
+const TILESET_IMAGES = import.meta.glob<string>('../../assets/tilesets/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+const TILESET_JSON = import.meta.glob<unknown>('../../assets/tilesets/*.tileset.json', {
+  import: 'default',
+});
+const tilesetSchema = z.object({
+  id: z.string(),
+  image: z.string(),
+  tileSize: z.literal(16),
+  columns: z.literal(16),
+  count: z.number().int().min(1).max(256),
+  names: z.record(z.string(), z.string()).optional(),
+});
+
+export type TilesetData = z.infer<typeof tilesetSchema>;
+
+export interface LoadedTileset {
+  data: TilesetData;
+  image: HTMLImageElement;
+}
+
+const tilesetCache = new Map<string, Promise<LoadedTileset>>();
+
+/** 타일셋 JSON(zod 검증)과 이미지를 함께 읽는다. 같은 id는 한 번만, 실패하면 캐시에서 빼서 다시 시도할 수 있게 */
+export function loadTileset(id: string): Promise<LoadedTileset> {
+  const cached = tilesetCache.get(id);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const json = TILESET_JSON[`${TILESET_PREFIX}${id}.tileset.json`];
+  const url = TILESET_IMAGES[`${TILESET_PREFIX}${id}.png`];
+  if (json === undefined || url === undefined) {
+    return Promise.reject(new Error(`unknown tileset "${id}"`));
+  }
+  const image = new Image();
+  image.src = url;
+  const promise = Promise.all([json(), image.decode()]).then(
+    ([raw]) => ({ data: tilesetSchema.parse(raw), image }),
+    (error: unknown) => {
+      tilesetCache.delete(id);
+      throw error;
+    },
+  );
+  tilesetCache.set(id, promise);
   return promise;
 }

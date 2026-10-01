@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { briefContext, briefFor, briefItems } from './art/brief.ts';
+import { tileColors, TILE_SOURCE_DIR, TILESET_DIR } from './art/build-tiles.ts';
 import {
   ART_DIR,
   AVATAR_SOURCE_DIR,
@@ -23,6 +24,14 @@ import {
 } from './art/checks.ts';
 import { glyphColors, PixError } from './art/pix.ts';
 import { Sheet } from './art/sheet.ts';
+import {
+  parseTiles,
+  renderTileset,
+  tilesetJson,
+  tilesetProblems,
+  type MapLike,
+  type TilesetJson,
+} from './art/tiles.ts';
 import type { KeyChannel } from '../src/game/assets/keyColors.ts';
 
 const catalog = readCatalog();
@@ -104,6 +113,50 @@ for (const path of walk(AVATAR_DIR)) {
     failures.push(`카탈로그에 없는 시트: ${file}`);
 }
 
+// 타일셋 (GRAPHICS 3장·4장·8장 타일셋): 규칙 + 원본(.tiles)·PNG·JSON 동기화 + 맵 레이어 인덱스
+const MAPS_DIR = join(import.meta.dirname, '../src/assets/maps');
+const maps = readdirSync(MAPS_DIR)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => JSON.parse(readFileSync(join(MAPS_DIR, f), 'utf8')) as MapLike);
+let tilesets = 0;
+for (const map of maps) {
+  const png = join(TILESET_DIR, `${map.tileset}.png`);
+  const jsonPath = join(TILESET_DIR, `${map.tileset}.tileset.json`);
+  const sourcePath = join(TILE_SOURCE_DIR, `${map.tileset}.tiles`);
+  if (!existsSync(png) || !existsSync(jsonPath) || !existsSync(sourcePath)) {
+    failures.push(
+      `맵 ${map.id}: 타일셋 ${map.tileset}의 PNG·JSON·원본(.tiles) 중 없는 것이 있음 — pnpm art:build`,
+    );
+    continue;
+  }
+  tilesets += 1;
+  const buffer = readFileSync(png);
+  if (buffer.length > MAX_FILE_BYTES)
+    failures.push(`${map.tileset}.png: ${String(buffer.length)} B (256 KB 이하)`);
+  const metadata = pngMetadataChunks(buffer);
+  if (metadata.length > 0)
+    failures.push(`${map.tileset}.png: 메타데이터 청크 ${metadata.join(', ')}`);
+  const sheet = Sheet.fromPng(buffer);
+  const json = JSON.parse(readFileSync(jsonPath, 'utf8')) as TilesetJson;
+  for (const problem of tilesetProblems(sheet, json, palette, maps))
+    failures.push(`타일셋 ${map.tileset}: ${problem}`);
+  try {
+    const colors = tileColors(palette);
+    const doc = parseTiles(
+      readFileSync(sourcePath, 'utf8'),
+      relative(process.cwd(), sourcePath),
+      new Set(colors.keys()),
+    );
+    if (!samePixels(renderTileset(doc, colors), sheet))
+      failures.push(`${map.tileset}.png가 원본 .tiles와 다름 — pnpm art:build`);
+    if (JSON.stringify(tilesetJson(doc, map.tileset)) !== JSON.stringify(json)) {
+      failures.push(`${map.tileset}.tileset.json이 원본 .tiles와 다름 — pnpm art:build`);
+    }
+  } catch (error) {
+    failures.push(error instanceof PixError ? error.message : `${map.tileset}: ${String(error)}`);
+  }
+}
+
 // AI 키트 지시문이 카탈로그·팔레트와 같은지 (다르면 pnpm art:brief를 안 돌린 것)
 const context = briefContext(palette);
 let briefs = 0;
@@ -129,5 +182,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `check-assets: 시트 ${String(checked)}장 통과 (GRAPHICS 8장 캐릭터 레이어), AI 지시문 ${String(briefs)}개 최신`,
+  `check-assets: 시트 ${String(checked)}장 통과 (GRAPHICS 8장 캐릭터 레이어), 타일셋 ${String(tilesets)}개, AI 지시문 ${String(briefs)}개 최신`,
 );

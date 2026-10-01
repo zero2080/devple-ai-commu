@@ -2,6 +2,7 @@
 // 스토어는 직접 import하지 않고 WorldSource로 읽는다 (테스트 용이, 60Hz 읽기는 getState() 경로).
 import type { Direction, MapData, Position, Presence } from '@/domain';
 
+import type { LoadedTileset } from '../assets/loader';
 import {
   AVATAR_BODY_BOX,
   AVATAR_FRAME_WIDTH,
@@ -22,7 +23,12 @@ import {
   type WorldViewport,
 } from '../render/characters';
 import { createWalkState } from '../render/sprite';
-import { createTilemapCache, renderTilemap, type TilemapCache } from '../render/tilemap';
+import {
+  createTilemapCache,
+  renderOverhead,
+  renderTilemap,
+  type TilemapCache,
+} from '../render/tilemap';
 import { RemoteInterpolator, tileToPixel } from '../sync/interpolation';
 
 export interface WorldSource {
@@ -63,6 +69,8 @@ export interface WorldGameOptions {
   onRendered?: (frame: WorldFrame) => void;
   now?: () => number;
   loop?: LoopOptions;
+  /** 타일셋 (없으면 대체 그림, GRAPHICS 3장). createTilemap을 주면 쓰지 않는다 */
+  tileset?: LoadedTileset | null;
   createTilemap?: (map: MapData) => TilemapCache;
   /** 아바타 합성기. 기본은 앱 공유 합성기 (테스트는 가짜를 넣는다) */
   compositor?: AvatarCompositor;
@@ -107,7 +115,9 @@ export class WorldGame {
     this.map = options.map;
     this.source = options.source;
     this.now = options.now ?? (() => performance.now());
-    this.tilemap = (options.createTilemap ?? createTilemapCache)(options.map);
+    this.tilemap = (
+      options.createTilemap ?? ((map) => createTilemapCache(map, options.tileset ?? null))
+    )(options.map);
     this.onRendered = options.onRendered;
     this.compositor = options.compositor ?? sharedAvatarCompositor();
     const anchorOf = (userId: string, out: { x: number; y: number }): boolean =>
@@ -280,6 +290,7 @@ export class WorldGame {
     this.viewport.width = this.widthPx / zoom;
     this.viewport.height = this.heightPx / zoom;
     renderCharacters(ctx, this.drawables.values(), this.camera, this.viewport, nowMs, this.visible);
+    renderOverhead(ctx, this.tilemap, this.camera); // 나무 꼭대기·지붕은 캐릭터 위 (ARCHITECTURE 2.2)
     if (this.onRendered !== undefined) {
       this.frame.camera = this.camera;
       this.frame.viewportWidthPx = this.widthPx;

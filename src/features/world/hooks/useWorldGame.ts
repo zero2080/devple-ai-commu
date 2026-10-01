@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react';
 
-import { loadMap } from '@/game/assets/loader';
+import { loadMap, loadTileset, type LoadedTileset } from '@/game/assets/loader';
 import { InputController } from '@/game/engine/input';
 import { PositionBatcher } from '@/game/sync/positionBatcher';
 import { WorldGame, type WorldFrame } from '@/game/world/worldGame';
@@ -32,7 +32,18 @@ export function useWorldGame(
     let batcher: PositionBatcher | null = null;
     let cancelled = false;
 
-    void loadMap(mapId).then((map) => {
+    // 타일셋을 못 읽어도 월드는 연다 (대체 그림, ARCHITECTURE 2.2)
+    const withTileset = async () => {
+      const map = await loadMap(mapId);
+      const tileset = await loadTileset(map.tileset).catch(
+        (error: unknown): LoadedTileset | null => {
+          console.warn('[tileset] load failed, drawing placeholder tiles', error);
+          return null;
+        },
+      );
+      return { map, tileset };
+    };
+    void withTileset().then(({ map, tileset }) => {
       if (cancelled) {
         return;
       }
@@ -52,6 +63,7 @@ export function useWorldGame(
       const createdGame = new WorldGame({
         canvas,
         map,
+        tileset,
         source: {
           presences: () => world().presences,
           positions: () => world().positions,

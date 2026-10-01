@@ -63,7 +63,8 @@ function fakeCanvas(drawImage: (...args: unknown[]) => void = () => undefined): 
 }
 
 const fakeTilemap = (): TilemapCache => ({
-  canvas: document.createElement('canvas'),
+  below: document.createElement('canvas'),
+  above: null,
   widthPx: 640,
   heightPx: 480,
 });
@@ -307,5 +308,43 @@ describe('걷기 애니메이션과 닉네임 앵커 (GRAPHICS 2.3·5.3, ARCHITE
       { userId: 'me', nickname: 'me', ...anchor(20, 15) },
     ]);
     expect(visible.every((v) => Number.isInteger(v.x) && Number.isInteger(v.y))).toBe(true);
+  });
+});
+
+describe('그리기 순서 (ARCHITECTURE 2.2): 바닥 → 캐릭터 → overhead', () => {
+  it('overhead 캐시는 캐릭터 다음에 그린다', async () => {
+    const order: string[] = [];
+    const below = { tag: 'below' } as unknown as HTMLCanvasElement;
+    const above = { tag: 'above' } as unknown as HTMLCanvasElement;
+    const game = new WorldGame({
+      canvas: fakeCanvas((image) => {
+        order.push(
+          image === below
+            ? 'below'
+            : image === above
+              ? 'above'
+              : image === SHEET
+                ? 'sprite'
+                : 'other',
+        );
+      }),
+      map,
+      createTilemap: () => ({ below, above, widthPx: 640, heightPx: 480 }),
+      compositor: readyCompositor(),
+      source: {
+        presences: () => new Map([['me', presence('me', 20, 15)]]),
+        positions: () => new Map(),
+        myUserId: () => 'me',
+        revision: () => 1,
+        snapshotRevision: () => 1,
+        zoom: () => 2,
+      },
+    });
+    game.resize(400, 300, 1);
+    game.step(0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    order.length = 0;
+    game.step(16);
+    expect(order).toEqual(['below', 'sprite', 'above']);
   });
 });

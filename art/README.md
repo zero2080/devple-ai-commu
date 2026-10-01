@@ -6,6 +6,7 @@
 |---|---|
 | `source/avatar/body/body_base.pix` | 기준 몸 (GRAPHICS 2.2) |
 | `source/avatar/<slot>/<id>.pix` | 아바타 레이어 원본. `<id>`는 `catalog.json`의 아이템 ID (GRAPHICS 6장 `art/source/`) |
+| `source/tiles/<tilesetId>.tiles` | 타일셋 원본 (아래 "타일셋") → `src/assets/tilesets/<id>.png` + `<id>.tileset.json` |
 | `templates/` | 제작 템플릿 (`pnpm art:templates`, GRAPHICS 7.2) |
 | `ai/` | AI 생성 키트 — 안내 `ai/README.md`, 아이템별 지시문 `ai/briefs/`(자동 생성), 코드표 `ai/glyphs.md`(자동 생성) |
 
@@ -13,7 +14,7 @@
 
 | 명령 | 하는 일 |
 |---|---|
-| `pnpm art:build` | `.pix` → `src/assets/sprites/avatar/**` PNG(96×160), 이어서 `check:assets` |
+| `pnpm art:build` | `.pix` → `src/assets/sprites/avatar/**` PNG(96×160), `.tiles` → 타일셋 PNG·JSON, 이어서 `check:assets` |
 | `pnpm check:assets` | GRAPHICS 8장 검수 + PNG가 `.pix` 원본과 같은지 (CI에서도 돈다) |
 | `pnpm art:templates` | `templates/` 다시 만들기 |
 | `pnpm art:brief` | `ai/briefs/<id>.md`·`ai/glyphs.md` 다시 만들기 (카탈로그·팔레트가 바뀌면) |
@@ -62,3 +63,19 @@ PNG만 고치고 원본을 안 고치면 `check:assets`가 실패한다. 언제�
 **외곽선** `o` = `#181425`, **투명** `.`
 
 **팔레트 고정색** (바뀌지 않는 색): `palette.json`의 `colors` 순서대로 코드를 매긴다. 외곽선 색은 `o`. 레이어당 외곽선을 빼고 4색까지 쓴다. 표는 [`ai/glyphs.md`](ai/glyphs.md)에 있고, `pnpm art:brief`가 팔레트에서 다시 만든다.
+
+## 타일셋 (`.tiles`)
+
+```
+# main — 개발용 타일셋
+@tile 0 grass_a          ← "@tile <번호 0–255> <소문자_이름>"
+FFFFFFFFFGFFGFFF         ← 16줄 × 16글자, 빠짐없이
+…
+@tile 17 wall_t
+…
+```
+
+- 시트는 256×256, 16열이고 번호는 `행 × 16 + 열`이에요 (GRAPHICS 3.1). 9분할 세트(벽·연못·화단)는 시트에서 3×3으로 붙여 둬요 (3.2)
+- 글자는 팔레트 코드·외곽선 `o`·투명 `.`만 써요. **키 색은 쓰지 않아요** (3.2). 바닥(`floor`) 타일은 투명 칸이 없어야 해요
+- 맵의 레이어(`src/assets/maps/<id>.json`): `floor`(below, 빈칸 없음) → `objects`(below) → `overhead`(above, 캐릭터 위). 물건이 놓인 칸은 `collision`과 맞춰요. 맵 JSON은 계약 자산이라 바꾸면 `docs/handoff/to-server/`에 알려요
+- `check:assets`가 크기·알파·팔레트·레이어 길이·없는 번호·floor 빈칸·투명한 바닥 타일, 그리고 PNG·JSON이 `.tiles`와 같은지 검사해요
