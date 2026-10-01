@@ -1,0 +1,9 @@
+# Commu Web 매니페스트 (DEPLOYMENT 3.3). Namespace devple은 서버 저장소(devple-stories app)가 소유하므로 선언하지 않는다 (2장)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: devple
+
+resources:
+  - deployment.yaml
+  - service.yaml

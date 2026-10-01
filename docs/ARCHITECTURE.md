@@ -1,6 +1,6 @@
 # ARCHITECTURE — 프론트엔드 아키텍처
 
-> 문서 버전: 1.23 (2026-10-01, 12b — 그림 원본 .pix·개발용 그림)
+> 문서 버전: 1.24 (2026-10-01, 운영 빌드 — Mock 배제·zod jitless)
 > 상태: 확정
 > 전제: PRD.md 1.1
 
@@ -253,6 +253,8 @@ src/
 - **백엔드 저장소** (2026-10-01, API_CONTRACT 2.2): 실제 서버는 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 전용 Deployment)이 이 저장소의 계약 문서를 읽어 구현한다. ID는 정수 문자열이지만 프론트는 계속 불투명 문자열로만 다룬다(파싱·비교 금지). 계약 자산(API_CONTRACT 9장 — `src/assets/maps/*.json`, `sprites/avatar/catalog.json`, `palette.json`)의 원본은 이 저장소이며, 바꾸면 `docs/handoff/to-server/`로 알린다. 실서버 연동은 서버가 `to-code`로 준비를 알린 뒤(서버 S11)에 한다 — 로컬 프록시 `/api/v1` → `http://localhost:8081`(docker-compose) 또는 `:30081`(k8s NodePort), 배포는 API와 같은 출처(refresh 쿠키 `SameSite=Strict`·`Path=/api/v1/auth`) (ROADMAP Phase 3)
 - SSE: MSW로 스트림 모킹이 제한적이므로 **Express 기반 소형 mock SSE 서버** (`mocks/sse-server.ts`) — 가짜 접속자 20명이 랜덤 이동하고 메시지를 보냄
 - `.env`: `VITE_API_BASE_URL`, `VITE_MOCK=true`
+- **운영 빌드** (D1단계, DEPLOYMENT 3장): `VITE_MOCK=false`·`VITE_API_BASE_URL=/api/v1`, 화면 기준 경로 `/commu/`(`vite build`만 `base: '/commu/'`, Router `basename`은 `BASE_URL`에서). **개발 서버·E2E는 `/`** — 개발 URL(`localhost:5173/`)과 운영 URL(`stories.devple.net/commu/`)이 다르다. 경로를 절대 경로 문자열로 쓰지 말고 라우터·`import.meta.env.BASE_URL`·import한 자산을 쓴다. API·SSE는 오리진 절대 경로 그대로. Mock은 `main.tsx`의 조건부 동적 import라 빌드 상수로 번들에서 빠지고, `public/mockServiceWorker.js`는 `vite.config.ts` 플러그인이 `dist`에서 지운다. `pnpm check:dist`가 확인한다. DEV 전용 훅(`window.__devple`·`__devpleMock`)은 `import.meta.env.DEV` 조건이라 운영 번들에 없다
+- zod `jitless`를 앱 진입점에서 가장 먼저 켠다(`src/shared/zodConfig.ts`): zod 4의 eval 가능 여부 시험(`new Function`)이 CSP `script-src 'self'` 위반으로 보고되기 때문이다. 모듈 로드 때 도는 검증(`avatarAssets`의 palette·catalog)보다 앞서야 한다
 
 ## 10. 확장 고려 (구현하지 않되 막지 않음)
 - `mapId`를 위치·공개 메시지·스냅샷 모든 곳에 포함 → 다중 맵 전환 시 계약 변경 없음
@@ -290,6 +292,7 @@ src/
 | 2026-10-01 | 1.17: 11b단계 설계 — 가입 신청·상태 화면(로그인 불필요, 신청 번호는 URL에만, 대기 중 30초 재확인, 필드 사유 표시, 접근 키 정규화는 서버). 백엔드 저장소와 계약 자산 변경 시 `to-server` 알림 |
 | 2026-10-01 | 1.18: 백엔드 구현 위치 정정 — 기존 API 저장소 `devple-stories`의 Commu 영역(API_CONTRACT 2.2, 사용자 결정). ID는 정수 문자열이어도 프론트는 불투명 문자열로만 |
 | 2026-10-01 | 1.19: 옛 인프라 메모(`devple.localhost`) 교체 — 로컬 프록시 `localhost:8081`/`30081`, 배포는 API와 같은 출처 (handoff 2026-10-01-server-repo-devple-stories) |
+| 2026-10-01 | 1.24: 운영 빌드에서 Mock 배제(빌드 상수·워커 삭제 플러그인·check:dist), zod jitless(CSP) — D1단계 |
 | 2026-10-01 | 1.23: 아바타 시트의 원본은 `art/avatar/**/*.pix`(art:build), 12b 개발용 그림 → 12c AI 생성 그림. 자리표시 생성기 제거 |
 | 2026-10-01 | 1.22: 옷장 저장 흐름 구현 반영 — 내 `presence.updated`는 `authStore.me`도 갱신(다른 탭 동기화), 옷장은 월드 무대 위 모달(선택지만 스크롤) |
 | 2026-10-01 | 1.21: 12a단계 구현 반영 — 걷기 주기는 75ms 이하 정지에서 이어감, 닉네임 레이어는 `WorldFrame.forEachVisible`로 앵커를 받음, 폭 재측정 조건 |

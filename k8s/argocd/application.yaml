@@ -1,0 +1,25 @@
+# ArgoCD Application (DEPLOYMENT 3.3). kustomization에 넣지 않는다 — 사용자가 클러스터에 한 번 수동 적용:
+#   kubectl apply -f k8s/argocd/application.yaml
+# Namespace는 서버 저장소 app이 만들므로 CreateNamespace를 쓰지 않는다 (2장)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devple-commu-web
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: ''
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: ''
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: ''
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zero2080/devple-ai-commu
+    targetRevision: HEAD
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devple
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -72,7 +72,7 @@ export async function startMockWorker(): Promise<void> {
     };
   }
   await worker.start({
-    serviceWorker: { url: '/mockServiceWorker.js' },
+    serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
     onUnhandledFrame: ({ frame, defaults }) => {
       const url = requestUrlOf(frame);
       // 계약 경로(/api/)만 경고한다. 문서·정적 자산·SSE(Express mock)는 조용히 통과

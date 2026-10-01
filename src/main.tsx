@@ -1,3 +1,6 @@
+// 가장 먼저: zod 전역 설정 (CSP — eval 시험 끄기)
+import '@/shared/zodConfig';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 

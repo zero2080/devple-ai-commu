@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배포 파이프라인 준비</title>
+<meta name="description" content="Commu 화면을 ArgoCD 자동 배포에 넣기 위한 프론트 준비 결과와 사용자 수동 단계">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+
+figure{margin:12px 0}figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;display:block}figcaption{color:var(--muted);font-size:13px;margin-top:6px}.shots{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:12px;align-items:start}@media (max-width:700px){.shots{grid-template-columns:minmax(0,1fr)}}</style>
+</head>
+<body><main>
+
+<h1>배포 파이프라인 준비 (D1단계)</h1>
+<p class="meta">devple-ai-commu · 2026-10-01 · 작성: Claude Code · 근거: <code>docs/DEPLOYMENT.md</code> 1.1 (chat), handoff <code>2026-10-01-deployment-pipeline</code></p>
+<p><strong>결론.</strong> Commu 화면(<code>https://stories.devple.net/commu/</code>)을 ArgoCD 자동 배포에 넣기 위한 프론트 쪽 준비를 마쳤어요. 운영 이미지, nginx 설정, k8s 매니페스트, CI 배포 잡이에요. 이미지를 로컬에서 빌드·실행해 경로 규칙과 헤더를 모두 확인했어요. 브라우저로 열어서 CSP 위반이 없는 것도 확인했어요. <strong>클러스터·Cloudflare·GitHub 설정은 제가 건드리지 않았고</strong>, 아래 순서대로 직접 해 주셔야 해요.</p>
+
+<div class="grid">
+<div class="stat"><b>6</b><span>해 주실 일</span></div>
+<div class="stat"><b>27초</b><span>로컬 이미지 빌드</span></div>
+<div class="stat"><b>13/13</b><span>경로 규칙 확인</span></div>
+<div class="stat"><b>0</b><span>CSP 위반 (Report-Only)</span></div>
+</div>
+
+<h2>0. 해 주실 일 (순서대로)</h2>
+<div class="card">
+<ol>
+<li><strong>CI 커밋 푸시</strong> — 워크플로 파일(<code>.github/workflows/ci.yml</code>)이 바뀐 커밋은 지금 토큰(<code>workflow</code> 권한 없음)으로 제가 푸시할 수 없어요. <code>git push origin main</code>을 직접 해 주시거나, 토큰에 <code>workflow</code> 권한을 더해 주세요(권한을 더하면 앞으로 제가 직접 올릴 수 있어요). 푸시하면 CI <code>check</code>가 통과한 뒤 <code>deploy</code> 잡이 이미지를 GHCR에 올리고 <code>k8s/deployment.yaml</code> 태그를 커밋해요. ArgoCD 앱을 아직 적용하지 않았으니 클러스터에는 아무 일도 일어나지 않아요.</li>
+<li><strong>main 브랜치 보호</strong> — main에 보호 규칙이 있으면 <code>deploy</code> 잡의 태그 커밋(github-actions[bot])이 막혀요. 켜져 있다면 봇 푸시를 허용해 주세요. 없으면 할 일이 없어요.</li>
+<li><strong>GHCR 패키지 확인</strong> — 첫 배포 뒤 <code>ghcr.io/zero2080/devple-commu-web</code> 패키지가 생겨요. 클러스터의 <code>ghcr-secret</code> 토큰이 이 패키지를 받을 수 있어야 해요(<code>read:packages</code>). 패키지가 비공개로 만들어졌는지 공개인지는 확인하지 못했어요(추정, 정확도 중간 — 같은 계정이라 <code>ghcr-secret</code>으로 받을 수 있을 것으로 봐요).</li>
+<li><strong>ArgoCD 앱 1회 적용</strong> — <code>kubectl apply -f k8s/argocd/application.yaml</code>. 저장소가 공개라 ArgoCD 자격 증명은 필요 없어요. 확인: ArgoCD <code>devple-commu-web</code>이 Synced/Healthy, <code>kubectl -n devple get pods</code>에 <code>devple-commu-web-*</code> Ready, 기존 <code>devple-api</code>·<code>devple-commu</code>에 영향 없음. 클러스터 안에서 <code>/healthz</code> 200, <code>/commu</code> 301, <code>/commu/x</code> → index.html, <code>/</code>·<code>/api/x</code> 404 (DEPLOYMENT 7장)</li>
+<li><strong>Cloudflare 규칙 (서버 S10 뒤)</strong> — Tunnel → Public Hostname에서 <code>stories.devple.net</code>의 <strong>기존 Stories 규칙보다 위에</strong> 두 개를 추가해요. ① path <code>^/api/v1/</code> → <code>http://devple-commu.devple.svc.cluster.local:8080</code> ② path <code>^/commu(/|$)</code> → <code>http://devple-commu-web.devple.svc.cluster.local:80</code>. 시험 기간에 Cloudflare Access를 건다면 <strong>경로(<code>/commu</code>, <code>/api/v1</code>)에만</strong> 걸어요. 호스트명 전체에 걸면 Stories가 막혀요.</li>
+<li><strong>공개 뒤 확인과 CSP 강제 전환</strong> — <code>https://stories.devple.net/commu/</code> 로그인 → 새로고침해도 로그인 유지 → 월드 진입 → 개발자 도구에 CSP 위반이 없는지 봐 주세요. 위반이 없다고 알려 주시면 <code>Content-Security-Policy-Report-Only</code>를 강제(<code>Content-Security-Policy</code>)로 바꿀게요. Stories 화면(<code>/user/reset-password</code> 등)이 그대로 동작하는지도 확인해 주세요.</li>
+</ol>
+</div>
+
+<h2>1. 만든 것</h2>
+<table><tr><th>파일</th><th>내용</th></tr>
+<tr><td><code>Dockerfile</code>, <code>.dockerignore</code></td><td>Node(<code>.nvmrc</code> 24와 일치 검사)·pnpm(<code>packageManager</code>)으로 운영 빌드(<code>VITE_MOCK=false</code>, <code>VITE_API_BASE_URL=/api/v1</code>) → Mock 검사 → 비루트 nginx(<code>nginx-unprivileged:1.30-alpine</code>, 8080). 화면 파일은 <code>/commu/</code> 아래. <code>.env</code>(로컬 Mock 설정)는 빌드에 들어가지 않아요</td></tr>
+<tr><td><code>nginx/default.conf</code>, <code>security-headers.conf</code></td><td><code>/commu</code> → <code>/commu/</code>(상대 주소 리다이렉트), 해시 파일 1년 캐시, 그 밖 <code>no-cache</code>, 없는 정적 파일 404, 화면 경로는 index.html, <code>/healthz</code> 200, <strong><code>/</code>·<code>/api/*</code> 등 나머지 404</strong>, gzip, 보안 헤더·CSP는 <code>/commu/</code> 응답에만</td></tr>
+<tr><td><code>k8s/</code></td><td><code>devple-commu-web</code> Deployment(1개, 무중단 교체, <code>ghcr-secret</code>, 프로브, 10m/32Mi·128Mi, 비루트)·Service(80 → 8080), kustomization(네임스페이스 리소스 없음), ArgoCD Application(알림 어노테이션은 <code>devple-stories</code>와 같게, <code>CreateNamespace</code> 없음)</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td><code>check</code>에 운영 빌드 + Mock 검사 추가. <code>deploy</code> 잡(main 푸시만): GHCR 로그인 → amd64·arm64 이미지 <code>:&lt;sha7&gt;</code>·<code>:latest</code> → 태그 커밋. <code>k8s/</code>만 바뀐 푸시는 CI를 다시 돌리지 않아요</td></tr>
+<tr><td>앱 코드</td><td>운영 빌드 기준 경로 <code>/commu/</code>(라우터 <code>basename</code>), Mock 워커 파일을 운영 빌드에서 삭제, <code>pnpm check:dist</code>(Mock 흔적 검사), zod <code>jitless</code>(아래 2-1)</td></tr></table>
+
+<h2>2. 진행 중 발견한 것</h2>
+<table><tr><th>문제</th><th>처리</th></tr>
+<tr><td><strong>2-1. CSP 위반 1건</strong>: 이미지를 브라우저로 열어 보니, 검증 라이브러리 zod가 처음 검증할 때 <code>new Function</code>으로 eval이 되는지 시험했어요. 예외는 삼키지만 CSP(<code>script-src 'self'</code>)에는 위반으로 보고돼요. 강제 모드로 바꾸면 콘솔이 오염됐을 거예요</td><td>앱 진입점에서 가장 먼저 zod <code>jitless</code>를 켜서 시험을 건너뛰게 했어요(zod 소스 주석이 권하는 방법). 다시 확인하니 위반 0이에요</td></tr>
+<tr><td>2-2. 404 응답에도 1년 캐시 헤더가 붙음</td><td>캐시 헤더는 성공 응답에만 붙게 고쳤어요</td></tr>
+<tr><td>2-3. 클러스터 아키텍처를 모름 — GitHub 러너는 amd64라, 클러스터가 arm64(예: Apple Silicon·라즈베리파이)면 이미지가 돌지 않아요</td><td>amd64·arm64 둘 다 만들어요. 빌드는 러너에서 한 번만 하고, nginx 단계만 아키텍처별로 만들어 에뮬레이션 없이 빨라요(추정, 정확도 중간 — 클러스터는 확인하지 않음)</td></tr></table>
+
+<h2>3. 확인한 것</h2>
+<table><tr><th>검사</th><th>결과</th></tr>
+<tr><td>로컬 이미지 경로 규칙 (curl 13개)</td><td class="ok"><code>/healthz</code> 200 · <code>/commu</code> 301 → <code>/commu/</code> · 화면 경로 index.html · 해시 파일 immutable · 없는 파일 404 · <code>mockServiceWorker.js</code> 404 · <code>/</code>·<code>/api/x</code>·<code>/api</code> 404 · gzip · nginx uid 101</td></tr>
+<tr><td>브라우저 스모크 (<code>/commu/</code>)</td><td class="ok">로그인 화면, 앱 안 링크 <code>/commu/signup</code>, 깊은 링크 새로고침, CSP 위반 0, Mock 워커 요청 없음, API는 <code>/api/v1/…</code></td></tr>
+<tr><td><code>kubectl kustomize k8s</code> (오프라인 렌더)</td><td class="ok">정상, 네임스페이스 리소스 없음 (클러스터에는 적용 안 함)</td></tr>
+<tr><td><code>pnpm lint</code>·<code>typecheck</code>·<code>test</code>·<code>test:e2e</code></td><td class="ok">통과 (단위 527건, E2E 33건)</td></tr></table>
+
+<h2>4. 알아 둘 점</h2>
+<ul>
+<li><strong>개발 URL과 운영 URL이 달라요</strong>: 개발 서버·E2E는 <code>localhost:5173/</code>, 운영은 <code>/commu/</code> 아래예요(DEPLOYMENT가 프론트 재량으로 둔 부분, ARCHITECTURE 9장에 기록). 기준 경로 차이로 생길 문제는 운영 이미지 스모크로 확인해요.</li>
+<li>서버(Commu API)가 아직 없어서, 배포해도 지금은 로그인 화면까지만 동작해요(<code>/api/v1/auth/refresh</code> 404). Cloudflare 규칙을 넣기 전에는 외부에서 보이지 않아요.</li>
+<li>서버가 보낸 정보(<code>2026-10-01-server-session-fyi</code>)의 제안 — 탭 두 개가 동시에 refresh할 때 진 탭이 로그아웃되지 않도록 refresh 401에 한 번 더 시도 — 은 이어서 반영해요.</li></ul>
+
+</main></body>
+</html>

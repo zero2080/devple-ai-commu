@@ -1,6 +1,6 @@
 # CONVENTIONS — 개발 규칙
 
-> 문서 버전: 1.6 (2026-10-01, CI 워크플로 추가)
+> 문서 버전: 1.7 (2026-10-01, 배포 — 동기화 표·CI deploy 잡)
 > 상태: 확정
 > 적용 범위: 프론트엔드 저장소 전체. AI(Claude)와 사람 모두 동일하게 따른다.
 
@@ -109,7 +109,7 @@
 - 테스트 파일은 대상 옆에 `*.test.ts(x)`
 - 테스트명은 한국어 문장: `it('반경 밖 DM은 말풍선을 만들지 않는다')`
 - 스냅샷 테스트 금지 (Canvas 렌더 포함)
-- CI에서 `pnpm lint && pnpm typecheck && pnpm test` 통과 필수. 워크플로는 `.github/workflows/ci.yml` — `main` 푸시·PR마다 `lint` · `typecheck` · `format:check` · `test:coverage`(domain 100% 기준 포함) · `check:assets`(GRAPHICS 8장). E2E(`pnpm test:e2e`)는 CI에 없으므로 단계 완료 전에 로컬에서 돌린다
+- CI에서 `pnpm lint && pnpm typecheck && pnpm test` 통과 필수. 워크플로는 `.github/workflows/ci.yml` — `main` 푸시·PR마다 `lint` · `typecheck` · `format:check` · `test:coverage`(domain 100% 기준 포함) · `check:assets`(GRAPHICS 8장) · 운영 빌드 + `check:dist`(Mock 배제, DEPLOYMENT 3.1). main 푸시에서는 이어서 `deploy` 잡이 이미지를 GHCR에 올리고 `k8s/deployment.yaml` 태그를 커밋한다(DEPLOYMENT 4장). E2E(`pnpm test:e2e`)는 CI에 없으므로 단계 완료 전에 로컬에서 돌린다
 
 ## 10. Git
 
@@ -146,6 +146,7 @@ Refs: #이슈번호
 | 단계·완료 조건 변경 | ROADMAP.md |
 | 자산 규격·팔레트·폰트·말풍선 CSS | GRAPHICS.md (chat 담당, `docs/handoff/to-chat/`로 요청) |
 | 계약 자산 (맵 JSON·`catalog.json`·`palette.json`, API_CONTRACT 9장) | `docs/handoff/to-server/`로 백엔드에 알림 (서버가 사본을 씀) |
+| 배포 토폴로지 (이미지 이름·k8s 리소스 이름·포트·경로, Dockerfile·nginx·`k8s/`·CI deploy 잡) | DEPLOYMENT.md (chat 담당, `docs/handoff/to-chat/`로 요청) |
 
 - 문서는 코드와 같은 PR에서 수정. 문서 버전 상단 표기 갱신
 - 결정 사항은 각 문서의 "결정 이력" 표에 날짜와 함께 추가
@@ -157,5 +158,6 @@ Refs: #이슈번호
 | 2026-09-29 | 1.2: 스택을 ROADMAP 1단계 표(React 19, Vite 8, TS ~6.0, Vitest 5, Zustand 5, MSW 3, ESLint 10, Node 24)에 맞춤. `domain/`은 같은 폴더 상대 import만 허용. `exactOptionalPropertyTypes` 미사용 |
 | 2026-09-29 | 1.3: 11장 문서 동기화 표에 ROADMAP.md 행 추가 |
 | 2026-09-30 | 1.4: 11장 문서 동기화 표에 GRAPHICS.md 행 추가 (담당은 chat, 요청은 handoff 인박스) |
+| 2026-10-01 | 1.7: 11장 표에 DEPLOYMENT(chat 담당) 행, 9장 CI에 운영 번들 검사·deploy 잡 (D1단계) |
 | 2026-10-01 | 1.6: CI 워크플로 추가(사용자 결정 A, 12a 리포트) — GitHub Actions 1개 잡, Node는 `.nvmrc`, pnpm은 `packageManager`. E2E는 로컬 |
 | 2026-10-01 | 1.5: 11장 표에 계약 자산 행 추가 — 맵·카탈로그·팔레트를 바꾸면 `to-server`로 백엔드에 알림 (API_CONTRACT 2.1 9장) |

@@ -1,0 +1,52 @@
+# 이미지 태그는 CI(.github/workflows/ci.yml deploy 잡)가 main 푸시마다 <sha7>로 바꿔 커밋한다
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devple-commu-web
+  labels:
+    app: devple-commu-web
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: devple-commu-web
+  template:
+    metadata:
+      labels:
+        app: devple-commu-web
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: devple-commu-web
+          image: ghcr.io/zero2080/devple-commu-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false

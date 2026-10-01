@@ -25,7 +25,8 @@
     "check:assets": "tsx scripts/check-assets.ts",
     "art:build": "tsx scripts/art/build-avatars.ts && tsx scripts/check-assets.ts",
     "art:brief": "tsx scripts/art/make-briefs.ts",
-    "art:ingest": "tsx scripts/art/ingest-cli.ts"
+    "art:ingest": "tsx scripts/art/ingest-cli.ts",
+    "check:dist": "tsx scripts/check-dist.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.0",

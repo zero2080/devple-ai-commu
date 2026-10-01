@@ -18,7 +18,7 @@ Three agents:
 | `done/` | chat | code (deletes) | `to-chat/` files chat has finished (chat's MCP has no delete) |
 
 ## Doc ownership
-- **chat**: `PRD`, `DOMAIN`, `API_CONTRACT`, `GRAPHICS` — product/contract, read by both code and server
+- **chat**: `PRD`, `DOMAIN`, `API_CONTRACT`, `GRAPHICS`, `DEPLOYMENT` — product/contract/topology, read by both code and server
 - **code**: this repo's `ROADMAP`, `ARCHITECTURE`, `CONVENTIONS`, `CLAUDE.md` — move with the frontend code
 - **server**: `../devple-stories/` `CLAUDE.md`, `docs/commu/*` — move with the backend code. (That repo also hosts the unrelated Stories product; chat and code never request changes to Stories.)
 - Never edit another side's docs. Send a request instead.

@@ -1,6 +1,6 @@
 # ROADMAP — 구현 순서와 완료 조건
 
-> 문서 버전: 1.23 (2026-10-01, 12b단계 상세화)
+> 문서 버전: 1.24 (2026-10-01, D1단계 — 운영 이미지·k8s·자동 배포)
 > 용도: Claude Code가 작업 단위를 고르고 완료 여부를 판단하는 기준. 각 단계는 독립된 PR 1개 이상으로 진행하며, 한 단계가 끝나면 이 문서의 체크박스를 갱신한다.
 > 1차 목표: **Mock 데이터만으로 로그인 → 월드 진입 → 가짜 접속자 20명이 움직이는 화면**
 
@@ -349,6 +349,28 @@ GRAPHICS 1·2·3·4·7·8장, ARCHITECTURE 2.1·2.2. **사용자 결정 (2026-10
 - [ ] 키트: 브리프 42+1개 생성, 개발용 시트를 래스터로 확대한 이미지를 `art:ingest`로 되돌리면 원본 `.pix`와 같음 (왕복 검사)
 - [ ] E2E: 옷장 저장 → 개발용 그림의 픽셀 색 변경(두 탭), 캐릭터가 overhead 타일 아래에 그려짐, 기존 E2E 전부 통과
 
+## 배포
+
+### D1단계: 운영 이미지 · k8s · 자동 배포 `[x]`
+
+DEPLOYMENT 1–4·7장 (chat 1.1, handoff 2026-10-01-deployment-pipeline, 사용자 요청: 프론트도 ArgoCD 자동 배포). 공개 URL은 `https://stories.devple.net/commu/` — Stories와 호스트명을 나눠 쓰고 화면은 `/commu/` 아래 (사용자 결정). 12b·12c와 독립이다. 클러스터 적용·Cloudflare·브랜치 보호는 사용자 수동 단계 (리포트 `docs/report/2026-10-01-deployment-pipeline.html`).
+
+**만든 것**
+- `Dockerfile` — 빌드 단계(`--platform=$BUILDPLATFORM`, Node = `.nvmrc` 검사, pnpm = `packageManager`) → `VITE_MOCK=false`·`VITE_API_BASE_URL=/api/v1`로 `pnpm build && pnpm check:dist` → 비루트 nginx(`nginxinc/nginx-unprivileged:1.30-alpine`, 8080). 런타임 단계는 파일 복사뿐이라 amd64·arm64를 에뮬레이션 없이 만든다. `.dockerignore`(`.env` 제외)
+- 운영 번들에 Mock 없음: `vite.config.ts`가 Mock이 꺼진 빌드에서 `dist/mockServiceWorker.js`를 지운다(Mock 코드는 `main.tsx`의 조건부 동적 import라 빌드 상수로 빠짐). `pnpm check:dist`(워커 파일·Mock 흔적 문자열 검사, `scripts/dist-checks.ts`) — Docker 빌드와 CI에서 돈다
+- 기준 경로 `/commu/`: 운영 빌드만 Vite `base: '/commu/'`(개발 서버·E2E는 `/` 그대로), Router `basename`은 `import.meta.env.BASE_URL`에서, MSW 워커 URL도 base 기준. API·SSE는 오리진 절대 경로 `/api/v1` 그대로
+- `nginx/default.conf`·`security-headers.conf` — DEPLOYMENT 3.2: 파일은 `<root>/commu/`, `/commu` → 301 `/commu/`(상대 Location — `absolute_redirect off`), `/commu/assets/*` 1년 immutable, 그 밖 `no-cache`(2xx·3xx만), 해시 없는 정적 파일은 없으면 404, `/commu/*` SPA 폴백, `/healthz` 200, **그 밖 전부(`/`·`/api/*`) 404**, gzip, 보안 헤더·CSP Report-Only는 `/commu/` 응답에만
+- zod `jitless`(`src/shared/zodConfig.ts`, `main.tsx`가 가장 먼저 import): zod 4의 eval 가능 여부 시험(`new Function`)이 CSP 위반으로 보고되던 것을 운영 이미지 스모크에서 발견
+- `k8s/` — `kustomization.yaml`(namespace만, Namespace 리소스 없음), `deployment.yaml`(`devple-commu-web`, 1 replica, maxUnavailable 0, `ghcr-secret`, `/healthz` 프로브, 10m/32Mi·128Mi, 비루트), `service.yaml`(80 → 8080), `argocd/application.yaml`(kustomization 밖, `CreateNamespace` 없음, Slack 알림 어노테이션은 `devple-stories` app과 같게)
+- `ci.yml` — `check`에 운영 빌드 + `check:dist`, `deploy` 잡(`needs: check`, main 푸시만): GHCR 로그인 → 멀티 아키텍처 이미지 `:<sha7>`·`:latest` 푸시 → `k8s/deployment.yaml` 태그 `sed` → `ci: update image tag to <sha7>` 커밋. push 트리거 `paths-ignore: ['k8s/**']`
+
+**완료 조건** — 검증 자산: `scripts/dist-checks.test.ts`, `pnpm check:dist`, 로컬 `docker build`·`docker run` + curl, `kubectl kustomize k8s`(오프라인 렌더)
+- [x] 단위: Mock 흔적 검사(워커 파일·흔적 문자열·index.html 없음·base64 data URL 무시)
+- [x] 로컬 이미지: `/healthz` 200, `/commu` 301 → `/commu/`, `/commu/some/route` → index.html(`no-cache`), `/commu/assets/*` immutable, 없는 해시 파일·정적 파일 404(캐시 헤더 없음), `/commu/mockServiceWorker.js` 404, `/`·`/api/x`·`/api` 404(CSP 없음), gzip, 보안 헤더, nginx uid 101
+- [x] 운영 이미지 스모크(헤드리스 Chromium, `/commu/`): 로그인 화면(`/commu/login`으로 이동), 앱 안 링크 `/commu/signup`, 깊은 링크 새로고침, CSP 위반 0, `mockServiceWorker.js` 요청 없음, API는 `/api/v1/…`
+- [x] `kubectl kustomize k8s` 렌더 정상 (클러스터에는 적용하지 않음)
+- [ ] 첫 `deploy` 잡 실행 — 워크플로 파일 변경은 사용자 푸시가 필요하다(토큰에 `workflow` 권한 없음). 실행 결과는 다음 단계 리포트에서 확인
+
 ## Phase 3 — 백엔드 연동
 - `VITE_MOCK=false` 전환, 실서버 계약 검증, E2E(Playwright)
 - 백엔드: 기존 API 저장소 `../devple-stories`의 Commu 영역(`net.devple.core.commu`, 문서 `docs/commu/`). 서버가 `to-code`로 실서버 E2E 준비를 알리면(서버 S11) 시작한다
@@ -367,6 +389,7 @@ GRAPHICS 1·2·3·4·7·8장, ARCHITECTURE 2.1·2.2. **사용자 결정 (2026-10
 | 2026-09-29 | 1.2: 선행 결정 전부 해소 (API_CONTRACT·DOMAIN·PRD 1.2). `seq`=`Date.now()`, 합성 타입 DOMAIN 9장, positions 본인 무시, `reissue-key` 추가로 엔드포인트 37개 |
 | 2026-09-30 | 1.3: Phase 1 결정 리포트 높음 2건 반영 — `system.heartbeat` 이벤트(17종), Mock 월드 REST 3개를 Express로(MSW 33 + Express 4). 6단계 상세화 |
 | 2026-09-30 | 1.4: GRAPHICS.md 1.0 연결 (handoff 2026-09-30-graphics). 7단계 말풍선 CSS·폰트, 12단계 자산 교체 항목 명시. `MapData.tileset`을 코드에 반영 |
+| 2026-10-01 | 1.24: D1단계(배포) 신설·완료 — chat DEPLOYMENT 1.0 요청. Dockerfile·nginx·k8s·CI deploy 잡, 운영 번들 Mock 배제 검사, zod jitless(CSP). 첫 배포 실행은 사용자 푸시 뒤 |
 | 2026-10-01 | 1.23: 12b단계 상세화 — 사용자 결정: 최종 그림은 AI 생성용 컨텍스트(제작 키트)로, 개발 중에는 Claude가 코드로 찍은 개발용 그림. 12b-1 `.pix` 원본·빌드·걷기 파생, 12b-2 키트(브리프·ingest), 12b-3 개발용 아바타, 12b-4 타일셋·맵 레이어. 최종 그림 교체와 램프 확정은 12c |
 | 2026-10-01 | 1.22: CI 결정 A(사용자, 12a 리포트) — `.github/workflows/ci.yml`이 `main` 푸시·PR마다 lint·typecheck·format:check·test:coverage·check:assets. 단계 완료 조건의 E2E는 계속 로컬 (CONVENTIONS 1.6) |
 | 2026-10-01 | 1.21: 12a단계 완료 — 자리표시 시트 53장·`pnpm check:assets`, 합성 1회·공유 캐시, 걷기 프레임, 닉네임 DOM(꼬리 끝 −15), 옷장 모달. 단위 449건·domain 100%·E2E 33건. 옷장의 숨긴 라디오가 선택지 스크롤 영역 밖으로 넘쳐 키보드 포커스 때 페이지가 밀리던 것을 발견해 수정(E2E 회귀 검사). CI는 결정 요청(리포트) |

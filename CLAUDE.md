@@ -17,6 +17,7 @@
 | 네이밍, 디렉토리, 테스트, 커밋 규칙은? | `docs/CONVENTIONS.md` |
 | 지금 무엇을 만들 차례인가? 완료 조건은? | `docs/ROADMAP.md` |
 | 스프라이트·타일셋·팔레트·말풍선 CSS 규격은? | `docs/GRAPHICS.md` |
+| 배포 토폴로지(이미지·k8s·CI 배포 잡·이름/포트/경로)는? | `docs/DEPLOYMENT.md` (chat 소유) |
 | chat(Claude.ai)·백엔드(server)와 주고받는 요청 형식은? | `docs/handoff/README.md` (에이전트 간 프로토콜, `to-chat/`·`to-server/`) |
 | 사용자에게 보여줄 결정·결과 리포트는 어디에? | `docs/report/` (한국어 HTML) |
 
@@ -38,7 +39,7 @@
 ## 작업 방식
 
 ### 시작 전
-- `docs/handoff/to-code/`에 파일이 있으면 먼저 처리하고 `done/`을 비운다 (규칙·메시지 형식은 `docs/handoff/README.md`: YAML frontmatter + `done/do/decide/info`, 간결한 영어). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
+- `docs/handoff/to-code/`에 파일이 있으면 먼저 처리하고 `done/`을 비운다 (규칙·메시지 형식은 `docs/handoff/README.md`: YAML frontmatter + `done/do/decide/info`, 간결한 영어). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS·DEPLOYMENT) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
 - 계약 자산(API_CONTRACT 9장: `src/assets/maps/*.json`, `src/assets/sprites/avatar/catalog.json`, `src/assets/palette.json`)을 바꾸면 `docs/handoff/to-server/`에 알린다. 백엔드(기존 API 저장소 `../devple-stories`의 Commu 영역)가 사본으로 위치·외형을 검증한다
 - 사용자가 결정하거나 검토해야 할 것이 생기면 `docs/report/YYYY-MM-DD-<slug>.html`(한국어, 자체 완결 HTML, 인라인 CSS)을 쓰고 터미널 답변에 경로를 적는다. 관련 handoff 메시지에는 `needs-user: true`. 리포트는 커밋한다 (결정 기록).
 - 요청을 PRD 기능 번호(예: 5.4 근접 대화)와 ROADMAP 단계에 매핑한다. 매핑이 안 되면 범위 밖일 가능성이 있으니 확인한다.

@@ -1,0 +1,17 @@
+# 이미지 빌드 컨텍스트에서 뺀다. .env는 로컬 개발용(VITE_MOCK=true)이라 반드시 제외
+node_modules
+dist
+coverage
+test-results
+playwright-report
+.git
+.github
+.idea
+.vscode
+.env
+.env.*
+!.env.example
+k8s
+art
+docs
+*.log
