@@ -88,7 +88,7 @@ test('로그인 → 월드 진입 → 가짜 접속자 이동 → 강제 끊김 
   });
 
   await page.goto('/login');
-  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO-0000-0000');
+  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO0-00000-00000-00000');
   await page.getByRole('button', { name: '입장' }).click();
 
   await expect(page).toHaveURL(/\/$/);

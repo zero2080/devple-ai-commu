@@ -28,7 +28,7 @@ cp .env.example .env
 pnpm dev          # Vite(5173) + Mock SSE 서버(5174) 동시 실행
 ```
 
-브라우저에서 `http://localhost:5173`을 열고 접근 키 `DEMO-0000-0000`으로 입장하면 가짜 접속자 20명이 움직이는 월드가 보입니다 (Phase 1).
+브라우저에서 `http://localhost:5173`을 열고 접근 키 `DEMO0-00000-00000-00000`(대소문자·하이픈 무시, API_CONTRACT 2.1)으로 입장하면 가짜 접속자 20명이 움직이는 월드가 보입니다 (Phase 1).
 
 Mock 모드(`VITE_MOCK=true`)에서는 REST는 브라우저 안의 MSW가, SSE 스트림과 접속 티켓은 `src/mocks/sse-server.ts`(Express)가 처리합니다. Vite dev 서버가 `/api/v1/sse`로 시작하는 요청만 Express로 프록시합니다.
 

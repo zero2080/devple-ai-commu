@@ -10,6 +10,7 @@ const MESSAGES: Record<string, string> = {
   VALIDATION_FAILED: '입력값을 확인해 주세요.',
   MESSAGE_INVALID_CONTENT: '보낼 수 없는 내용이에요.',
   NICKNAME_TAKEN: '이미 사용 중인 닉네임이에요.',
+  EMAIL_TAKEN: '이미 가입했거나 심사 중인 이메일이에요.',
   GROUP_FULL: '그룹 인원이 가득 찼어요.',
   SIGNUP_ALREADY_REVIEWED: '이미 처리된 신청이에요.',
   MESSAGE_ALREADY_READ: '상대가 이미 읽어서 회수할 수 없어요.',
@@ -31,4 +32,18 @@ export function messageFor(error: unknown): string {
 /** 이미 코드만 남은 경우 (예: 실패한 전송 항목의 errorCode) */
 export function messageForCode(code: string | undefined): string {
   return (code === undefined ? undefined : MESSAGES[code]) ?? '요청을 처리하지 못했어요.';
+}
+
+/** details.fields 사유 어휘 (API_CONTRACT 1.3). 필드 옆에 보여줄 짧은 문구 */
+const FIELD_REASONS: Record<string, string> = {
+  required: '꼭 입력해 주세요.',
+  length: '길이를 확인해 주세요.',
+  format: '형식을 확인해 주세요.',
+  invalid: '쓸 수 없는 문자나 값이 있어요.',
+  unknown: '목록에 없는 값이에요.',
+  slot_mismatch: '그 자리에 둘 수 없는 아이템이에요.',
+};
+
+export function messageForFieldReason(reason: string): string {
+  return FIELD_REASONS[reason] ?? '입력값을 확인해 주세요.';
 }

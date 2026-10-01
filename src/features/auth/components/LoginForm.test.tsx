@@ -30,12 +30,12 @@ describe('LoginForm', () => {
   it('접근 키를 제출하면 로그인하고 onSuccess를 부른다', async () => {
     loginWithAccessKey.mockResolvedValue(undefined);
     const { onSuccess } = renderForm();
-    await userEvent.type(screen.getByLabelText('접근 키'), ' DEMO-0000-0000 ');
+    await userEvent.type(screen.getByLabelText('접근 키'), ' DEMO0-00000-00000-00000 ');
     await userEvent.click(screen.getByRole('button', { name: '입장' }));
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledOnce();
     });
-    expect(loginWithAccessKey).toHaveBeenCalledWith('DEMO-0000-0000');
+    expect(loginWithAccessKey).toHaveBeenCalledWith('DEMO0-00000-00000-00000');
   });
 
   it('빈 키는 제출하지 않는다', async () => {

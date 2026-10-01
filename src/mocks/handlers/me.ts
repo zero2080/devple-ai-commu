@@ -1,7 +1,7 @@
 // API_CONTRACT 2.2 본인
 import { http, HttpResponse } from 'msw';
 
-import { normalizeAppearance, validateAppearance, type Appearance } from '@/domain';
+import { nicknameError, normalizeAppearance, validateAppearance, type Appearance } from '@/domain';
 import { ENDPOINTS } from '@/transport/api/endpoints';
 
 import { emitViaExpress } from '../bridge.ts';
@@ -27,8 +27,8 @@ export const meHandlers = [
     // API_CONTRACT 2.2 검증 표: 틀린 필드를 전부 details.fields에 담아 400, 그 다음 닉네임 중복 409
     const fields: Record<string, string> = {};
     if (nickname !== undefined) {
-      const length = Array.from(nickname).length;
-      if (length < 2 || length > 12) fields.nickname = 'length';
+      const problem = nicknameError(nickname); // 공백 제거 후 2~12, 제어·비가시 불가 (DOMAIN 8장 2.1)
+      if (problem !== null) fields.nickname = problem;
     }
     if (statusMessage !== undefined && Array.from(statusMessage).length > 40) {
       fields.statusMessage = 'length';
@@ -45,9 +45,10 @@ export const meHandlers = [
     }
 
     const changed: { nickname?: string; appearance?: Appearance } = {};
-    if (nickname !== undefined && nickname !== state.me.nickname) {
-      state.me.nickname = nickname;
-      changed.nickname = nickname;
+    const trimmedNickname = nickname?.trim(); // 앞뒤 공백 제거 후 저장 (DOMAIN 8장 2.1)
+    if (trimmedNickname !== undefined && trimmedNickname !== state.me.nickname) {
+      state.me.nickname = trimmedNickname;
+      changed.nickname = trimmedNickname;
     }
     if (statusMessage !== undefined) {
       state.me.statusMessage = statusMessage;

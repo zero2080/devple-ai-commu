@@ -12,7 +12,7 @@ test.beforeEach(async ({ request }) => {
 
 async function openConsole(page: Page): Promise<void> {
   await page.goto('/login');
-  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO-0000-0000');
+  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO0-00000-00000-00000');
   await page.getByRole('button', { name: '입장' }).click();
   await expect(page.getByTestId('sse-state')).toHaveAttribute('data-state', 'open');
   await page.getByRole('link', { name: '운영자 콘솔' }).click(); // SPA 이동 — MSW 상태·SSE 유지

@@ -11,6 +11,7 @@ import type {
   SignupRequest,
   User,
 } from '@/domain';
+import { nicknameKey } from '@/domain';
 
 import {
   SEED_DM_CONVERSATIONS,
@@ -79,13 +80,24 @@ export function userAsMe(user: User): Me {
   return { ...user, email: `${user.id}@example.com`, phone: '010-0000-0000' };
 }
 
-/** 닉네임 중복: 본인·다른 회원·대기 중 가입 신청 (API_CONTRACT 2.1·2.2) */
+/** 닉네임 중복: 본인·다른 회원·대기 중 가입 신청. 비교는 공백 제거 + NFC + 대소문자 무시 (DOMAIN 8장 2.1) */
 export function isNicknameTaken(nickname: string, exceptUserId?: string): boolean {
-  if (state.me.id !== exceptUserId && state.me.nickname === nickname) {
+  const key = nicknameKey(nickname);
+  if (state.me.id !== exceptUserId && nicknameKey(state.me.nickname) === key) {
     return true;
   }
   return (
-    state.users.some((u) => u.id !== exceptUserId && u.nickname === nickname) ||
-    state.signups.some((s) => s.status === 'pending' && s.nickname === nickname)
+    state.users.some((u) => u.id !== exceptUserId && nicknameKey(u.nickname) === key) ||
+    state.signups.some((s) => s.status === 'pending' && nicknameKey(s.nickname) === key)
+  );
+}
+
+/** 이메일 중복: 가입된 회원 또는 같은 이메일의 대기 중 신청 (API_CONTRACT 2.1 EMAIL_TAKEN). 대소문자 무시 */
+export function isEmailTaken(email: string): boolean {
+  const key = email.trim().toLowerCase();
+  return (
+    state.me.email.toLowerCase() === key ||
+    state.users.some((u) => userAsMe(u).email.toLowerCase() === key) ||
+    state.signups.some((s) => s.status === 'pending' && s.email.toLowerCase() === key)
   );
 }

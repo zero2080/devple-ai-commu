@@ -209,6 +209,21 @@ describe('/__mock/reset', () => {
   });
 });
 
+describe('PUT /api/v1/me/position 필드 사유 (API_CONTRACT 1.3·2.2)', () => {
+  it('다른 맵은 mapId invalid, 정수가 아니면 invalid, 빠지면 required', async () => {
+    const res = await fetch(`${base}/api/v1/me/position`, {
+      method: 'PUT',
+      headers: AUTH,
+      body: JSON.stringify({ mapId: 'other', x: 1.5, dir: 'down', seq: 1 }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      details: { fields: { mapId: 'invalid', x: 'invalid', y: 'required' } },
+    });
+  });
+});
+
 describe('/__mock/emit 브리지', () => {
   it('presence.updated는 Express Presence에도 반영하고 방송한다', async () => {
     const chunks: string[] = [];

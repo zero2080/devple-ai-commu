@@ -12,7 +12,7 @@ test.beforeEach(async ({ request }) => {
 
 async function login(page: Page): Promise<void> {
   await page.goto('/login');
-  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO-0000-0000');
+  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO0-00000-00000-00000');
   await page.getByRole('button', { name: '입장' }).click();
   await expect(page.getByTestId('sse-state')).toHaveAttribute('data-state', 'open');
 }
@@ -92,7 +92,7 @@ test('정지되면 로그인 화면으로 가서 안내하고, 다시 연결하�
   await page.waitForTimeout(2500); // 백오프(1초)가 지나도 새 연결을 만들지 않는다
   expect(await stats()).toEqual({ created, open: 0 });
 
-  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO-0000-0000');
+  await page.getByRole('textbox', { name: '접근 키' }).fill('DEMO0-00000-00000-00000');
   await page.getByRole('button', { name: '입장' }).click();
   await expect(page.getByRole('alert')).toHaveText(SUSPENDED); // 안내 대신 폼 오류 한 줄
   await expect(page.getByRole('alert')).toHaveCount(1);

@@ -89,4 +89,17 @@ describe('PATCH /me appearance (API_CONTRACT 2.2)', () => {
     expect((await patchMe({ appearance: state.me.appearance })).status).toBe(200);
     expect(bridge.emitViaExpress).not.toHaveBeenCalled();
   });
+
+  it('닉네임: 앞뒤 공백 제거 후 저장, 다른 회원과 대소문자·공백 무시로 겹치면 409, 제어 문자는 invalid', async () => {
+    expect((await patchMe({ nickname: ' 픽셀 ' })).status).toBe(409);
+    const invalid = await patchMe({ nickname: '데\u0007모' });
+    expect(await invalid.json()).toMatchObject({ details: { fields: { nickname: 'invalid' } } });
+    const ok = await patchMe({ nickname: '  새 데모  ' });
+    expect(ok.status).toBe(200);
+    expect(state.me.nickname).toBe('새 데모');
+    expect(bridge.emitViaExpress).toHaveBeenCalledWith('presence.updated', {
+      userId: 'u_me',
+      nickname: '새 데모',
+    });
+  });
 });

@@ -38,7 +38,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         onChange={(event) => {
           setAccessKey(event.target.value);
         }}
-        placeholder="XXXX-XXXX-XXXX"
+        placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
         autoComplete="off"
         autoFocus
         spellCheck={false}

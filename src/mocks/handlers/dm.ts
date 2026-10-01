@@ -59,6 +59,11 @@ export const dmHandlers = [
     const denied = requireAuth(request);
     if (denied !== null) return denied;
     const userId = param(params, 'userId');
+    if (userId === state.me.id) {
+      return apiError(400, 'VALIDATION_FAILED', 'cannot DM yourself', {
+        fields: { userId: 'invalid' },
+      }); // API_CONTRACT 2.6
+    }
     const target = state.users.find((u) => u.id === userId);
     if (target === undefined) {
       return apiError(404, 'NOT_FOUND', 'user not found', { resource: 'user' });

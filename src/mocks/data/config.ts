@@ -12,7 +12,8 @@ export const SERVER_CONFIG: ServerConfig = {
   avatarOptions: AVATAR_OPTIONS,
 };
 
-export const DEMO_ACCESS_KEY = 'DEMO-0000-0000';
+/** Crockford Base32 20자 형식 (API_CONTRACT 2.1). 서버처럼 정규화해 비교하므로 소문자·하이픈 없이 쳐도 된다 */
+export const DEMO_ACCESS_KEY = 'DEMO0-00000-00000-00000';
 export const ACCESS_TOKEN_TTL_SEC = 900;
 export const DEFAULT_SSE_MOCK_PORT = 5174;
 /**

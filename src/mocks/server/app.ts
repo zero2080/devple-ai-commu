@@ -182,17 +182,28 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const y = field(body, 'y');
     const dir = field(body, 'dir');
     const seq = field(body, 'seq');
+    // 필드별 사유 (API_CONTRACT 1.3 어휘): 빠짐 required, 정수 아님·현재 맵과 다름·방향 아님 invalid
+    const fields: Record<string, string> = {};
+    const reason = (value: unknown, ok: boolean): string | null =>
+      value === undefined ? 'required' : ok ? null : 'invalid';
+    const checks: [string, string | null][] = [
+      ['mapId', reason(mapId, mapId === MAIN_MAP.id)],
+      ['x', reason(x, typeof x === 'number' && Number.isInteger(x))],
+      ['y', reason(y, typeof y === 'number' && Number.isInteger(y))],
+      ['dir', reason(dir, typeof dir === 'string' && DIRECTIONS.includes(dir as Direction))],
+      ['seq', reason(seq, typeof seq === 'number')],
+    ];
+    for (const [name, problem] of checks) {
+      if (problem !== null) fields[name] = problem;
+    }
     if (
-      mapId !== MAIN_MAP.id ||
+      Object.keys(fields).length > 0 ||
       typeof x !== 'number' ||
       typeof y !== 'number' ||
-      !Number.isInteger(x) ||
-      !Number.isInteger(y) ||
       typeof dir !== 'string' ||
-      !DIRECTIONS.includes(dir as Direction) ||
       typeof seq !== 'number'
     ) {
-      apiError(res, 400, 'VALIDATION_FAILED', 'invalid position payload');
+      apiError(res, 400, 'VALIDATION_FAILED', 'invalid position payload', { fields });
       return;
     }
     const me = world.find(userId);

@@ -94,6 +94,19 @@ describe('전송·회수는 emit 브리지로 방송한다', () => {
     });
   });
 
+  it('나에게 DM은 400 fields.userId invalid (API_CONTRACT 2.6)', async () => {
+    const res = await fetch(api(`/dm/${state.me.id}/messages`), {
+      method: 'POST',
+      headers: AUTH,
+      body: JSON.stringify({ content: '혼잣말' }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      details: { fields: { userId: 'invalid' } },
+    });
+  });
+
   it('상대가 읽은 뒤에는 409 MESSAGE_ALREADY_READ', async () => {
     const sent = (await (
       await fetch(api('/dm/u_07/messages'), {

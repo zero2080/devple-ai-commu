@@ -72,7 +72,7 @@ beforeEach(() => {
 describe('세션 수명과 SSE', () => {
   it('로그인하면 세션·내 userId를 저장하고 SSE를 연결한다', async () => {
     login.mockResolvedValue(session);
-    await loginWithAccessKey('DEMO-0000-0000');
+    await loginWithAccessKey('DEMO0-00000-00000-00000');
     expect(useAuthStore.getState().status).toBe('authenticated');
     expect(useWorldStore.getState().myUserId).toBe('me');
     expect(connectSse).toHaveBeenCalledOnce();
@@ -95,7 +95,7 @@ describe('세션 수명과 SSE', () => {
 
   it('로그아웃은 SSE를 먼저 끊고 서버 무효화 후 스토어를 비운다 (서버 실패해도 비움)', async () => {
     login.mockResolvedValue(session);
-    await loginWithAccessKey('DEMO-0000-0000');
+    await loginWithAccessKey('DEMO0-00000-00000-00000');
     logout.mockRejectedValue(new Error('offline'));
     await logoutSession();
     expect(disconnectSse).toHaveBeenCalledOnce();
@@ -106,7 +106,7 @@ describe('세션 수명과 SSE', () => {
 
   it('SSE system.suspended 훅 → 세션 종료: 재연결 없이 끊고 추적 중지, 스토어 비우고 정지 안내 (logout 요청 없음)', async () => {
     login.mockResolvedValue(session);
-    await loginWithAccessKey('DEMO-0000-0000');
+    await loginWithAccessKey('DEMO0-00000-00000-00000');
     const hooks = connectSse.mock.calls[0]?.[0];
     expect(hooks?.onSuspended).toBeTypeOf('function');
     hooks?.onSuspended?.();
@@ -121,7 +121,7 @@ describe('세션 수명과 SSE', () => {
     expect(disconnectSse).toHaveBeenCalledOnce();
 
     // 다시 로그인하면 안내는 지워진다
-    await loginWithAccessKey('DEMO-0000-0000');
+    await loginWithAccessKey('DEMO0-00000-00000-00000');
     expect(useAuthStore.getState().notice).toBeNull();
   });
 });
