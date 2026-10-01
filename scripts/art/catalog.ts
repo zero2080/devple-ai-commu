@@ -2,14 +2,25 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { CatalogItemLike } from './placeholders.ts';
-
 export const ASSETS_DIR = join(import.meta.dirname, '../../src/assets');
 export const AVATAR_DIR = join(ASSETS_DIR, 'sprites/avatar');
 
+export type SlotId = 'hair' | 'hat' | 'face' | 'top' | 'bottom' | 'shoes' | 'hand';
+
+/** catalog.json 항목 (GRAPHICS 2.8). 런타임은 game/assets/avatarAssets.ts가 zod로 검증하고, 스크립트는 이 타입으로 읽는다 */
+export interface CatalogItem {
+  id: string;
+  slot: SlotId;
+  name: string;
+  sheets: { front: string; back?: string };
+  channels: ('primary' | 'secondary')[];
+  defaultColors: { primary?: string; secondary?: string };
+  coversBottom?: true;
+}
+
 export interface CatalogFile {
   body: { front: string };
-  items: (CatalogItemLike & { name: string })[];
+  items: CatalogItem[];
 }
 
 export interface PaletteFileLike {

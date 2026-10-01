@@ -7,6 +7,7 @@
 | `avatar/body/body_base.pix` | 기준 몸 (GRAPHICS 2.2) |
 | `avatar/<slot>/<id>.pix` | 아바타 레이어 원본. `<id>`는 `catalog.json`의 아이템 ID |
 | `templates/` | 제작 템플릿 (`pnpm art:templates`, GRAPHICS 7.2) |
+| `ai/` | AI 생성 키트 — 안내 `ai/README.md`, 아이템별 지시문 `ai/briefs/`(자동 생성), 코드표 `ai/glyphs.md`(자동 생성) |
 
 ## 명령
 
@@ -15,6 +16,8 @@
 | `pnpm art:build` | `.pix` → `src/assets/sprites/avatar/**` PNG(96×160), 이어서 `check:assets` |
 | `pnpm check:assets` | GRAPHICS 8장 검수 + PNG가 `.pix` 원본과 같은지 (CI에서도 돈다) |
 | `pnpm art:templates` | `templates/` 다시 만들기 |
+| `pnpm art:brief` | `ai/briefs/<id>.md`·`ai/glyphs.md` 다시 만들기 (카탈로그·팔레트가 바뀌면) |
+| `pnpm art:ingest <png> --id <id>` | AI가 그린 이미지를 `.pix`로 정리 (`ai/README.md`) |
 
 PNG만 고치고 원본을 안 고치면 `check:assets`가 실패한다. 언제나 `.pix`를 고치고 `pnpm art:build`를 돌린다.
 
@@ -58,38 +61,4 @@ PNG만 고치고 원본을 안 고치면 `check:assets`가 실패한다. 언제�
 
 **외곽선** `o` = `#181425`, **투명** `.`
 
-**팔레트 고정색** (바뀌지 않는 색. `palette.json`의 `colors` 순서대로 코드를 매긴다 — 외곽선 색은 `o`. 레이어당 외곽선 빼고 4색까지):
-
-| 코드 | 색 | 이름 |
-|---|---|---|
-| `1` | `#be4a2f` | 적갈 |
-| `2` | `#d77643` | 주황갈 |
-| `3` | `#ead4aa` | 크림 |
-| `4` | `#e4a672` | 살구 |
-| `5` | `#b86f50` | 갈색 |
-| `6` | `#733e39` | 고동 |
-| `7` | `#3e2731` | 흑갈 |
-| `8` | `#a22633` | 진홍 |
-| `9` | `#e43b44` | 빨강 |
-| `A` | `#f77622` | 주황 |
-| `B` | `#feae34` | 귤색 |
-| `C` | `#fee761` | 노랑 |
-| `E` | `#63c74d` | 연두 |
-| `F` | `#3e8948` | 초록 |
-| `G` | `#265c42` | 숲 |
-| `J` | `#193c3e` | 심록 |
-| `K` | `#124e89` | 남색 |
-| `L` | `#0099db` | 파랑 |
-| `M` | `#2ce8f5` | 하늘 |
-| `N` | `#ffffff` | 흰색 |
-| `T` | `#c0cbdc` | 연회색 |
-| `U` | `#8b9bb4` | 회색 |
-| `V` | `#5a6988` | 청회색 |
-| `W` | `#3a4466` | 짙은 청회 |
-| `X` | `#262b44` | 먹색 |
-| `Y` | `#ff0044` | 진분홍 |
-| `Z` | `#68386c` | 자주 |
-| `d` | `#b55088` | 자홍 |
-| `e` | `#f6757a` | 분홍 |
-| `f` | `#e8b796` | 살색 |
-| `g` | `#c28569` | 황갈 |
+**팔레트 고정색** (바뀌지 않는 색): `palette.json`의 `colors` 순서대로 코드를 매긴다. 외곽선 색은 `o`. 레이어당 외곽선을 빼고 4색까지 쓴다. 표는 [`ai/glyphs.md`](ai/glyphs.md)에 있고, `pnpm art:brief`가 팔레트에서 다시 만든다.

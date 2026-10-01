@@ -2,7 +2,15 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import { AVATAR_SOURCE_DIR, loadPix, renderSheet, samePixels, sourceOf } from './art/build.ts';
+import { briefContext, briefFor, briefItems } from './art/brief.ts';
+import {
+  ART_DIR,
+  AVATAR_SOURCE_DIR,
+  loadPix,
+  renderSheet,
+  samePixels,
+  sourceOf,
+} from './art/build.ts';
 import { AVATAR_DIR, readCatalog, readPalette } from './art/catalog.ts';
 import {
   channelMismatch,
@@ -96,10 +104,30 @@ for (const path of walk(AVATAR_DIR)) {
     failures.push(`카탈로그에 없는 시트: ${file}`);
 }
 
+// AI 키트 지시문이 카탈로그·팔레트와 같은지 (다르면 pnpm art:brief를 안 돌린 것)
+const context = briefContext(palette);
+let briefs = 0;
+for (const item of briefItems(catalog)) {
+  const path = join(ART_DIR, 'ai/briefs', `${item.id}.md`);
+  let expected: string;
+  try {
+    expected = briefFor(item, context);
+  } catch (error) {
+    failures.push(`${item.id}: ${String(error)}`);
+    continue;
+  }
+  briefs += 1;
+  if (!existsSync(path) || readFileSync(path, 'utf8') !== expected) {
+    failures.push(`art/ai/briefs/${item.id}.md가 카탈로그·팔레트와 다름 — pnpm art:brief`);
+  }
+}
+
 if (failures.length > 0) {
   console.error(
     `check-assets: ${String(failures.length)}건 실패\n${failures.map((f) => `  - ${f}`).join('\n')}`,
   );
   process.exit(1);
 }
-console.log(`check-assets: 시트 ${String(checked)}장 통과 (GRAPHICS 8장 캐릭터 레이어)`);
+console.log(
+  `check-assets: 시트 ${String(checked)}장 통과 (GRAPHICS 8장 캐릭터 레이어), AI 지시문 ${String(briefs)}개 최신`,
+);
