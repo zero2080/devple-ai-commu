@@ -1,10 +1,13 @@
-# CI (CONVENTIONS 9장, GRAPHICS 8장): main 푸시·PR마다 정적 검사 · 단위 테스트(domain 커버리지 100%) · 자산 검수.
+# CI (CONVENTIONS 9장, GRAPHICS 8장, DEPLOYMENT 4장): main 푸시·PR마다 정적 검사 · 단위 테스트(domain 커버리지 100%) · 자산 검수 ·
+# 운영 번들 검사. main 푸시에서 check가 통과하면 deploy가 이미지를 GHCR에 올리고 k8s 태그를 커밋한다 (ArgoCD가 끌어감).
 # E2E(Playwright)는 아직 넣지 않는다 — 로컬 `pnpm test:e2e` (2026-10-01 사용자 결정 A)
 name: CI
 
 on:
   push:
     branches: [main]
+    # deploy 잡의 태그 갱신 커밋(k8s/)으로 다시 돌지 않게 (GITHUB_TOKEN 푸시는 원래 트리거하지 않지만 이중 안전장치)
+    paths-ignore: ['k8s/**']
   pull_request:
 
 permissions:
@@ -36,3 +39,68 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test:coverage
       - run: pnpm check:assets
+      # 운영 번들에 Mock이 없는지 (DEPLOYMENT 3.1) — Docker 빌드와 같은 환경 변수
+      - run: pnpm build
+        env:
+          VITE_MOCK: 'false'
+          VITE_API_BASE_URL: /api/v1
+      - run: pnpm check:dist
+
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: false
+    env:
+      IMAGE: ghcr.io/zero2080/devple-commu-web
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: meta
+        run: |
+          echo "sha7=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "node=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      # 빌드 단계는 러너에서 한 번, nginx 단계만 아키텍처별 (Dockerfile 주석) — 클러스터가 arm64여도 돈다
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: NODE_VERSION=${{ steps.meta.outputs.node }}
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.sha7 }}
+            ${{ env.IMAGE }}:latest
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update image tag in k8s/deployment.yaml
+        env:
+          SHA7: ${{ steps.meta.outputs.sha7 }}
+        run: |
+          sed -i "s#image: ${IMAGE}:.*#image: ${IMAGE}:${SHA7}#" k8s/deployment.yaml
+          git add k8s/deployment.yaml
+          if git diff --cached --quiet; then
+            echo "tag unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "ci: update image tag to ${SHA7}"
+          git pull --rebase origin main
+          git push origin HEAD:main
