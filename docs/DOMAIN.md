@@ -1,6 +1,6 @@
 # DOMAIN — 도메인 모델
 
-> 문서 버전: 2.0 (2026-09-30, avatarId → Appearance — 장착 아이템·색 커스터마이징)
+> 문서 버전: 2.1 (2026-09-30, 닉네임 유일성 비교 규칙)
 > 상태: 확정
 > 목적: 프론트 `src/domain/types.ts`와 백엔드 엔티티가 공유하는 단일 기준. 여기 정의된 타입이 API_CONTRACT.md의 스키마 원천이다.
 
@@ -36,7 +36,7 @@ SignupRequest ──(승인)──▶ User ──1:1──▶ AccessKey
 ```ts
 interface User {
   id: string;
-  nickname: string;          // 2~12자, 유니크
+  nickname: string;          // 2~12자, 유니크 (비교 규칙은 8장)
   appearance: Appearance;    // 외형 (3.7)
   statusMessage?: string;    // 최대 40자
   role: 'member' | 'admin';
@@ -324,7 +324,7 @@ interface RemoteCharacter {
 
 | 규칙 | 검증 위치 |
 |---|---|
-| 닉네임 유니크, 2~12자 | 가입 신청 시 |
+| 닉네임 2~12자(코드 포인트), 앞뒤 공백 제거 후 저장, 제어·비가시 문자 불가(5.1과 같은 집합). **유니크 비교는 NFC 정규화 + 대소문자 무시** (`Dot`과 `dot`은 같은 닉네임). 회원과 심사 대기 중 신청을 함께 비교 | 가입 신청 · `PATCH /me` 시 |
 | `appearance`: 모든 키 존재, 필수 슬롯 non-null, 슬롯과 `itemId` 접두사 일치, 아이템·램프 ID는 `ServerConfig.avatarOptions` 안의 값. 가입 승인 시 유효한 기본 외형 배정 | 가입 승인 시 배정 · `PATCH /me` 시 검증 |
 | 두 사용자 간 DmConversation 1개 | 첫 전송 시 자동 생성 |
 | DM 대상은 active 상태 회원 | 전송 시 |
@@ -398,3 +398,4 @@ interface GroupUpdatedEvent extends Group {
 | 2026-09-30 | 1.4: `ServerConfig.avatarIds` 추가 — 아바타 목록 원천은 서버 (Claude Code 결정 요청 B). 승인 시 목록 중 배정 |
 | 2026-09-30 | 1.5: 안 읽음 수 정의 — 그룹은 전송 시 발신자 `lastReadMessageId` 자동 갱신(Claude Code 제안), DM은 상대 메시지 중 `readAt == null`. 두 경우 모두 내 메시지 제외 |
 | 2026-09-30 | **2.0 (호환 깨짐)**: `User.avatarId`·`Presence.avatarId` → `appearance: Appearance`(3.7 신설, 7슬롯 + 피부색·머리색 + 아이템별 primary/secondary). `ServerConfig.avatarIds` → `avatarOptions`(itemIds + 램프 목록 3종). `ChatPublicEvent.sender`에서 avatarId 제거. 사용자 결정: 7슬롯, 프리셋 램프만, 모든 아이템 자유 선택 |
+| 2026-09-30 | 2.1 (서버 설계 중 발견): 닉네임 유일성 비교 = NFC + 대소문자 무시, 앞뒤 공백 제거, 제어·비가시 문자 금지, `PATCH /me`에도 적용 |

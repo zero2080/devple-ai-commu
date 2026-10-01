@@ -1,8 +1,9 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 2.0 (2026-09-30, avatarId → appearance)
+> 문서 버전: 2.1 (2026-09-30, 서버 설계 중 발견한 빈 곳 보강 · 계약 자산)
 > 상태: 확정
-> 기준: DOMAIN.md 2.0, ARCHITECTURE.md 1.13
+> 기준: DOMAIN.md 2.1, ARCHITECTURE.md 1.15
+> 구현: 백엔드는 별도 저장소 `devple-ai-commu-server` (그 저장소 `docs/ARCHITECTURE.md`가 구현 방식을 정한다)
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -29,20 +30,24 @@
 
 | HTTP | code | 상황 |
 |---|---|---|
-| 400 | `VALIDATION_FAILED` | 필드 검증 실패. `details.fields: { [name]: reason }` |
+| 400 | `VALIDATION_FAILED` | 필드 검증 실패. `details.fields: { [필드경로]: 사유 }` (사유 어휘는 표 아래) |
 | 400 | `MESSAGE_INVALID_CONTENT` | 제어 문자·비UTF-8·길이 초과 |
 | 401 | `AUTH_REQUIRED` | 토큰 없음/만료 → 프론트는 refresh 후 1회 재시도 |
 | 401 | `AUTH_INVALID_KEY` | 접근 키 불일치 |
 | 403 | `USER_SUSPENDED` | 정지 회원 |
 | 403 | `FORBIDDEN` | 권한 없음 (그룹 owner 아님 등) |
-| 404 | `NOT_FOUND` | 리소스 없음. `details.resource` |
+| 404 | `NOT_FOUND` | 리소스 없음. `details.resource` (예: `'user'`, `'group'`, `'message'`, `'presence'`) |
 | 409 | `NICKNAME_TAKEN` | 닉네임 중복 |
+| 409 | `EMAIL_TAKEN` | 이미 가입된 이메일, 또는 같은 이메일의 신청이 심사 대기 중 |
 | 409 | `SIGNUP_ALREADY_REVIEWED` | 이미 처리된 신청 |
 | 409 | `GROUP_FULL` | 인원 초과 |
 | 409 | `POSITION_REJECTED` | 이동 검증 실패. 응답에 서버 인정 위치 포함 |
 | 409 | `MESSAGE_ALREADY_READ` | 상대가 이미 읽어 DM 회수 불가 |
 | 429 | `RATE_LIMITED` | `Retry-After` 헤더 포함 |
 | 500 | `INTERNAL` | |
+
+- `details.fields` 사유 어휘 (이 목록 밖의 값은 쓰지 않는다): `'required'` 필수 누락 · `'length'` 길이 위반(코드 포인트) · `'format'` 형식 위반(이메일·전화번호) · `'invalid'` 허용되지 않는 값·문자(제어 문자, 자기 자신에게 DM 등) · `'unknown'` 목록에 없는 ID · `'slot_mismatch'` 외형 슬롯 불일치
+- 필드 경로는 요청 본문 기준 점 표기 (`nickname`, `appearance.top.primary`). 경로 파라미터는 이름 그대로 (`userId`)
 
 ### 1.4 레이트 리밋 (권장값)
 | 대상 | 제한 |
@@ -75,16 +80,20 @@
 { "requestId": "sr_01", "status": "pending" }
 ```
 - 검증: email 형식, nickname 2~12자 유니크(대기 중 신청 포함), phone 숫자·하이픈 8~20자
+- 실패: 형식·길이 → `400 VALIDATION_FAILED` (`fields.email: 'format'`, `fields.nickname: 'length' | 'invalid'`, `fields.phone: 'format'`), 닉네임 중복 → `409 NICKNAME_TAKEN`, 이메일 중복 → `409 EMAIL_TAKEN`
+- 닉네임은 앞뒤 공백을 제거하고 저장한다. 중복 비교 규칙은 DOMAIN 8장
 
 **GET /signup/{requestId}** → `200 { "status": "pending" | "approved" | "rejected", "rejectReason"?: string }`
 
 **POST /auth/login**
 ```jsonc
 // req
-{ "accessKey": "XXXX-XXXX-XXXX" }
+{ "accessKey": "ABCDE-FGHJK-MNPQR-STVWX" }
 // 200  (+ Set-Cookie: refreshToken)
 { "accessToken": "eyJ...", "expiresIn": 900, "me": Me, "config": ServerConfig }
 ```
+- 접근 키 형식: Crockford Base32 20자, 5자 × 4묶음. 서버는 입력을 **정규화**한다 — 공백·하이픈 무시, 대소문자 무시, 혼동 문자(`O`→`0`, `I`·`L`→`1`) 치환. 클라이언트는 형식을 검사하지 않고 앞뒤 공백만 제거해 보낸다
+- 불일치·형식 오류 모두 `401 AUTH_INVALID_KEY` (구분하지 않음). 정지 회원은 `403 USER_SUSPENDED`
 
 **POST /auth/refresh** → `200 { "accessToken", "expiresIn" }` (쿠키 회전: 새 refreshToken 발급)
 
@@ -135,6 +144,7 @@
 - 검증 실패 시 `409 POSITION_REJECTED`, `details.position` = 서버가 인정하는 현재 위치(마지막 성공 위치), `details.reason` = `'collision' | 'too_far' | 'occupied'`
 - 409 수신 시 프론트는 `details.position`으로 즉시 보정. `occupied`면 경로 재계산 (ARCHITECTURE 3.2.1)
 - 점유 판정은 서버의 **원자적 연산**이어야 함 (같은 타일에 2명이 기록되는 일이 없도록)
+- SSE가 연결되지 않아 Presence가 없으면 `404 NOT_FOUND`, `details.resource: 'presence'` (프론트는 `world.snapshot`을 받은 뒤에만 이동을 보낸다). `mapId`가 현재 맵과 다르면 `400 VALIDATION_FAILED fields.mapId: 'invalid'`
 
 **PUT /me/presence** — body: `{ "state": "online" | "away" }` → `204`
 
@@ -169,6 +179,7 @@
 PublicMessage   // links: ["https://example.com"], position: 서버가 인정한 발신자 현재 위치
 ```
 - 서버가 `position` 기준 `proximityRadius` 내 접속자(본인 포함)에게 `chat.public` 이벤트 전송
+- 발신자 Presence가 없으면(SSE 미연결) `404 NOT_FOUND`, `details.resource: 'presence'`
 - 히스토리 API 없음
 
 ### 2.6 DM
@@ -186,7 +197,7 @@ PublicMessage   // links: ["https://example.com"], position: 서버가 인정한
 **GET /dm/{userId}/messages?cursor=&limit=50** → `200 { "items": DmMessage[], "nextCursor" }` — 최신순, `cursor`는 이전 페이지의 가장 오래된 messageId
 
 **POST /dm/{userId}/messages** — body `{ "content" }` → `201 DmMessage`
-- 대상이 `suspended`이면 `403 FORBIDDEN`, 없으면 `404`
+- 대상이 `suspended`이면 `403 FORBIDDEN`, 없으면 `404`, 자기 자신이면 `400 VALIDATION_FAILED fields.userId: 'invalid'`
 - 서버는 양쪽에 `chat.dm` 이벤트 전송 (발신자에게도 보내 다중 탭 동기화)
 
 **POST /dm/messages/{id}/recall** → `204` (양쪽에 `chat.dm.recalled`)
@@ -356,6 +367,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-30 | 1.5 (결정 리포트 7번): 응답 미정의 엔드포인트 명시 — `POST /auth/logout` 204, `PATCH /groups/{id}` 200 Group, `DELETE /groups/{id}` 204, `DELETE /groups/{id}/members/{userId}` 204, `reject` 204(reason 필수), `suspend`·`unsuspend` 204(멱등), `POST /admin/notices` 201 Notice. 그룹 이름 검증 응답, 초대 시 기존 멤버 `group.updated`, `group.removed`에 `'left'` 추가(다중 탭) |
 | 2026-09-30 | 1.6 (Claude Code 결정 요청): 그룹 메시지 전송 시 발신자 `lastReadMessageId` 갱신, `GET /groups` 정렬(최근 활동 먼저, 안 A), `GET /dm` 정렬 기준 `updatedAt` 명시 |
 | 2026-09-30 | **2.0 (호환 깨짐, DOMAIN 2.0)**: `avatarId` → `appearance`. `PATCH /me`는 `appearance` 전체 교체 + 검증 실패 4종(`required`·`unknown`·`slot_mismatch`, 필드 경로 `appearance.<경로>`), `presence.updated`는 `appearance` 전체. `User`·`Presence`를 싣는 모든 응답·이벤트(`world.snapshot`, `presence.joined`, `GET /users/*`, DM·그룹의 `User`)가 함께 바뀐다. `chat.public`의 sender는 nickname만 |
+| 2026-09-30 | 2.1 (서버 설계 중 발견): `409 EMAIL_TAKEN` 추가, `details.fields` 사유 어휘 고정(`required`·`length`·`format`·`invalid`·`unknown`·`slot_mismatch`), 가입 검증 실패 매핑, 접근 키 형식(Crockford 20자)과 서버 정규화, Presence 없을 때 위치·공개 대화 `404 resource: 'presence'`, 자기 자신에게 DM `400 invalid`. 8장 백엔드 결정 기록, 9장 계약 자산 신설 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
@@ -363,7 +375,22 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 - 재전송 버퍼 보관 시간 (60초), 하트비트 간격 (15초)
 - 레이트 리밋 수치
 
-## 8. 백엔드 결정 사항 (프론트 무관)
-- 이메일 발송 실패 시 승인 롤백 여부
-- 근접 공개 대화 저장 여부
-- ID 형식, 접근 키 형식
+## 8. 백엔드 결정 사항 (프론트 무관, 2026-09-30 확정)
+상세는 `devple-ai-commu-server/docs/ARCHITECTURE.md`
+- 이메일 발송: outbox + 재시도. 발송 실패는 승인을 **되돌리지 않는다** (관리자가 키 재발급으로 다시 보냄)
+- 근접 공개 대화: DB에 저장하지 않는다 (재전송 버퍼 60초에만)
+- ID: 시간순 정렬 64비트 TSID를 13자 문자열로. 프론트는 계속 불투명 문자열로 취급한다
+- 접근 키: 2.1 형식, HMAC 해시로만 저장
+- 첫 관리자: 서버 기동 시 설정값으로 1명 생성 (API 없음)
+- SSE 이벤트 `id`: 기동 시각 기반 단조 증가 — 재시작 후에도 이전 값보다 크다. 프론트는 문자열 그대로 돌려보낸다
+
+## 9. 계약 자산 (프론트·서버가 같은 내용을 가져야 하는 파일)
+| 자산 | 원본 (프론트 저장소) | 서버가 쓰는 부분 |
+|---|---|---|
+| 맵 | `src/assets/maps/<mapId>.json` | `width`·`height`·`spawn`·`collision` (위치 검증) |
+| 아바타 카탈로그 | `src/assets/sprites/avatar/catalog.json` | `items[].id` → `ServerConfig.avatarOptions.itemIds` 기본값 |
+| 팔레트 | `src/assets/palette.json` | `rampGroups` → `skin/hair/itemRampIds` 기본값 |
+
+- **원본은 프론트 저장소**다. 서버는 동기화 스크립트로 사본을 만들고 원본 커밋·sha256을 기록한다
+- 위 파일을 바꾸는 프론트 변경은 `docs/handoff/to-server/`로 서버에 알린다. 맵의 `collision`·스폰이나 아이템·램프 ID가 어긋나면 위치 거부·외형 거부가 생긴다
+- 새 아이템은 GRAPHICS 2.8 순서(그림 먼저 → 서버 목록)를 따른다
