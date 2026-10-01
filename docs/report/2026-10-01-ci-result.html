@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI 도입 결과</title>
+<meta name="description" content="GitHub Actions CI(결정 A) 도입 결과: 워크플로 구성, 첫 실행 결과와 단계별 시간, 알림, 앞으로의 운영 방법">
+<style>
+:root{--bg:#fbfbfd;--fg:#1c1c24;--muted:#5b5b6b;--line:#e2e2ea;--card:#ffffff;--accent:#3b5bdb;--high:#c92a2a;--mid:#e67700;--low:#2b8a3e;--info:#1971c2;--code:#f1f3f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}}
+:root[data-theme="dark"]{--bg:#111116;--fg:#ececf1;--muted:#a3a3b5;--line:#2a2a36;--card:#181822;--accent:#8da2fb;--high:#ff8787;--mid:#ffa94d;--low:#69db7c;--info:#74c0fc;--code:#20202b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}h3{font-size:16px;margin:20px 0 8px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:20px}table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 16px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}pre{background:var(--code);padding:12px;border-radius:6px;overflow:auto;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0}.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:middle}
+.high{background:var(--high)}.mid{background:var(--mid)}.low{background:var(--low)}.info{background:var(--info)}.ok{color:var(--low);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.stat b{display:block;font-size:22px}.stat span{color:var(--muted);font-size:12px}
+ul{padding-left:20px}li{margin:4px 0}.muted{color:var(--muted)}a{color:var(--accent)}
+
+figure{margin:12px 0}figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;display:block}figcaption{color:var(--muted);font-size:13px;margin-top:6px}.shots{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:12px;align-items:start}@media (max-width:700px){.shots{grid-template-columns:minmax(0,1fr)}}</style>
+</head>
+<body><main>
+
+<h1>CI 도입 결과 (결정 A)</h1>
+<p class="meta">devple-ai-commu · 2026-10-01 · 작성: Claude Code · 관련: <a href="2026-10-01-step12a-result.html">12a단계 결과</a>(결정 요청)</p>
+<p><strong>결론.</strong> 이제 GitHub Actions CI가 동작해요. <code>main</code>에 푸시하거나 PR을 열 때마다 정적 검사, 단위 테스트(domain 커버리지 100% 기준), 자산 검수를 자동으로 돌려요. 첫 실행(커밋 <code>406ede7</code>)은 <strong>1분 44초에 모든 단계를 통과</strong>했어요. 결정이 필요한 것은 없어요.</p>
+
+<div class="grid">
+<div class="stat"><b>통과</b><span>첫 실행 결과</span></div>
+<div class="stat"><b>1분 44초</b><span>잡 전체 시간</span></div>
+<div class="stat"><b>449</b><span>단위 테스트 (81 파일)</span></div>
+<div class="stat"><b>53장</b><span>자산 검수 통과</span></div>
+<div class="stat"><b>0</b><span>결정 대기</span></div>
+</div>
+
+<h2>1. 무엇을 검사하나</h2>
+<p>워크플로 파일은 <code>.github/workflows/ci.yml</code> 하나, 잡도 하나예요. 실행 환경은 GitHub 러너 Ubuntu 24.04예요. Node는 <code>.nvmrc</code>(24, 실제 24.21.0), pnpm은 <code>package.json</code>의 <code>packageManager</code>(12.6.0)를 따라요.</p>
+<table><tr><th>순서</th><th>단계</th><th>첫 실행 시간</th><th>무엇을 막나</th></tr>
+<tr><td>1</td><td>준비 (checkout · Node · pnpm)</td><td>약 12초</td><td>—</td></tr>
+<tr><td>2</td><td><code>pnpm install --frozen-lockfile</code></td><td>2초</td><td>잠금 파일과 맞지 않는 의존성 변경</td></tr>
+<tr><td>3</td><td><code>pnpm lint</code></td><td>26초</td><td>레이어 경계 위반(<code>game</code>의 React import 등), 타입 안전 규칙</td></tr>
+<tr><td>4</td><td><code>pnpm typecheck</code></td><td>5초</td><td>타입 오류</td></tr>
+<tr><td>5</td><td><code>pnpm format:check</code></td><td>4초</td><td>포맷이 어긋난 코드</td></tr>
+<tr><td>6</td><td><code>pnpm test:coverage</code></td><td>46초</td><td>단위 테스트 실패, domain 커버리지 100% 미달</td></tr>
+<tr><td>7</td><td><code>pnpm check:assets</code></td><td>1초 미만</td><td>GRAPHICS 8장 그림 규칙 위반(크기·색·여백·좌우 반전 등)</td></tr></table>
+<p class="muted">실행 기록: <a href="https://github.com/zero2080/devple-ai-commu/actions/runs/36806181713">https://github.com/zero2080/devple-ai-commu/actions/runs/36806181713</a></p>
+
+<h2>2. CI에 넣지 않은 것</h2>
+<ul>
+<li><strong>E2E(Playwright)</strong>: 브라우저 설치와 Mock 서버 두 개를 띄우는 데 시간이 걸려 이번에는 넣지 않았어요(결정 A의 범위). 앞으로도 각 단계를 마치기 전에 제가 로컬에서 <code>pnpm test:e2e</code>를 돌려요. 필요해지면 PR에서만 도는 별도 잡으로 추가할 수 있어요.</li>
+<li><strong>폰트 검수</strong>(<code>scripts/fonts/check-font.py</code>): Python fontTools가 필요하고 폰트를 바꿀 때만 의미가 있어서 넣지 않았어요. chat에도 알렸어요.</li></ul>
+
+<h2>3. 첫 실행에서 나온 알림 (조치 불필요)</h2>
+<table><tr><th>알림</th><th>판단</th></tr>
+<tr><td>"ubuntu-latest가 2026-10-19부터 Ubuntu 26으로 바뀐다"</td><td>러너 OS가 바뀌어도 이 프로젝트는 Node·pnpm 버전을 직접 지정해서 영향이 적을 것으로 봐요(추정, 정확도 중간). 바뀐 뒤 실패하면 그때 <code>ubuntu-24.04</code>로 고정해요.</td></tr>
+<tr><td>pnpm 설치 단계의 "pnpm v10 설치 흔적" 경고</td><td>러너 이미지에 미리 깔린 pnpm 10의 흔적이에요. 실제 설치·실행은 pnpm 12.6.0으로 됐어요(로그로 확인). 무시해도 돼요.</td></tr></table>
+
+<h2>4. 앞으로의 운영</h2>
+<ul>
+<li>CI가 실패하면 저장소의 Actions 탭에서 어느 단계가 실패했는지 바로 보여요. 제가 단계를 진행할 때는 푸시 후 CI 결과까지 확인하고 보고할게요.</li>
+<li><strong>워크플로 파일을 바꾸는 푸시</strong>는 지금 토큰(<code>workflow</code> 권한 없음)으로는 GitHub가 거부해요. 워크플로를 고칠 일이 생기면 이번처럼 직접 푸시해 주시거나, 토큰에 <code>workflow</code> 권한을 더해 주세요. 그 밖의 코드·문서 푸시는 지금처럼 제가 해요.</li>
+<li>pnpm 저장소 캐시를 첫 실행에서 저장했어요. 이후 실행은 의존성 다운로드가 줄어들어요. 잠금 파일이 바뀌면 새로 저장해요.</li></ul>
+
+<h2>5. 관련 문서 변경</h2>
+<ul>
+<li>CONVENTIONS 1.6: CI 항목에 워크플로·검사 목록을 적고, E2E는 로컬이라는 점을 적었어요.</li>
+<li>ROADMAP 1.22: 결정 이력에 CI 결정 A를 기록했어요.</li>
+<li>chat에 보낸 메시지(<code>docs/handoff/to-chat/2026-10-01-step12a-done.md</code>): GRAPHICS 8장의 "CI에 넣는다"가 이제 맞는 문장이 됐다고 고쳤어요.</li></ul>
+
+</main></body>
+</html>
