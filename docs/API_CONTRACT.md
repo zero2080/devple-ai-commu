@@ -1,9 +1,9 @@
 # API_CONTRACT — REST + SSE 계약
 
-> 문서 버전: 2.1 (2026-09-30, 서버 설계 중 발견한 빈 곳 보강 · 계약 자산)
+> 문서 버전: 2.2 (2026-10-01, 백엔드 구현 저장소 확정: devple-stories)
 > 상태: 확정
-> 기준: DOMAIN.md 2.1, ARCHITECTURE.md 1.15
-> 구현: 백엔드는 별도 저장소 `devple-ai-commu-server` (그 저장소 `docs/ARCHITECTURE.md`가 구현 방식을 정한다)
+> 기준: DOMAIN.md 2.2, ARCHITECTURE.md 1.15
+> 구현: 백엔드는 기존 API 저장소 `devple-stories`의 Commu 영역 (`net.devple.core.commu`, 문서 `docs/commu/ARCHITECTURE.md`가 구현 방식을 정한다)
 > 이 문서는 **백엔드 구현의 유일한 기준**이다. 스키마의 원천은 DOMAIN.md이며, 여기서는 엔드포인트·이벤트·에러만 정의한다. 변경 시 반드시 버전을 올리고 프론트 Mock 핸들러를 함께 갱신한다.
 
 ---
@@ -368,6 +368,7 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 | 2026-09-30 | 1.6 (Claude Code 결정 요청): 그룹 메시지 전송 시 발신자 `lastReadMessageId` 갱신, `GET /groups` 정렬(최근 활동 먼저, 안 A), `GET /dm` 정렬 기준 `updatedAt` 명시 |
 | 2026-09-30 | **2.0 (호환 깨짐, DOMAIN 2.0)**: `avatarId` → `appearance`. `PATCH /me`는 `appearance` 전체 교체 + 검증 실패 4종(`required`·`unknown`·`slot_mismatch`, 필드 경로 `appearance.<경로>`), `presence.updated`는 `appearance` 전체. `User`·`Presence`를 싣는 모든 응답·이벤트(`world.snapshot`, `presence.joined`, `GET /users/*`, DM·그룹의 `User`)가 함께 바뀐다. `chat.public`의 sender는 nickname만 |
 | 2026-09-30 | 2.1 (서버 설계 중 발견): `409 EMAIL_TAKEN` 추가, `details.fields` 사유 어휘 고정(`required`·`length`·`format`·`invalid`·`unknown`·`slot_mismatch`), 가입 검증 실패 매핑, 접근 키 형식(Crockford 20자)과 서버 정규화, Presence 없을 때 위치·공개 대화 `404 resource: 'presence'`, 자기 자신에게 DM `400 invalid`. 8장 백엔드 결정 기록, 9장 계약 자산 신설 |
+| 2026-10-01 | 2.2: 백엔드 구현 저장소를 기존 `devple-stories`로 확정(사용자). 8장: 전용 Deployment(Pod 1), Stories와 회원·인증 분리, ID는 IDENTITY 문자열(기존 저장소 관례). 엔드포인트·필드 변경 없음 |
 
 ## 7. 운영 중 조정 가능한 값 (계약 변경 없이 백엔드가 조정)
 - `PUT /me/position` 이동 검증 관대함 (`max(3, elapsedMs/100)`)
@@ -376,10 +377,12 @@ B 클라이언트: A가 내 근접 범위 안? → 예: DM 말풍선 + 패널 / 
 - 레이트 리밋 수치
 
 ## 8. 백엔드 결정 사항 (프론트 무관, 2026-09-30 확정)
-상세는 `devple-ai-commu-server/docs/ARCHITECTURE.md`
+상세는 `devple-stories/docs/commu/ARCHITECTURE.md`
+- 배치: 기존 Stories API와 같은 이미지의 **전용 Deployment(Pod 1개)**. Stories의 다중 Pod와 무관하게 Commu 실시간 상태는 항상 한 곳에 있다
+- 회원·인증: Stories 회원(`users`)·토큰과 완전히 분리. Stories 토큰으로는 이 계약의 API를 쓸 수 없다
 - 이메일 발송: outbox + 재시도. 발송 실패는 승인을 **되돌리지 않는다** (관리자가 키 재발급으로 다시 보냄)
 - 근접 공개 대화: DB에 저장하지 않는다 (재전송 버퍼 60초에만)
-- ID: 시간순 정렬 64비트 TSID를 13자 문자열로. 프론트는 계속 불투명 문자열로 취급한다
+- ID: DB IDENTITY 정수를 문자열로 (예: `"1234"`). 값이 커지는 순서가 생성 순서와 같다. 프론트는 계속 불투명 문자열로 취급한다 (파싱·비교 금지)
 - 접근 키: 2.1 형식, HMAC 해시로만 저장
 - 첫 관리자: 서버 기동 시 설정값으로 1명 생성 (API 없음)
 - SSE 이벤트 `id`: 기동 시각 기반 단조 증가 — 재시작 후에도 이전 값보다 크다. 프론트는 문자열 그대로 돌려보낸다

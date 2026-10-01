@@ -39,7 +39,7 @@
 
 ### 시작 전
 - `docs/handoff/to-code/`에 파일이 있으면 먼저 처리하고 `done/`을 비운다 (규칙·메시지 형식은 `docs/handoff/README.md`: YAML frontmatter + `done/do/decide/info`, 간결한 영어). 계약·제품 문서(PRD·DOMAIN·API_CONTRACT·GRAPHICS) 변경이 필요하면 직접 고치지 말고 `docs/handoff/to-chat/`에 요청 파일을 쓰고 사용자에게 알린다.
-- 계약 자산(API_CONTRACT 9장: `src/assets/maps/*.json`, `src/assets/sprites/avatar/catalog.json`, `src/assets/palette.json`)을 바꾸면 `docs/handoff/to-server/`에 알린다. 백엔드 저장소 `../devple-ai-commu-server`가 사본으로 위치·외형을 검증한다
+- 계약 자산(API_CONTRACT 9장: `src/assets/maps/*.json`, `src/assets/sprites/avatar/catalog.json`, `src/assets/palette.json`)을 바꾸면 `docs/handoff/to-server/`에 알린다. 백엔드(기존 API 저장소 `../devple-stories`의 Commu 영역)가 사본으로 위치·외형을 검증한다
 - 사용자가 결정하거나 검토해야 할 것이 생기면 `docs/report/YYYY-MM-DD-<slug>.html`(한국어, 자체 완결 HTML, 인라인 CSS)을 쓰고 터미널 답변에 경로를 적는다. 관련 handoff 메시지에는 `needs-user: true`. 리포트는 커밋한다 (결정 기록).
 - 요청을 PRD 기능 번호(예: 5.4 근접 대화)와 ROADMAP 단계에 매핑한다. 매핑이 안 되면 범위 밖일 가능성이 있으니 확인한다.
 - 현재 단계보다 앞선 단계의 기능을 구현하지 않는다 (예: 5단계 중에 말풍선 만들지 않기).
