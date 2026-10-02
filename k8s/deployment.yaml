@@ -26,7 +26,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: devple-commu-web
-          image: ghcr.io/zero2080/devple-commu-web:latest
+          image: ghcr.io/zero2080/devple-commu-web:ebbf4e5
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
