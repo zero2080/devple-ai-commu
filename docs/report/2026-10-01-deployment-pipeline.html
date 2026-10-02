@@ -23,7 +23,7 @@ figure{margin:12px 0}figure img{max-width:100%;height:auto;border:1px solid var(
 <body><main>
 
 <h1>배포 파이프라인 준비 (D1단계)</h1>
-<p class="meta">devple-ai-commu · 2026-10-01 · 작성: Claude Code · 근거: <code>docs/DEPLOYMENT.md</code> 1.1 (chat), handoff <code>2026-10-01-deployment-pipeline</code></p>
+<p class="meta">devple-ai-commu · 2026-10-01 (2026-10-02 갱신 — PR #1) · 작성: Claude Code · 근거: <code>docs/DEPLOYMENT.md</code> 1.1 (chat), handoff <code>2026-10-01-deployment-pipeline</code></p>
 <p><strong>결론.</strong> Commu 화면(<code>https://stories.devple.net/commu/</code>)을 ArgoCD 자동 배포에 넣기 위한 프론트 쪽 준비를 마쳤어요. 운영 이미지, nginx 설정, k8s 매니페스트, CI 배포 잡이에요. 이미지를 로컬에서 빌드·실행해 경로 규칙과 헤더를 모두 확인했어요. 브라우저로 열어서 CSP 위반이 없는 것도 확인했어요. <strong>클러스터·Cloudflare·GitHub 설정은 제가 건드리지 않았고</strong>, 아래 순서대로 직접 해 주셔야 해요.</p>
 
 <div class="grid">
@@ -36,7 +36,7 @@ figure{margin:12px 0}figure img{max-width:100%;height:auto;border:1px solid var(
 <h2>0. 해 주실 일 (순서대로)</h2>
 <div class="card">
 <ol>
-<li><strong>CI 커밋 푸시</strong> — 워크플로 파일(<code>.github/workflows/ci.yml</code>)이 바뀐 커밋은 지금 토큰(<code>workflow</code> 권한 없음)으로 제가 푸시할 수 없어요. <code>git push origin main</code>을 직접 해 주시거나, 토큰에 <code>workflow</code> 권한을 더해 주세요(권한을 더하면 앞으로 제가 직접 올릴 수 있어요). 푸시하면 CI <code>check</code>가 통과한 뒤 <code>deploy</code> 잡이 이미지를 GHCR에 올리고 <code>k8s/deployment.yaml</code> 태그를 커밋해요. ArgoCD 앱을 아직 적용하지 않았으니 클러스터에는 아무 일도 일어나지 않아요.</li>
+<li><strong>PR #1 머지</strong> — 배포 잡이 든 <code>.github/workflows/ci.yml</code> 변경은 <a href="https://github.com/zero2080/devple-ai-commu/pull/1">PR #1</a>로 올라가 있어요(2026-10-02 갱신: 토큰에 <code>workflow</code> 권한이 생겨 브랜치 <code>chore/ci-deploy-job</code>을 푸시했고, PR의 CI <code>check</code>는 운영 빌드·Mock 배제 검사까지 통과). 머지하면 <code>check</code>가 통과한 뒤 <code>deploy</code> 잡이 이미지를 GHCR에 올리고 <code>k8s/deployment.yaml</code> 태그를 커밋해요. ArgoCD 앱을 아직 적용하지 않았으니 클러스터에는 아무 일도 일어나지 않아요.</li>
 <li><strong>main 브랜치 보호</strong> — main에 보호 규칙이 있으면 <code>deploy</code> 잡의 태그 커밋(github-actions[bot])이 막혀요. 켜져 있다면 봇 푸시를 허용해 주세요. 없으면 할 일이 없어요.</li>
 <li><strong>GHCR 패키지 확인</strong> — 첫 배포 뒤 <code>ghcr.io/zero2080/devple-commu-web</code> 패키지가 생겨요. 클러스터의 <code>ghcr-secret</code> 토큰이 이 패키지를 받을 수 있어야 해요(<code>read:packages</code>). 패키지가 비공개로 만들어졌는지 공개인지는 확인하지 못했어요(추정, 정확도 중간 — 같은 계정이라 <code>ghcr-secret</code>으로 받을 수 있을 것으로 봐요).</li>
 <li><strong>ArgoCD 앱 1회 적용</strong> — <code>kubectl apply -f k8s/argocd/application.yaml</code>. 저장소가 공개라 ArgoCD 자격 증명은 필요 없어요. 확인: ArgoCD <code>devple-commu-web</code>이 Synced/Healthy, <code>kubectl -n devple get pods</code>에 <code>devple-commu-web-*</code> Ready, 기존 <code>devple-api</code>·<code>devple-commu</code>에 영향 없음. 클러스터 안에서 <code>/healthz</code> 200, <code>/commu</code> 301, <code>/commu/x</code> → index.html, <code>/</code>·<code>/api/x</code> 404 (DEPLOYMENT 7장)</li>

@@ -369,7 +369,7 @@ DEPLOYMENT 1–4·7장 (chat 1.1, handoff 2026-10-01-deployment-pipeline, 사용
 - [x] 로컬 이미지: `/healthz` 200, `/commu` 301 → `/commu/`, `/commu/some/route` → index.html(`no-cache`), `/commu/assets/*` immutable, 없는 해시 파일·정적 파일 404(캐시 헤더 없음), `/commu/mockServiceWorker.js` 404, `/`·`/api/x`·`/api` 404(CSP 없음), gzip, 보안 헤더, nginx uid 101
 - [x] 운영 이미지 스모크(헤드리스 Chromium, `/commu/`): 로그인 화면(`/commu/login`으로 이동), 앱 안 링크 `/commu/signup`, 깊은 링크 새로고침, CSP 위반 0, `mockServiceWorker.js` 요청 없음, API는 `/api/v1/…`
 - [x] `kubectl kustomize k8s` 렌더 정상 (클러스터에는 적용하지 않음)
-- [ ] 첫 `deploy` 잡 실행 — 워크플로 파일 변경은 사용자 푸시가 필요하다(토큰에 `workflow` 권한 없음). 실행 결과는 다음 단계 리포트에서 확인
+- [ ] 첫 `deploy` 잡 실행 — `ci.yml` 배포 잡은 PR #1(`chore/ci-deploy-job`, PR CI 통과)로 올라가 있고, 머지되면 main 푸시에서 돈다. 실행 결과는 머지 뒤 확인
 
 ## Phase 3 — 백엔드 연동
 - `VITE_MOCK=false` 전환, 실서버 계약 검증, E2E(Playwright)
